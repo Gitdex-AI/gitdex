@@ -26,6 +26,7 @@ export async function createProject(input: {
   githubAccessToken: string;
   autoDeploy: boolean;
   agentsFilePath: string;
+  updateAgentsFile: boolean;
 }): Promise<ProjectRecord> {
   const project: ProjectRecord = {
     projectId: randomUUID().slice(0, 8),
@@ -36,6 +37,7 @@ export async function createProject(input: {
     githubAccessToken: input.githubAccessToken.trim(),
     autoDeploy: input.autoDeploy,
     agentsFilePath: input.agentsFilePath.trim() || "AGENTS.md",
+    updateAgentsFile: input.updateAgentsFile,
     projectManagerSessionId: null,
     architectSessionId: null,
     devopsSessionId: null,
@@ -257,6 +259,7 @@ function normalizeProject(project: ProjectRecord): ProjectRecord {
     ...project,
     autoDeploy: project.autoDeploy ?? false,
     agentsFilePath: project.agentsFilePath ?? "AGENTS.md",
+    updateAgentsFile: project.updateAgentsFile ?? true,
     architectSessionId: project.architectSessionId ?? null,
     devopsSessionId: project.devopsSessionId ?? null,
     teamRoles: project.teamRoles ?? ["developer", "qa", "architect", "devops"]

@@ -18,18 +18,21 @@ export async function POST(request: Request) {
   const githubAccount = settings.githubUsername;
   const agentsFilePath = String(form.get("agentsFilePath") ?? "AGENTS.md").trim();
   const autoDeploy = form.get("autoDeploy") === "true";
+  const updateAgentsFile = form.get("updateAgentsFile") === "true";
 
   const error = validateProject(projectName, githubRepo, githubAccount, agentsFilePath);
   if (error) return redirect(request, `/projects/new?error=${encodeURIComponent(error)}`);
 
   try {
     await verifyLocalGitHubRepo(githubRepo);
-    await upsertAgentsFileWithGh({
-      repo: githubRepo,
-      projectName,
-      autoDeploy,
-      path: agentsFilePath
-    });
+    if (updateAgentsFile) {
+      await upsertAgentsFileWithGh({
+        repo: githubRepo,
+        projectName,
+        autoDeploy,
+        path: agentsFilePath
+      });
+    }
   } catch (verificationError) {
     const message = verificationError instanceof Error ? verificationError.message : "GitHub connection failed.";
     return redirect(request, `/projects/new?error=${encodeURIComponent(message)}`);
@@ -41,7 +44,8 @@ export async function POST(request: Request) {
     githubAccount,
     githubAccessToken: "",
     autoDeploy,
-    agentsFilePath
+    agentsFilePath,
+    updateAgentsFile
   });
   return redirect(request, `/projects?message=${encodeURIComponent(`Project ${project.name} created. Telegram users can switch with /use ${project.slug}.`)}`);
 }

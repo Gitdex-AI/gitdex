@@ -124,6 +124,7 @@ export type ProjectRecord = {
   githubAccessToken: string;
   autoDeploy: boolean;
   agentsFilePath: string;
+  updateAgentsFile: boolean;
   projectManagerSessionId?: string | null;
   architectSessionId?: string | null;
   devopsSessionId?: string | null;

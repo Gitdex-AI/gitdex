@@ -80,6 +80,7 @@ export default async function ProjectDetailPage({
               <Text size="sm">Architect: <Code>{project.architectSessionId ?? "new"}</Code></Text>
               <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
               <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
+              <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
             </Stack>
           </Paper>
 

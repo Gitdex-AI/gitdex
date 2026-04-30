@@ -59,11 +59,18 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             <TextInput
               name="agentsFilePath"
               label="Agent Instructions File"
-              description="Codex reads AGENTS.md. Existing content outside Taskix's managed block is preserved."
+              description="Used only when AGENTS update is enabled. Existing content outside Taskix's managed block is preserved."
               defaultValue="AGENTS.md"
               required
             />
           </SimpleGrid>
+          <Checkbox
+            name="updateAgentsFile"
+            value="true"
+            mt="md"
+            label="Update AGENTS.md in the selected repository"
+            description="Enable only when you want Taskix to commit or update the managed workflow section in the remote repo."
+          />
           <Checkbox
             name="autoDeploy"
             value="true"
@@ -72,7 +79,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             description="Leave disabled if the architect should stop at merge readiness and wait for manual deployment approval."
           />
           <Alert color="gray" icon={<ShieldCheck size={16} />} mt="md">
-            Project creation uses your configured GitHub account and local gh login to write the workflow into AGENTS.md.
+            Project creation always verifies the repository with your local gh login. Updating AGENTS.md is optional and may modify the remote repository.
           </Alert>
           <Button type="submit" disabled={!hasGitHubAccount || !repos.length} leftSection={<FolderPlus size={16} />} w={{ base: "100%", sm: "fit-content" }}>
             Connect GitHub & Add Project
