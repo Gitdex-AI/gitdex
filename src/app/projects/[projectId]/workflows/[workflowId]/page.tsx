@@ -5,6 +5,7 @@ import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
+import { getIssueQaStatus } from "@/lib/qa-status";
 import { getProject, getWorkflow, listAgentSessions, listJobs } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord } from "@/lib/types";
 
@@ -144,6 +145,7 @@ function IssueCard({
   const issueSessions = sessions.filter((session) => session.issueId === issue.issueId);
   const developerSession = issueSessions.find((session) => session.role === "developer");
   const qaSession = issueSessions.find((session) => session.role === "qa");
+  const qaStatus = getIssueQaStatus(issue, qaSession);
 
   return (
     <div className="workflow-issue-card">
@@ -153,6 +155,7 @@ function IssueCard({
             <Text fw={760}>{issue.issueId}</Text>
             <Badge size="sm" variant="light">{issue.developerRole ?? issue.assigneeRole}</Badge>
             {issue.prState ? <Badge size="sm" variant="outline">PR {issue.prState}</Badge> : null}
+            <Badge size="sm" color={qaStatus.color} variant="light">{qaStatus.label}</Badge>
           </Group>
           <Text fw={700} mt={4}>{issue.title}</Text>
           <Text size="sm" c="dimmed" lineClamp={3}>{issue.description}</Text>

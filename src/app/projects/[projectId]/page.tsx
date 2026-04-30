@@ -8,6 +8,7 @@ import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload } from "@/lib/pm-handoff";
+import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 
 export default async function ProjectDetailPage({
@@ -123,12 +124,19 @@ export default async function ProjectDetailPage({
                       <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} />
                     </Group>
                   </Group>
-                  {workflow.issues.map((issue) => (
-                    <Text key={issue.issueId} size="xs" c="dimmed">
-                      {issue.issueId}: {issue.title} · {issue.developerRole ?? issue.assigneeRole}
-                      {issue.prState ? ` · PR ${issue.prState}` : ""}
-                    </Text>
-                  ))}
+                  {workflow.issues.map((issue) => {
+                    const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
+                    const qaStatus = getIssueQaStatus(issue, qaSession);
+                    return (
+                      <Group key={issue.issueId} gap={6} wrap="nowrap">
+                        <Text size="xs" c="dimmed" lineClamp={1}>
+                          {issue.issueId}: {issue.title} · {issue.developerRole ?? issue.assigneeRole}
+                          {issue.prState ? ` · PR ${issue.prState}` : ""}
+                        </Text>
+                        <Badge color={qaStatus.color} size="xs" variant="light">{qaStatus.label}</Badge>
+                      </Group>
+                    );
+                  })}
                 </div>
               ))}
               {doneWorkflows.length ? (
