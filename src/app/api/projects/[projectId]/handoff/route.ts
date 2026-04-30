@@ -10,14 +10,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
 
   const form = await request.formData();
   const submittedPayload = parseReadyForArchitectPayload(String(form.get("payload") ?? ""));
+  const directRequirement = String(form.get("requirement") ?? "").trim();
   const pmSession = await getAgentSession(`${project.projectId}:product_manager`);
   const payload = submittedPayload ?? findReadyForArchitectPayload(pmSession);
-  if (!payload) {
-    return redirect(request, `/projects/${project.projectId}?role=product_manager&error=${encodeURIComponent("PM has not produced ready_for_architect JSON yet.")}`);
+  if (!payload && !directRequirement) {
+    return redirect(request, `/projects/${project.projectId}?role=product_manager&error=${encodeURIComponent("Enter a requirement or use PM chat to produce ready_for_architect JSON.")}`);
   }
 
   try {
-    const workflow = await createWorkflow(formatPmHandoffPayload(payload), 0, project);
+    const requirement = payload ? formatPmHandoffPayload(payload) : directRequirement;
+    const workflow = await createWorkflow(requirement, 0, project);
     await createJob({
       projectId: project.projectId,
       type: "workflow_run",
