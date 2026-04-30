@@ -39,7 +39,7 @@ QA should test from user-visible behavior and leave a GitHub issue comment with:
 - Findings with severity, reproduction steps, expected result, and actual result.
 - Any untested areas or environment limits.
 
-When QA passes, add the `qa-passwd` label. When QA fails, add `qa-failed` and comment with the failure details. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue. Merge the PR into `main` only after QA has passed.
+When QA passes, add the `qa-passed` label. When QA fails, add `qa-failed` and comment with the failure details. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue. Merge the PR into `main` only after QA has passed.
 
 ## Commit & Pull Request Guidelines
 
