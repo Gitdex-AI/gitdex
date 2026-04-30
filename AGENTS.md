@@ -70,8 +70,8 @@ Minimal local QA smoke workflow for main-flow E2E validation:
   6. Add QA evidence to the implementation issue before architect review and merge readiness.
 - GitHub links:
   - Source issue: https://github.com/Taskix-AI/Taskix/issues/23
-  - Implementation PR: https://github.com/Taskix-AI/Taskix/pull/<issue-23-pr>
-  - QA evidence record: https://github.com/Taskix-AI/Taskix/issues/23#issuecomment-<qa-record>
+  - Implementation PR: https://github.com/Taskix-AI/Taskix/pull/24
+  - QA evidence record: issue `#23` comments thread at https://github.com/Taskix-AI/Taskix/issues/23
 - Architect merge-readiness inputs: confirmation that the smoke job passed or failed, the exact commands run, the browser scenarios exercised, and the final QA evidence link on issue `#23`
 
 - PM keeps talking with the user and hands confirmed requirements to the architect.
