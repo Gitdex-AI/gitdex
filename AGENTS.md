@@ -24,7 +24,9 @@ There is no dedicated test runner configured yet. For now, use `npm run typechec
 
 ## Developer and QA Workflow
 
-Developers implement the requested change, run baseline checks, and create or update a GitHub issue with QA instructions. Treat QA as an independent validator, not as a code co-author. The QA issue should include the requirement, changed files, acceptance criteria, commands to run, and manual scenarios to verify.
+All development work should start from a GitHub issue. Create a feature branch from the latest `main` using a descriptive issue-based name such as `issue-12-add-retry-controls`, implement the change there, and open a pull request back to `main`. Do not commit feature work directly to `main` except for explicit repository setup or emergency maintenance.
+
+Developers implement the requested change, run baseline checks, and create or update the GitHub issue with QA instructions. Treat QA as an independent validator, not as a code co-author. The QA issue should include the requirement, changed files, acceptance criteria, commands to run, and manual scenarios to verify.
 
 QA should test from user-visible behavior and leave a GitHub issue comment with:
 
@@ -34,11 +36,11 @@ QA should test from user-visible behavior and leave a GitHub issue comment with:
 - Findings with severity, reproduction steps, expected result, and actual result.
 - Any untested areas or environment limits.
 
-When QA passes, add the `qa-passwd` label. When QA fails, add `qa-failed` and comment with the failure details. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue.
+When QA passes, add the `qa-passwd` label. When QA fails, add `qa-failed` and comment with the failure details. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue. Merge the PR into `main` only after QA has passed.
 
 ## Commit & Pull Request Guidelines
 
-The GitHub repository is `git@github.com:Taskix-AI/Taskix.git`. Use concise, imperative commit subjects, for example `Add workflow retry controls`. Pull requests should include a short problem summary, the implemented change, verification commands run, linked issues when applicable, QA issue status, and screenshots for UI changes.
+The GitHub repository is `git@github.com:Taskix-AI/Taskix.git`. Use concise, imperative commit subjects, for example `Add workflow retry controls`. Pull requests should link the source issue, summarize the problem and implemented change, list verification commands, report QA issue status, and include screenshots for UI changes.
 
 ## Security & Configuration Tips
 
