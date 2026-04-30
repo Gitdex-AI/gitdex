@@ -33,6 +33,9 @@ QA should test from user-visible behavior and leave a GitHub issue comment with:
 - `Status: pass`, `fail`, or `blocked`.
 - Commands run, including `npm run typecheck` and `npm run build`.
 - Manual scenarios tested.
+- For UI or interaction changes, browser validation run with `npm run dev` at `http://127.0.0.1:8000`.
+- Pages visited, controls clicked, and observed results for browser validation.
+- Screenshots, or a concise visual description when screenshots are not available.
 - Findings with severity, reproduction steps, expected result, and actual result.
 - Any untested areas or environment limits.
 
