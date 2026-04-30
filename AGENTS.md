@@ -54,6 +54,26 @@ Keep secrets in `.env` or local settings, never in source files. Common local va
 
 Project: Issue 16 QA Worktree
 
+Minimal local QA smoke workflow for main-flow E2E validation:
+
+- Workflow ID: `WF-20260430-001`
+- Implementation issue: https://github.com/Taskix-AI/Taskix/issues/23
+- QA smoke job name: `taskix-main-flow-local-smoke`
+- Scope: no-deploy validation only; run locally against `npm run dev` at `http://127.0.0.1:8000`
+- Required sessions/accounts: local Node/npm environment, authenticated `gh` session, authenticated `codex` session, and one local browser session for manual validation
+- Execution timeline/order:
+  1. Confirm `codex --version`, `codex login`, and `gh auth status`.
+  2. Run `npm run typecheck`.
+  3. Run `npm run build`.
+  4. Start the app with `npm run dev`.
+  5. Execute the `taskix-main-flow-local-smoke` manual browser pass against `http://127.0.0.1:8000` and record outcomes.
+  6. Add QA evidence to the implementation issue before architect review and merge readiness.
+- GitHub links:
+  - Source issue: https://github.com/Taskix-AI/Taskix/issues/23
+  - Implementation PR: https://github.com/Taskix-AI/Taskix/pull/24
+  - QA evidence record: issue `#23` comments thread at https://github.com/Taskix-AI/Taskix/issues/23
+- Architect merge-readiness inputs: confirmation that the smoke job passed or failed, the exact commands run, the browser scenarios exercised, and the final QA evidence link on issue `#23`
+
 - PM keeps talking with the user and hands confirmed requirements to the architect.
 - Architect creates issues with developerRole and ownedPaths.
 - Developers must stay inside ownedPaths.
