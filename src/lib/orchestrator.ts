@@ -421,6 +421,14 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
         autoDeploy: project.autoDeploy,
         qaPassed: true
       });
+      if (!project.autoDeploy && architectReview.decision === "merged") {
+        architectReview = {
+          ...architectReview,
+          decision: "ready_to_merge",
+          summary: `${architectReview.summary}\n\nTaskix stopped before merge because automatic merge is not enabled for this project.`,
+          labelsApplied: [...new Set([...architectReview.labelsApplied.filter((label) => label !== "taskix:merged"), "taskix:ready-to-merge"])]
+        };
+      }
       if (workflow.projectId) {
         await appendAgentMessages({
           sessionKey: `${workflow.projectId}:architect`,
