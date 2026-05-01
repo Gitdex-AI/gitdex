@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
 import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
-import { expectedDeveloperBranch, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
+import { expectedDeveloperBranch, manualDeployArchitectPolicyDecision, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
@@ -525,16 +525,18 @@ async function recoverDeveloperPullRequest(
   }
 }
 
-async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: string | null; base: string | null }> {
+async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: string | null; base: string | null; state: string | null; merged: boolean }> {
   try {
-    const { stdout } = await execFileAsync("gh", ["pr", "view", pr, "--repo", repo, "--json", "headRefName,baseRefName"]);
-    const payload = JSON.parse(stdout) as { headRefName?: string; baseRefName?: string };
+    const { stdout } = await execFileAsync("gh", ["pr", "view", pr, "--repo", repo, "--json", "headRefName,baseRefName,state,mergedAt"]);
+    const payload = JSON.parse(stdout) as { headRefName?: string; baseRefName?: string; state?: string; mergedAt?: string | null };
     return {
       head: payload.headRefName?.trim() || null,
-      base: payload.baseRefName?.trim() || null
+      base: payload.baseRefName?.trim() || null,
+      state: payload.state?.trim() || null,
+      merged: Boolean(payload.mergedAt)
     };
   } catch {
-    return { head: null, base: null };
+    return { head: null, base: null, state: null, merged: false };
   }
 }
 
@@ -577,10 +579,12 @@ async function requestInitialPrReview(project: ProjectRecord, issue: IssueRecord
 
 async function requestFinalPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
   if (!project.autoDeploy && issue.githubIssueNumber) {
-    const architectDecision = await codex.architectConfirmManualReady({
-      repo: project.githubRepo,
-      issueNumber: issue.githubIssueNumber,
-      prUrl
+    const prRefs = await readPullRequestRefs(project.githubRepo, prUrl);
+    const architectDecision = manualDeployArchitectPolicyDecision({
+      prUrl,
+      qaPassed: true,
+      prState: prRefs.state,
+      prMerged: prRefs.merged
     });
     const labelPlan = manualDeployFinalLabelPlan({ prUrl, architectDecision });
     if (labelPlan.decision !== "ready_to_merge") {

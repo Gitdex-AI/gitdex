@@ -46,6 +46,45 @@ export function manualDeployFinalLabelPlan(input: {
   };
 }
 
+export function manualDeployArchitectPolicyDecision(input: {
+  prUrl: string;
+  qaPassed: boolean;
+  prState?: string | null;
+  prMerged?: boolean;
+}): ArchitectPrReviewResult {
+  const state = input.prState?.toUpperCase() ?? "OPEN";
+  if (!input.qaPassed) {
+    return {
+      decision: "blocked",
+      summary: `Architect policy blocked ${input.prUrl}: QA has not passed.`,
+      labelsApplied: [],
+      comments: []
+    };
+  }
+  if (input.prMerged || state === "MERGED") {
+    return {
+      decision: "blocked",
+      summary: `Architect policy blocked ${input.prUrl}: PR is already merged.`,
+      labelsApplied: [],
+      comments: []
+    };
+  }
+  if (state !== "OPEN") {
+    return {
+      decision: "blocked",
+      summary: `Architect policy blocked ${input.prUrl}: PR state is ${state}.`,
+      labelsApplied: [],
+      comments: []
+    };
+  }
+  return {
+    decision: "ready_to_merge",
+    summary: `Architect policy approved ${input.prUrl} after QA passed; manual deployment keeps the PR open for human merge.`,
+    labelsApplied: [],
+    comments: []
+  };
+}
+
 function uniqueNonEmpty(value: string, index: number, values: string[]): boolean {
   return Boolean(value) && values.indexOf(value) === index;
 }
