@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
 import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { expectedDeveloperBranch, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
@@ -490,8 +491,11 @@ async function recoverDeveloperPullRequest(
   branch: string
 ): Promise<{ prUrl: string; branch: string; base: string | null; source: string } | null> {
   try {
-    const expectedBranch = expectedDeveloperBranch(workflow, issue);
-    const branchCandidates = [...new Set([branch, expectedBranch].map((value) => value.trim()).filter(Boolean))];
+    const branchCandidates = prRecoveryBranches({
+      developerBranch: branch,
+      workflowCode: displayWorkflowCode(workflow),
+      issueNumberOrId: issue.githubIssueNumber ?? issue.issueId
+    });
 
     for (const candidateBranch of branchCandidates) {
       const existingPrUrl = await findPullRequestByHeadWithGh(repo, candidateBranch);
@@ -501,7 +505,7 @@ async function recoverDeveloperPullRequest(
         prUrl: existingPrUrl,
         branch: details.head ?? candidateBranch,
         base: details.base,
-        source: candidateBranch === branch ? "developer branch lookup" : "expected workflow branch lookup"
+        source: branch && candidateBranch === branch ? "developer branch lookup" : "expected workflow branch lookup"
       };
     }
 
@@ -512,17 +516,13 @@ async function recoverDeveloperPullRequest(
     const details = await readPullRequestRefs(repo, linkedPr.url);
     return {
       prUrl: linkedPr.url,
-      branch: details.head ?? expectedBranch,
+      branch: details.head ?? expectedDeveloperBranch(displayWorkflowCode(workflow), issue.githubIssueNumber ?? issue.issueId),
       base: details.base,
       source: "linked issue pull request lookup"
     };
   } catch {
     return null;
   }
-}
-
-function expectedDeveloperBranch(workflow: WorkflowRecord, issue: IssueRecord): string {
-  return `taskix/${displayWorkflowCode(workflow)}-issue-${issue.githubIssueNumber ?? issue.issueId}`;
 }
 
 async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: string | null; base: string | null }> {
@@ -582,34 +582,34 @@ async function requestFinalPrReview(project: ProjectRecord, issue: IssueRecord, 
       issueNumber: issue.githubIssueNumber,
       prUrl
     });
-    if (architectDecision.decision !== "ready_to_merge") {
-      const addLabels = ["taskix:blocked"];
-      const removeLabels = ["taskix:qa-running", "taskix:ready-to-merge"];
+    const labelPlan = manualDeployFinalLabelPlan({ prUrl, architectDecision });
+    if (labelPlan.decision !== "ready_to_merge") {
       await Promise.all([
-        addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, addLabels),
-        addLabelsWithGh(project.githubRepo, prUrl, addLabels),
-        removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, removeLabels),
-        removeLabelsWithGh(project.githubRepo, prUrl, removeLabels)
+        addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
+        addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
+        removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
+        removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
       ]);
       return {
         ...architectDecision,
-        labelsApplied: [...new Set([...architectDecision.labelsApplied, ...addLabels])]
+        decision: labelPlan.decision,
+        summary: labelPlan.summary,
+        labelsApplied: labelPlan.labelsApplied,
+        comments: labelPlan.comments
       };
     }
 
-    const addLabels = ["taskix:ready-to-merge"];
-    const removeLabels = ["taskix:need-qa", "taskix:qa-running", "taskix:blocked"];
     await Promise.all([
-      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, addLabels),
-      addLabelsWithGh(project.githubRepo, prUrl, addLabels),
-      removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, removeLabels),
-      removeLabelsWithGh(project.githubRepo, prUrl, removeLabels)
+      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
+      addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
+      removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
+      removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
     ]);
     return {
       decision: "ready_to_merge" as const,
-      summary: `${architectDecision.summary}\n\nManual-deploy project: architect approved merge readiness after QA; Taskix marked ${prUrl} ready to merge without merging it.`,
-      labelsApplied: [...new Set([...architectDecision.labelsApplied, ...addLabels])],
-      comments: architectDecision.comments
+      summary: labelPlan.summary,
+      labelsApplied: labelPlan.labelsApplied,
+      comments: labelPlan.comments
     };
   }
 

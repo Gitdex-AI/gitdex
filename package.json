@@ -7,7 +7,8 @@
     "dev": "next dev -H 127.0.0.1 -p 8000",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 8000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:issue-run": "node --experimental-strip-types scripts/issue-run-policy.test.mjs"
   },
   "dependencies": {
     "@mantine/core": "^9.1.0",
