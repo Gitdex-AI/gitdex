@@ -813,6 +813,34 @@ pre,
   line-height: var(--leading-tight);
 }
 
+.execution-log-bubble details {
+  margin: 0;
+}
+
+.execution-log-bubble summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.execution-log-bubble summary::-webkit-details-marker {
+  display: none;
+}
+
+.execution-log-content {
+  max-height: 360px;
+  margin: 12px 0 0;
+  padding: 12px;
+  overflow: auto;
+  color: #1f2937;
+  background: #f8fafc;
+  border: 1px solid #dbe5f3;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .project-context {
   position: sticky;
   top: 18px;

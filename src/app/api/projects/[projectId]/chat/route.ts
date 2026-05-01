@@ -49,6 +49,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     role,
     title: chatRoleLabel(role),
     sessionId: result.sessionId ?? currentSessionId ?? existing?.sessionId ?? null,
+    executionLogs: result.executionLog ? [{
+      title: `${chatRoleLabel(role)} Codex execution`,
+      content: result.executionLog,
+      createdAt: new Date().toISOString(),
+      status: "ok"
+    }] : [],
     messages: [
       { role: "user", content: message, createdAt: now },
       { role: "assistant", content: result.text, createdAt: new Date().toISOString() }

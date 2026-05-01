@@ -66,6 +66,7 @@ export type DeveloperIssueResult = {
   prUrl: string;
   changedFiles: string[];
   testsRun: string[];
+  executionLog?: string;
 };
 
 export type ArchitectPrReviewDecision = "need_qa" | "ready_to_merge" | "changes_requested" | "merged" | "blocked";
@@ -75,6 +76,7 @@ export type ArchitectPrReviewResult = {
   summary: string;
   labelsApplied: string[];
   comments: string[];
+  executionLog?: string;
 };
 
 export type QaPrReviewResult = {
@@ -83,6 +85,7 @@ export type QaPrReviewResult = {
   findings: string[];
   labelsApplied: string[];
   testsRun: string[];
+  executionLog?: string;
 };
 
 export type QaResult = {
@@ -160,6 +163,13 @@ export type AgentMessage = {
   createdAt: string;
 };
 
+export type AgentExecutionLog = {
+  title: string;
+  content: string;
+  createdAt: string;
+  status?: "ok" | "failed";
+};
+
 export type AgentSessionRecord = {
   sessionKey: string;
   projectId: string;
@@ -183,6 +193,7 @@ export type AgentSessionRecord = {
   closedAt?: string | null;
   archivedAt?: string | null;
   messages: AgentMessage[];
+  executionLogs?: AgentExecutionLog[];
   updatedAt: string;
 };
 
