@@ -178,6 +178,7 @@ function buildWorkflowStepDetails(input: {
     ),
     planning: (
       <Stack gap="xs">
+        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {input.queuedWorkflow ? (
           <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
             <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -193,6 +194,7 @@ function buildWorkflowStepDetails(input: {
     ),
     developer: (
       <Stack gap="xs">
+        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderJobRows(input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
         {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
@@ -200,12 +202,14 @@ function buildWorkflowStepDetails(input: {
     ),
     qa: (
       <Stack gap="xs">
+        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderQaIssueRows(input.activeWorkflows, input.sessions)}
         {renderSessionRows(qaSessions)}
       </Stack>
     ),
     merge: (
       <Stack gap="xs">
+        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderMergeIssueRows(input.activeWorkflows)}
       </Stack>
     ),
@@ -216,6 +220,30 @@ function buildWorkflowStepDetails(input: {
       </Stack>
     )
   };
+}
+
+function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
+  if (!workflows.length) return <Text size="xs" c="dimmed">No active workflow controls for this step.</Text>;
+  return workflows.map((workflow) => (
+    <div key={workflow.workflowId} className="workflow-control-row">
+      <div>
+        <Text size="sm" fw={760} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+        <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+      </div>
+      <Group gap={6} wrap="nowrap">
+        <Button
+          component="a"
+          href={`/projects/${projectId}/workflows/${workflow.workflowId}`}
+          variant="light"
+          size="compact-xs"
+          radius="xl"
+        >
+          Open
+        </Button>
+        <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} />
+      </Group>
+    </div>
+  ));
 }
 
 function renderJobRows(jobs: JobRecord[], queuedJobId: string | null): ReactNode {
