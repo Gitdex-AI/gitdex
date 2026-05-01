@@ -5,7 +5,8 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { allTaskixLabels, roleLabel } from "@/lib/github-labels";
 import { dataDir } from "@/lib/paths";
-import type { IssueSpec, ProjectTriageGroup, ProjectTriageItem } from "@/lib/types";
+import { classifyTriageIssue } from "@/lib/triage-classifier";
+import type { IssueSpec, ProjectTriageItem } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
 
@@ -116,25 +117,6 @@ async function listLinkedPullRequestsWithGh(repo: string, issueNumber: number): 
 
 function pickPrimaryPullRequest(prs: GhTriagePr[]): GhTriagePr | null {
   return prs.find((pr) => pr.state === "OPEN") ?? prs[0] ?? null;
-}
-
-function classifyTriageIssue(input: {
-  issueState: string;
-  issueLabels: string[];
-  primaryLinkedPrState: string | null;
-  primaryLinkedPrLabels: string[];
-}): ProjectTriageGroup {
-  const labels = new Set([...input.issueLabels, ...input.primaryLinkedPrLabels].map((label) => label.toLowerCase()));
-  if (input.issueState === "CLOSED" || input.primaryLinkedPrState === "MERGED" || hasAnyLabel(labels, ["taskix:merged"])) return "done";
-  if (hasAnyLabel(labels, ["taskix:blocked", "qa-failed", "taskix:qa-failed"])) return "blocked";
-  if (hasAnyLabel(labels, ["taskix:need-qa", "qa-running", "taskix:qa-running"])) return "needs_qa";
-  if (hasAnyLabel(labels, ["taskix:ready-to-merge", "qa-passed", "taskix:qa-passed"])) return "ready_to_merge";
-  if (hasAnyLabel(labels, ["taskix:dev-running", "taskix:pr-opened"]) || input.primaryLinkedPrState === "OPEN") return "in_progress";
-  return "untracked";
-}
-
-function hasAnyLabel(labels: Set<string>, expected: string[]): boolean {
-  return expected.some((label) => labels.has(label));
 }
 
 export async function ensureTaskixLabels(repo: string): Promise<void> {
