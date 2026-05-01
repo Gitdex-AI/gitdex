@@ -9,10 +9,19 @@ import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
 import type { AgentMessage, AgentSessionRecord } from "@/lib/types";
 
 type TimelineMessage = AgentMessage & {
+  kind: "message";
   sessionKey: string;
   sourceLabel: string;
   sourceRole: AgentSessionRecord["role"];
   session: AgentSessionRecord | null;
+};
+
+type TimelineExecutionLog = NonNullable<AgentSessionRecord["executionLogs"]>[number] & {
+  kind: "execution-log";
+  sessionKey: string;
+  sourceLabel: string;
+  sourceRole: AgentSessionRecord["role"];
+  session: AgentSessionRecord;
 };
 
 export function ProjectChatArea({
@@ -58,6 +67,7 @@ export function ProjectChatArea({
     setPending(true);
     setOptimisticMessage({
       role: "user",
+      kind: "message",
       content: target.message,
       createdAt: new Date().toISOString(),
       sessionKey: `pending:${target.role}`,
@@ -143,11 +153,20 @@ function MessageList({
   const messages = [
     ...sessions.flatMap((session) => session.messages.map((message) => ({
       ...message,
+      kind: "message",
       sessionKey: session.sessionKey,
       sourceLabel: message.role === "user" ? `You → ${chatRoleLabel(session.role, session.title, session.developerRole)}` : chatRoleLabel(session.role, session.title, session.developerRole),
       sourceRole: session.role,
       session
     } satisfies TimelineMessage))),
+    ...sessions.flatMap((session) => (session.executionLogs ?? []).map((log) => ({
+      ...log,
+      kind: "execution-log",
+      sessionKey: session.sessionKey,
+      sourceLabel: chatRoleLabel(session.role, session.title, session.developerRole),
+      sourceRole: session.role,
+      session
+    } satisfies TimelineExecutionLog))),
     ...(optimisticMessage ? [optimisticMessage] : [])
   ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
@@ -159,22 +178,26 @@ function MessageList({
     <Stack gap="md">
       {inspectedSession ? <SessionRuntime projectId={projectId} session={inspectedSession} /> : null}
       {messages.map((message, index) => (
-        <div key={`${message.sessionKey}-${message.createdAt}-${index}`} className={`chat-message ${message.role}`}>
-          <div className="chat-avatar">{chatAvatarText(message)}</div>
-          <div className="chat-bubble">
-            <Group gap="xs" mb={6} justify="space-between" align="center">
-              <Group gap={6}>
-                <Badge variant="light">{message.sourceLabel}</Badge>
-                {message.session?.workflowId ? <Badge size="xs" variant="outline">{message.session.workflowId}</Badge> : null}
-                {message.session?.issueId ? <Badge size="xs" variant="outline">{message.session.issueId}</Badge> : null}
-              </Group>
-              <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
-                {formatMessageTime(message.createdAt)}
-              </Text>
-            </Group>
-            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>{message.content}</Text>
-          </div>
-        </div>
+        message.kind === "execution-log"
+          ? <ExecutionLogItem key={`${message.sessionKey}-log-${message.createdAt}-${index}`} log={message} />
+          : (
+            <div key={`${message.sessionKey}-${message.createdAt}-${index}`} className={`chat-message ${message.role}`}>
+              <div className="chat-avatar">{chatAvatarText(message)}</div>
+              <div className="chat-bubble">
+                <Group gap="xs" mb={6} justify="space-between" align="center">
+                  <Group gap={6}>
+                    <Badge variant="light">{message.sourceLabel}</Badge>
+                    {message.session?.workflowId ? <Badge size="xs" variant="outline">{message.session.workflowId}</Badge> : null}
+                    {message.session?.issueId ? <Badge size="xs" variant="outline">{message.session.issueId}</Badge> : null}
+                  </Group>
+                  <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
+                    {formatMessageTime(message.createdAt)}
+                  </Text>
+                </Group>
+                <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>{message.content}</Text>
+              </div>
+            </div>
+          )
       ))}
       {pending && (
         <div className="chat-message assistant pending">
@@ -194,14 +217,39 @@ function MessageList({
   );
 }
 
-function chatAvatarText(message: TimelineMessage): string {
-  if (message.role === "user") return "U";
+function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
+  return (
+    <div className="chat-message system">
+      <div className="chat-avatar">{chatAvatarText(log)}</div>
+      <div className="chat-bubble execution-log-bubble">
+        <details>
+          <summary>
+            <Group gap="xs" justify="space-between" wrap="nowrap">
+              <Group gap={6}>
+                <Badge variant="light">{log.sourceLabel}</Badge>
+                <Badge size="xs" color={log.status === "failed" ? "red" : "green"} variant="light">execution log</Badge>
+              </Group>
+              <Text component="time" dateTime={log.createdAt} size="xs" c="dimmed">
+                {formatMessageTime(log.createdAt)}
+              </Text>
+            </Group>
+            <Text size="sm" fw={760} mt={6}>{log.title}</Text>
+          </summary>
+          <pre className="execution-log-content">{log.content || "No Codex execution output captured."}</pre>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+function chatAvatarText(message: TimelineMessage | TimelineExecutionLog): string {
+  if (message.kind === "message" && message.role === "user") return "U";
   if (message.sourceRole === "product_manager") return "PM";
   if (message.sourceRole === "architect") return "AR";
   if (message.sourceRole === "devops") return "DO";
   if (message.sourceRole === "developer") return "DV";
   if (message.sourceRole === "qa") return "QA";
-  return message.role === "assistant" ? "A" : "S";
+  return message.kind === "message" && message.role === "assistant" ? "A" : "S";
 }
 
 function SessionRuntime({ projectId, session }: { projectId: string; session: AgentSessionRecord }) {

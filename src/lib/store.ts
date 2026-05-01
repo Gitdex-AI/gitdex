@@ -217,6 +217,7 @@ export async function appendAgentMessages(input: {
   closedAt?: string | null;
   archivedAt?: string | null;
   status?: AgentSessionRecord["status"];
+  executionLogs?: NonNullable<AgentSessionRecord["executionLogs"]>;
   messages: AgentSessionRecord["messages"];
 }): Promise<AgentSessionRecord> {
   const now = new Date().toISOString();
@@ -244,6 +245,7 @@ export async function appendAgentMessages(input: {
     closedAt: input.closedAt ?? existing?.closedAt ?? null,
     archivedAt: input.archivedAt ?? existing?.archivedAt ?? null,
     messages: [...(existing?.messages ?? []), ...input.messages],
+    executionLogs: [...(existing?.executionLogs ?? []), ...(input.executionLogs ?? [])],
     updatedAt: now
   };
   await saveAgentSession(session);

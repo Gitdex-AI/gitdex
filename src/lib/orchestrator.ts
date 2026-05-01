@@ -322,6 +322,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       labels: developerResult.prUrl ? ["taskix:pr-opened", "taskix:architect-review"] : ["taskix:blocked"],
       closedAt: closeAt,
       archivedAt: closeAt,
+      executionLogs: developerResult.executionLog ? [{
+        title: `Developer Codex execution for ${issue.title}`,
+        content: developerResult.executionLog,
+        createdAt: finishedAt,
+        status: developerResult.prUrl ? "ok" : "failed"
+      }] : [],
       messages: [
         { role: "assistant", content: `Summary: ${developerResult.summary}\nBranch: ${developerResult.branch || "none"}\nPR: ${developerResult.prUrl || "none"}\nTests: ${developerResult.testsRun.join(", ") || "none"}`, createdAt: new Date().toISOString() }
       ]
@@ -354,6 +360,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       title: "Architect",
       workflowId: workflow.workflowId,
       issueId: issue.issueId,
+      executionLogs: architectReview.executionLog ? [{
+        title: `Architect Codex review for ${issue.title}`,
+        content: architectReview.executionLog,
+        createdAt: new Date().toISOString(),
+        status: architectReview.decision === "blocked" || architectReview.decision === "changes_requested" ? "failed" : "ok"
+      }] : [],
       messages: [
         { role: "user", content: `Review PR for issue ${issue.issueId}: ${developerResult.prUrl}`, createdAt: new Date().toISOString() },
         { role: "assistant", content: `Decision: ${architectReview.decision}\n${architectReview.summary}\nLabels: ${architectReview.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }
@@ -416,6 +428,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       labels: qaResult.labelsApplied,
       closedAt: qaCloseAt,
       archivedAt: qaCloseAt,
+      executionLogs: qaResult.executionLog ? [{
+        title: `QA Codex execution for ${issue.title}`,
+        content: qaResult.executionLog,
+        createdAt: qaFinishedAt,
+        status: qaResult.passed ? "ok" : "failed"
+      }] : [],
       messages: [
           { role: "assistant", content: `Passed: ${qaResult.passed}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${qaResult.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }
       ]
@@ -432,6 +450,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
           title: "Architect",
           workflowId: workflow.workflowId,
           issueId: issue.issueId,
+          executionLogs: architectReview.executionLog ? [{
+            title: `Architect final Codex review for ${issue.title}`,
+            content: architectReview.executionLog,
+            createdAt: new Date().toISOString(),
+            status: architectReview.decision === "blocked" || architectReview.decision === "changes_requested" ? "failed" : "ok"
+          }] : [],
           messages: [
             { role: "user", content: `QA passed PR ${developerResult.prUrl}. Perform final review/merge for issue ${issue.issueId}.`, createdAt: new Date().toISOString() },
             { role: "assistant", content: `Decision: ${architectReview.decision}\n${architectReview.summary}\nLabels: ${architectReview.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }

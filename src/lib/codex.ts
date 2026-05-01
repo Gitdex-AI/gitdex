@@ -10,7 +10,7 @@ import type { ArchitectPrReviewResult, ArchitectReviewResult, DeveloperIssueResu
 import { dataDir, rootDir } from "@/lib/paths";
 import type { Settings } from "@/lib/types";
 
-type CodexTextResult = { text: string; sessionId?: string | null };
+type CodexTextResult = { text: string; sessionId?: string | null; executionLog?: string };
 type RunJsonOptions = { cwd?: string };
 type RunCodexOptions = { cwd?: string };
 const execFileAsync = promisify(execFile);
@@ -332,12 +332,13 @@ Execution rules:
 
 Return JSON with summary, branch, prUrl, changedFiles, testsRun.`;
     const result = await this.runJsonResult<DeveloperIssueResult>(prompt, schema, { cwd: workspaceDir });
-    return result.value ?? {
+    return result.value ? { ...result.value, executionLog: result.executionLog } : {
       summary: `Developer runner did not complete issue #${input.issueNumber}.${result.error ? `\n\nCodex error:\n${result.error}` : ""}`,
       branch: "",
       prUrl: "",
       changedFiles: [],
-      testsRun: []
+      testsRun: [],
+      executionLog: result.executionLog
     };
   }
 
@@ -372,11 +373,13 @@ Required GitHub label behavior:
 - If auto deploy is enabled and QA has passed, verify repository checks and branch state, then still stop at decision "ready_to_merge" without merging.
 
 Return JSON with decision, summary, labelsApplied, comments.`;
-    return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
+    const result = await this.runJsonResult<ArchitectPrReviewResult>(prompt, schema);
+    return result.value ? { ...result.value, executionLog: result.executionLog } : {
       decision: "blocked",
       summary: `Architect runner did not complete PR review for ${input.prUrl}.`,
       labelsApplied: [],
-      comments: []
+      comments: [],
+      executionLog: result.executionLog
     };
   }
 
@@ -411,11 +414,13 @@ Rules:
 - Return "blocked" if readiness cannot be determined from available GitHub state.
 
 Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied to an empty array.`;
-    return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
+    const result = await this.runJsonResult<ArchitectPrReviewResult>(prompt, schema);
+    return result.value ? { ...result.value, executionLog: result.executionLog } : {
       decision: "blocked",
       summary: `Architect runner did not complete manual ready review for ${input.prUrl}.`,
       labelsApplied: [],
-      comments: []
+      comments: [],
+      executionLog: result.executionLog
     };
   }
 
@@ -446,12 +451,14 @@ Required GitHub label behavior:
 - If failed, comment findings on the PR, add taskix:qa-failed, and remove taskix:qa-running.
 
 Return JSON with passed, summary, findings, labelsApplied, testsRun.`;
-    return (await this.runJson<QaPrReviewResult>(prompt, schema)) ?? {
+    const result = await this.runJsonResult<QaPrReviewResult>(prompt, schema);
+    return result.value ? { ...result.value, executionLog: result.executionLog } : {
       passed: false,
       summary: `QA runner did not complete PR review for ${input.prUrl}.`,
       findings: ["QA runner did not return a result."],
       labelsApplied: [],
-      testsRun: []
+      testsRun: [],
+      executionLog: result.executionLog
     };
   }
 
@@ -557,7 +564,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
     return (await this.runJsonResult<T>(prompt, schema)).value;
   }
 
-  private async runJsonResult<T>(prompt: string, schema: object, options: RunJsonOptions = {}): Promise<{ value: T | null; error: string | null }> {
+  private async runJsonResult<T>(prompt: string, schema: object, options: RunJsonOptions = {}): Promise<{ value: T | null; error: string | null; executionLog: string }> {
     const tmp = await this.tmpDir();
     const schemaPath = path.join(tmp, "schema.json");
     const outputPath = path.join(tmp, "output.json");
@@ -575,11 +582,12 @@ Summarize code review outcome, merge readiness, and deployment status according 
       outputPath,
       prompt
     ], { cwd: options.cwd });
-    if (!result.ok) return { value: null, error: result.stderr.trim() || "Codex exited with a non-zero status." };
+    const executionLog = formatCodexExecutionLog(result.stdout, result.stderr);
+    if (!result.ok) return { value: null, error: result.stderr.trim() || "Codex exited with a non-zero status.", executionLog };
     try {
-      return { value: JSON.parse(await readFile(outputPath, "utf8")) as T, error: null };
+      return { value: JSON.parse(await readFile(outputPath, "utf8")) as T, error: null, executionLog };
     } catch {
-      return { value: null, error: "Codex completed but did not produce valid JSON output." };
+      return { value: null, error: "Codex completed but did not produce valid JSON output.", executionLog };
     }
   }
 
@@ -590,13 +598,13 @@ Summarize code review outcome, merge readiness, and deployment status according 
     const result = await this.runCodex(args);
     if (!result.ok) return null;
     try {
-      return { text: (await readFile(outputPath, "utf8")).trim(), sessionId: extractSessionId(result.stderr) ?? sessionId };
+      return { text: (await readFile(outputPath, "utf8")).trim(), sessionId: extractSessionId(result.stderr) ?? sessionId, executionLog: formatCodexExecutionLog(result.stdout, result.stderr) };
     } catch {
       return null;
     }
   }
 
-  private async runCodex(args: string[], options: RunCodexOptions = {}): Promise<{ ok: boolean; stderr: string }> {
+  private async runCodex(args: string[], options: RunCodexOptions = {}): Promise<{ ok: boolean; stdout: string; stderr: string }> {
     const codexHome = this.settings.codexHome;
     await mkdir(codexHome, { recursive: true });
     return new Promise((resolve) => {
@@ -605,14 +613,18 @@ Summarize code review outcome, merge readiness, and deployment status according 
         env: { ...process.env, CODEX_HOME: codexHome },
         stdio: ["ignore", "pipe", "pipe"]
       });
+      let stdout = "";
       let stderr = "";
       let settled = false;
       const timeout = setTimeout(() => {
         if (settled) return;
         settled = true;
         child.kill("SIGTERM");
-        resolve({ ok: false, stderr: `${stderr}\nCodex timed out after ${Math.round(codexTimeoutMs / 1000)} seconds.` });
+        resolve({ ok: false, stdout, stderr: `${stderr}\nCodex timed out after ${Math.round(codexTimeoutMs / 1000)} seconds.` });
       }, codexTimeoutMs);
+      child.stdout.on("data", (chunk) => {
+        stdout += String(chunk);
+      });
       child.stderr.on("data", (chunk) => {
         stderr += String(chunk);
       });
@@ -620,13 +632,13 @@ Summarize code review outcome, merge readiness, and deployment status according 
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
-        resolve({ ok: false, stderr });
+        resolve({ ok: false, stdout, stderr });
       });
       child.on("close", (code) => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
-        resolve({ ok: code === 0, stderr });
+        resolve({ ok: code === 0, stdout, stderr });
       });
     });
   }
@@ -668,6 +680,14 @@ function objectSchema(properties: Record<string, unknown>): object {
 function extractSessionId(stderr: string): string | null {
   const line = stderr.split("\n").find((item) => item.toLowerCase().includes("session id:"));
   return line?.split(":").slice(1).join(":").trim() || null;
+}
+
+function formatCodexExecutionLog(stdout: string, stderr: string): string {
+  const sections = [
+    stdout.trim() ? `stdout\n${stdout.trim()}` : "",
+    stderr.trim() ? `stderr\n${stderr.trim()}` : ""
+  ].filter(Boolean);
+  return sections.join("\n\n");
 }
 
 function approvalArgs(policy: string): string[] {
