@@ -130,7 +130,7 @@ export default async function ProjectDetailPage({
                     <ProjectRunJobsForm projectId={project.projectId} label={nextAction.buttonLabel} />
                   ) : (
                     <Button type="button" variant="light" size="xs" radius="xl" disabled leftSection={<Play size={14} />}>
-                      No Pending Work
+                      {nextAction.disabledLabel}
                     </Button>
                   )}
                 </Group>
@@ -299,6 +299,7 @@ type WorkflowNextAction = {
   phase: string;
   description: string;
   buttonLabel: string | null;
+  disabledLabel: string;
   tone: "ready" | "running" | "blocked" | "idle";
   icon: ReactNode;
   planningPending: number;
@@ -319,6 +320,7 @@ function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
       phase: "Running",
       description: "Taskix is executing the current job. Refresh or wait for the session and job status to update before starting another step.",
       buttonLabel: null,
+      disabledLabel: "Running",
       tone: "running",
       icon: <Clock size={18} />,
       planningPending,
@@ -334,6 +336,7 @@ function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
       phase: "Developer work",
       description: "Runs one planned developer issue. The developer should create a branch and pull request, then stop for QA and merge readiness.",
       buttonLabel: "Start Next Developer Issue",
+      disabledLabel: "Start Next Developer Issue",
       tone: "ready",
       icon: <Play size={18} />,
       planningPending,
@@ -349,6 +352,7 @@ function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
       phase: "Planning",
       description: "The architect will split the requirement into GitHub issues. Developer work will not start until you run the next step.",
       buttonLabel: "Run Architect Planning",
+      disabledLabel: "Run Architect Planning",
       tone: "ready",
       icon: <GitBranch size={18} />,
       planningPending,
@@ -364,6 +368,7 @@ function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
       phase: "Blocked",
       description: "A previous job failed or timed out. Inspect the session, fix the blocker, then retry from the workflow or session controls.",
       buttonLabel: null,
+      disabledLabel: "Blocked",
       tone: "blocked",
       icon: <AlertCircle size={18} />,
       planningPending,
@@ -378,6 +383,7 @@ function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
     phase: "Idle",
     description: "Queue a requirement to start planning, or review existing workflows and PRs before taking another manual step.",
     buttonLabel: null,
+    disabledLabel: "No Pending Work",
     tone: "idle",
     icon: <CheckCircle2 size={18} />,
     planningPending,
