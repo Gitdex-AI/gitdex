@@ -299,7 +299,9 @@ Required GitHub label behavior:
 
 Execution rules:
 - Use gh to read issue #${input.issueNumber}; treat GitHub as the source of truth.
-- Clone or use the repo in a workspace under this project if needed.
+- Do not modify the current Taskix app checkout or its .git directory.
+- Create or reuse an isolated working clone under data/taskix-workspaces/${input.workflowId}-issue-${input.issueNumber}.
+- Run git fetch, checkout, commit, push, and gh pr create only inside that isolated clone.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
