@@ -262,7 +262,7 @@ pre,
 
 .project-chat-layout {
   display: grid;
-  grid-template-columns: minmax(520px, 1fr) minmax(430px, 34vw);
+  grid-template-columns: minmax(480px, 1fr) minmax(520px, clamp(520px, 40vw, 680px));
   gap: 18px;
   align-items: start;
 }
