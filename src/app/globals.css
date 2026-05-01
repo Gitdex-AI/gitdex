@@ -415,6 +415,14 @@ pre,
   border-color: #bbf7d0;
 }
 
+.workflow-progress-controls {
+  margin-top: 12px;
+  padding: 10px;
+  background: #f8fbff;
+  border: 1px solid #dbe5f3;
+  border-radius: 12px;
+}
+
 .workflow-progress-step {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);

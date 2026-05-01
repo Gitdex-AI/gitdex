@@ -123,7 +123,13 @@ export default async function ProjectDetailPage({
             </Group>
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
-              <WorkflowProgressList steps={workflowProgress} nextAction={nextAction} projectId={project.projectId} stepDetails={workflowStepDetails} />
+              <WorkflowProgressList
+                steps={workflowProgress}
+                nextAction={nextAction}
+                projectId={project.projectId}
+                activeWorkflows={visibleActiveWorkflows}
+                stepDetails={workflowStepDetails}
+              />
             </Stack>
           </Paper>
         </aside>
@@ -178,7 +184,6 @@ function buildWorkflowStepDetails(input: {
     ),
     planning: (
       <Stack gap="xs">
-        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {input.queuedWorkflow ? (
           <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
             <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -194,7 +199,6 @@ function buildWorkflowStepDetails(input: {
     ),
     developer: (
       <Stack gap="xs">
-        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderJobRows(input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
         {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
@@ -202,14 +206,12 @@ function buildWorkflowStepDetails(input: {
     ),
     qa: (
       <Stack gap="xs">
-        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderQaIssueRows(input.activeWorkflows, input.sessions)}
         {renderSessionRows(qaSessions)}
       </Stack>
     ),
     merge: (
       <Stack gap="xs">
-        {renderWorkflowActionRows(input.projectId, input.visibleActiveWorkflows)}
         {renderMergeIssueRows(input.activeWorkflows)}
       </Stack>
     ),
@@ -378,11 +380,13 @@ function WorkflowProgressList({
   steps,
   nextAction,
   projectId,
+  activeWorkflows,
   stepDetails
 }: {
   steps: WorkflowProgressStep[];
   nextAction: WorkflowNextAction;
   projectId: string;
+  activeWorkflows: WorkflowRecord[];
   stepDetails: Record<WorkflowProgressStep["id"], ReactNode>;
 }) {
   const activeIndex = getActiveWorkflowStepIndex(steps);
@@ -402,6 +406,14 @@ function WorkflowProgressList({
           </Badge>
         </Group>
       </div>
+      {activeWorkflows.length ? (
+        <div className="workflow-progress-controls">
+          <Text size="xs" fw={800} tt="uppercase" c="dimmed">Workflow controls</Text>
+          <Stack gap="xs" mt="xs">
+            {renderWorkflowActionRows(projectId, activeWorkflows)}
+          </Stack>
+        </div>
+      ) : null}
 
       <Stack gap={0} mt="sm">
         {steps.map((step, index) => (
