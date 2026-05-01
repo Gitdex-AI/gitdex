@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, Play, Wrench } from "lucide-react";
+import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, ListTodo, Play, Wrench } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -102,6 +102,17 @@ export default async function ProjectDetailPage({
                 <Text size="sm" c="dimmed">Issues assigned by architect.</Text>
               </div>
               <Group gap="xs">
+                <Button
+                  component="a"
+                  href={`/projects/${project.projectId}/github-triage`}
+                  variant="light"
+                  size="xs"
+                  radius="xl"
+                  leftSection={<ListTodo size={14} />}
+                >
+                  GitHub triage
+                </Button>
+                <ProjectRunJobsForm projectId={project.projectId} />
                 <ProjectSyncForm projectId={project.projectId} />
               </Group>
             </Group>
