@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
 import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, Play, Wrench } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
@@ -11,6 +11,7 @@ import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
+import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
 import { getWorkflowNextAction, type WorkflowNextAction } from "@/lib/workflow-next-action";
 
@@ -45,11 +46,26 @@ export default async function ProjectDetailPage({
   const queuedJobId = query.job ?? null;
   const queuedWorkflow = queuedWorkflowId ? workflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
   const queuedJob = queuedJobId ? jobs.find((job) => job.jobId === queuedJobId) ?? null : null;
-  const visibleJobs = prioritizeById(jobs, queuedJobId).slice(0, 4);
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
   const readyForArchitectPayload = findReadyForArchitectPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
   const nextAction = getWorkflowNextAction(jobs);
   const workflowProgress = getWorkflowProgress({ workflows, jobs });
+  const workflowStepDetails = buildWorkflowStepDetails({
+    projectId: project.projectId,
+    isInspectingIssueSession,
+    readyForArchitectPayload,
+    pmSession,
+    sessions,
+    dynamicSessions,
+    archivedSessions,
+    jobs,
+    activeWorkflows,
+    doneWorkflows,
+    visibleActiveWorkflows,
+    queuedWorkflow,
+    queuedJob,
+    queuedJobId
+  });
 
   return (
     <>
@@ -107,144 +123,7 @@ export default async function ProjectDetailPage({
             </Group>
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
-              {!isInspectingIssueSession && <ProjectHandoffForm projectId={project.projectId} payload={readyForArchitectPayload} />}
-              <WorkflowProgressList steps={workflowProgress} nextAction={nextAction} projectId={project.projectId} />
-              {query.queued === "1" && queuedWorkflow ? (
-                <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
-                  <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
-                  <Text size="xs" c="dimmed">
-                    {queuedWorkflow.trackingCode ?? queuedWorkflow.workflowId} is waiting in the workflow area below.
-                    {queuedJob ? ` Pending job: ${queuedJob.type} (${queuedJob.status}).` : ""}
-                  </Text>
-                </Alert>
-              ) : null}
-              {visibleJobs.map((job) => (
-                <div
-                  key={job.jobId}
-                  className="workflow-job-row"
-                  style={job.jobId === queuedJobId ? highlightedCardStyle : undefined}
-                >
-                  <Group justify="space-between" gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={700}>{job.type}</Text>
-                    <Badge size="xs" variant="light">{job.status}</Badge>
-                  </Group>
-                  <Text size="xs" c="dimmed" mt={4}>
-                    Job {job.jobId}
-                    {job.payload.workflowId ? ` · workflow ${job.payload.workflowId}` : ""}
-                    {job.error ? ` · ${job.error}` : ""}
-                  </Text>
-                </div>
-              ))}
-              {!visibleJobs.length ? <Text c="dimmed" size="sm">No queued jobs yet.</Text> : null}
-              {visibleActiveWorkflows.map((workflow) => (
-                <div
-                  key={workflow.workflowId}
-                  className="workflow-summary-card"
-                  style={workflow.workflowId === queuedWorkflowId ? highlightedCardStyle : undefined}
-                >
-                  <Group justify="space-between" gap="xs">
-                    <div>
-                      <Text fw={700} size="sm">
-                        {workflow.trackingCode ?? workflow.workflowId} · {workflow.paused ? "paused" : workflow.status}
-                      </Text>
-                      <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
-                    </div>
-                    <Group gap={6}>
-                      <Button
-                        component="a"
-                        href={`/projects/${project.projectId}/workflows/${workflow.workflowId}`}
-                        variant="light"
-                        size="compact-xs"
-                        radius="xl"
-                      >
-                        Open
-                      </Button>
-                      <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} />
-                    </Group>
-                  </Group>
-                  {workflow.issues.map((issue) => {
-                    const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
-                    const qaStatus = getIssueQaStatus(issue, qaSession);
-                    return (
-                      <Group key={issue.issueId} gap={6} wrap="nowrap">
-                        <Text size="xs" c="dimmed" lineClamp={1}>
-                          {issue.issueId}: {issue.title} · {issue.developerRole ?? issue.assigneeRole}
-                          {issue.prState ? ` · PR ${issue.prState}` : ""}
-                        </Text>
-                        <Badge color={qaStatus.color} size="xs" variant="light">{qaStatus.label}</Badge>
-                      </Group>
-                    );
-                  })}
-                </div>
-              ))}
-              {doneWorkflows.length ? (
-                <details className="completed-workflows">
-                  <summary>
-                    Completed workflows <span>{doneWorkflows.length}</span>
-                  </summary>
-                  <Stack gap="xs" mt="xs">
-                    {doneWorkflows.slice(0, 6).map((workflow) => (
-                      <a key={workflow.workflowId} href={`/projects/${project.projectId}/workflows/${workflow.workflowId}`} className="completed-workflow-row">
-                        <Group justify="space-between" wrap="nowrap">
-                          <Text size="sm" fw={700} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
-                          <Badge size="xs" variant="light">done</Badge>
-                        </Group>
-                        <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
-                      </a>
-                    ))}
-                    {doneWorkflows.length > 6 ? (
-                      <Text size="xs" c="dimmed">Showing latest 6 completed workflows.</Text>
-                    ) : null}
-                  </Stack>
-                </details>
-              ) : null}
-              {!activeWorkflows.length && !doneWorkflows.length && <Text c="dimmed" size="sm">No workflows yet.</Text>}
-            </Stack>
-          </Paper>
-
-          <Paper mt="md">
-            <Group justify="space-between" p="md" className="section-header">
-              <div>
-                <Text fw={760}>Sessions</Text>
-                <Text size="sm" c="dimmed">Dynamic developer and QA contexts.</Text>
-              </div>
-              <Group gap="xs">
-                <Badge variant="light">{dynamicSessions.length} active</Badge>
-                {archivedSessions.length ? <Badge variant="outline">{archivedSessions.length} archived</Badge> : null}
-              </Group>
-            </Group>
-            <Stack p="md" gap="xs">
-              {dynamicSessions.map((session) => (
-                <a key={session.sessionKey} href={`/projects/${project.projectId}?session=${encodeURIComponent(session.sessionKey)}`} className="session-row">
-                  <Group justify="space-between" align="center" wrap="nowrap">
-                    <div>
-                      <Text size="sm" fw={720} lineClamp={1}>{session.title}</Text>
-                      <Text size="xs" c="dimmed" lineClamp={1}>
-                        {session.issueId ?? session.role}
-                        {session.developerRole ? ` · ${session.developerRole}` : ""}
-                        {session.durationMs != null ? ` · ${formatDuration(session.durationMs)}` : ""}
-                      </Text>
-                    </div>
-                    <Badge size="xs" variant="light">{session.status}</Badge>
-                  </Group>
-                  {session.currentStep ? <Text size="xs" c="dimmed" lineClamp={1}>{session.currentStep}</Text> : null}
-                  {session.ownedPaths?.length ? <Text size="xs" c="dimmed" lineClamp={1}>Paths: {session.ownedPaths.join(", ")}</Text> : null}
-                </a>
-              ))}
-              {archivedSessions.slice(0, 3).map((session) => (
-                <a key={session.sessionKey} href={`/projects/${project.projectId}?session=${encodeURIComponent(session.sessionKey)}`} className="session-row archived">
-                  <Group justify="space-between" align="center" wrap="nowrap">
-                    <div>
-                      <Text size="sm" fw={720} lineClamp={1}>{session.title}</Text>
-                      <Text size="xs" c="dimmed" lineClamp={1}>
-                        archived{session.archivedAt ? ` · ${formatDate(session.archivedAt)}` : ""}
-                      </Text>
-                    </div>
-                    <Badge size="xs" variant="outline">{session.status}</Badge>
-                  </Group>
-                </a>
-              ))}
-              {!dynamicSessions.length && <Text c="dimmed" size="sm">No dynamic sessions yet.</Text>}
+              <WorkflowProgressList steps={workflowProgress} nextAction={nextAction} projectId={project.projectId} stepDetails={workflowStepDetails} />
             </Stack>
           </Paper>
         </aside>
@@ -268,6 +147,207 @@ const highlightedCardStyle = {
   background: "#eff6ff"
 } satisfies CSSProperties;
 
+type ProjectHandoffPayload = ComponentProps<typeof ProjectHandoffForm>["payload"];
+
+function buildWorkflowStepDetails(input: {
+  projectId: string;
+  isInspectingIssueSession: boolean;
+  readyForArchitectPayload: ProjectHandoffPayload;
+  pmSession: AgentSessionRecord | undefined;
+  sessions: AgentSessionRecord[];
+  dynamicSessions: AgentSessionRecord[];
+  archivedSessions: AgentSessionRecord[];
+  jobs: JobRecord[];
+  activeWorkflows: WorkflowRecord[];
+  doneWorkflows: WorkflowRecord[];
+  visibleActiveWorkflows: WorkflowRecord[];
+  queuedWorkflow: WorkflowRecord | null;
+  queuedJob: JobRecord | null;
+  queuedJobId: string | null;
+}): Record<WorkflowProgressStep["id"], ReactNode> {
+  const developerSessions = input.dynamicSessions.filter((session) => session.role === "developer");
+  const qaSessions = input.dynamicSessions.filter((session) => session.role === "qa");
+
+  return {
+    requirement: (
+      <Stack gap="xs">
+        <Text size="xs" c="dimmed">PM chat is the source of the requirement before it becomes planned work.</Text>
+        {input.pmSession ? <SessionLink session={input.pmSession} /> : <Text size="xs" c="dimmed">No PM session has been recorded yet.</Text>}
+        {!input.isInspectingIssueSession ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
+      </Stack>
+    ),
+    planning: (
+      <Stack gap="xs">
+        {input.queuedWorkflow ? (
+          <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
+            <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
+            <Text size="xs" c="dimmed">
+              {input.queuedWorkflow.trackingCode ?? input.queuedWorkflow.workflowId} is waiting for the planning step.
+              {input.queuedJob ? ` Pending job: ${input.queuedJob.type} (${input.queuedJob.status}).` : ""}
+            </Text>
+          </Alert>
+        ) : null}
+        {renderJobRows(input.jobs.filter((job) => job.type === "workflow_run"), input.queuedJobId)}
+        {renderSessionRows(input.sessions.filter((session) => session.role === "architect"))}
+      </Stack>
+    ),
+    developer: (
+      <Stack gap="xs">
+        {renderJobRows(input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
+        {renderWorkflowCards(input.projectId, input.visibleActiveWorkflows, input.sessions)}
+        {renderSessionRows(developerSessions)}
+      </Stack>
+    ),
+    qa: (
+      <Stack gap="xs">
+        {renderQaIssueRows(input.activeWorkflows, input.sessions)}
+        {renderSessionRows(qaSessions)}
+      </Stack>
+    ),
+    merge: (
+      <Stack gap="xs">
+        {renderMergeIssueRows(input.activeWorkflows)}
+      </Stack>
+    ),
+    done: (
+      <Stack gap="xs">
+        {renderCompletedWorkflowRows(input.projectId, input.doneWorkflows)}
+        {renderSessionRows(input.archivedSessions.slice(0, 4), true)}
+      </Stack>
+    )
+  };
+}
+
+function renderJobRows(jobs: JobRecord[], queuedJobId: string | null): ReactNode {
+  if (!jobs.length) return <Text size="xs" c="dimmed">No jobs recorded for this step.</Text>;
+  return jobs.slice(0, 4).map((job) => (
+    <div
+      key={job.jobId}
+      className="workflow-job-row"
+      style={job.jobId === queuedJobId ? highlightedCardStyle : undefined}
+    >
+      <Group justify="space-between" gap="xs" wrap="nowrap">
+        <Text size="sm" fw={700}>{job.type}</Text>
+        <Badge size="xs" variant="light">{job.status}</Badge>
+      </Group>
+      <Text size="xs" c="dimmed" mt={4}>
+        Job {job.jobId}
+        {job.payload.workflowId ? ` · workflow ${job.payload.workflowId}` : ""}
+        {job.error ? ` · ${job.error}` : ""}
+      </Text>
+    </div>
+  ));
+}
+
+function renderWorkflowCards(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
+  if (!workflows.length) return <Text size="xs" c="dimmed">No active workflow details for this step.</Text>;
+  return workflows.map((workflow) => (
+    <div key={workflow.workflowId} className="workflow-summary-card">
+      <Group justify="space-between" gap="xs">
+        <div>
+          <Text fw={700} size="sm">
+            {workflow.trackingCode ?? workflow.workflowId} · {workflow.paused ? "paused" : workflow.status}
+          </Text>
+          <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+        </div>
+        <Group gap={6}>
+          <Button component="a" href={`/projects/${projectId}/workflows/${workflow.workflowId}`} variant="light" size="compact-xs" radius="xl">
+            Open
+          </Button>
+          <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} />
+        </Group>
+      </Group>
+      {workflow.issues.map((issue) => {
+        const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
+        const qaStatus = getIssueQaStatus(issue, qaSession);
+        return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={qaStatus} />;
+      })}
+    </div>
+  ));
+}
+
+function renderQaIssueRows(workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
+  const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => issue.prUrl || issue.prState || issue.qaSessionId);
+  if (!issues.length) return <Text size="xs" c="dimmed">No QA-ready issues yet.</Text>;
+  return issues.map((issue) => {
+    const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
+    return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={getIssueQaStatus(issue, qaSession)} />;
+  });
+}
+
+function renderMergeIssueRows(workflows: WorkflowRecord[]): ReactNode {
+  const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"]));
+  if (!issues.length) return <Text size="xs" c="dimmed">No QA-passed or ready-to-merge issues yet.</Text>;
+  return issues.map((issue) => (
+    <div key={issue.issueId} className="workflow-job-row">
+      <Group justify="space-between" gap="xs" wrap="nowrap">
+        <Text size="sm" fw={700} lineClamp={1}>{issue.title}</Text>
+        <Badge size="xs" color="green" variant="light">ready</Badge>
+      </Group>
+      <Text size="xs" c="dimmed" mt={4}>
+        {issue.githubIssueNumber ? `Issue #${issue.githubIssueNumber}` : issue.issueId}
+        {issue.prState ? ` · PR ${issue.prState}` : ""}
+      </Text>
+    </div>
+  ));
+}
+
+function renderCompletedWorkflowRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
+  if (!workflows.length) return <Text size="xs" c="dimmed">No completed workflows yet.</Text>;
+  return workflows.slice(0, 6).map((workflow) => (
+    <a key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="completed-workflow-row">
+      <Group justify="space-between" wrap="nowrap">
+        <Text size="sm" fw={700} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+        <Badge size="xs" variant="light">done</Badge>
+      </Group>
+      <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+    </a>
+  ));
+}
+
+function renderSessionRows(sessions: AgentSessionRecord[], archived = false): ReactNode {
+  if (!sessions.length) return <Text size="xs" c="dimmed">No sessions recorded for this step.</Text>;
+  return sessions.map((session) => <SessionLink key={session.sessionKey} session={session} archived={archived || Boolean(session.archivedAt)} />);
+}
+
+function IssueStatusRow({ issue, qaStatus }: { issue: IssueRecord; qaStatus: ReturnType<typeof getIssueQaStatus> }) {
+  return (
+    <Group gap={6} wrap="nowrap">
+      <Text size="xs" c="dimmed" lineClamp={1}>
+        {issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}: {issue.title}
+        {issue.prState ? ` · PR ${issue.prState}` : ""}
+      </Text>
+      <Badge color={qaStatus.color} size="xs" variant="light">{qaStatus.label}</Badge>
+    </Group>
+  );
+}
+
+function SessionLink({ session, archived = false }: { session: AgentSessionRecord; archived?: boolean }) {
+  return (
+    <a href={`/projects/${session.projectId}?session=${encodeURIComponent(session.sessionKey)}`} className={`session-row${archived ? " archived" : ""}`}>
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <div>
+          <Text size="sm" fw={720} lineClamp={1}>{session.title}</Text>
+          <Text size="xs" c="dimmed" lineClamp={1}>
+            {archived ? "archived" : session.issueId ?? session.role}
+            {session.developerRole ? ` · ${session.developerRole}` : ""}
+            {session.durationMs != null ? ` · ${formatDuration(session.durationMs)}` : ""}
+            {archived && session.archivedAt ? ` · ${formatDate(session.archivedAt)}` : ""}
+          </Text>
+        </div>
+        <Badge size="xs" variant={archived ? "outline" : "light"}>{session.status}</Badge>
+      </Group>
+      {session.currentStep ? <Text size="xs" c="dimmed" lineClamp={1}>{session.currentStep}</Text> : null}
+      {session.ownedPaths?.length ? <Text size="xs" c="dimmed" lineClamp={1}>Paths: {session.ownedPaths.join(", ")}</Text> : null}
+    </a>
+  );
+}
+
+function hasAnyLabel(issue: IssueRecord, expected: string[]): boolean {
+  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
+  return expected.some((label) => labels.has(label));
+}
+
 function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
   switch (action.icon) {
     case "clock":
@@ -286,11 +366,13 @@ function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
 function WorkflowProgressList({
   steps,
   nextAction,
-  projectId
+  projectId,
+  stepDetails
 }: {
   steps: WorkflowProgressStep[];
   nextAction: WorkflowNextAction;
   projectId: string;
+  stepDetails: Record<WorkflowProgressStep["id"], ReactNode>;
 }) {
   const activeIndex = getActiveWorkflowStepIndex(steps);
   const activeStep = steps[activeIndex];
@@ -324,6 +406,12 @@ function WorkflowProgressList({
                 </Badge>
               </Group>
               <Text size="xs" c="dimmed" mt={2}>{step.detail}</Text>
+              <details className="workflow-progress-detail" open={step.status === "current" || step.status === "blocked"}>
+                <summary>View step details</summary>
+                <div className="workflow-progress-detail-body">
+                  {stepDetails[step.id]}
+                </div>
+              </details>
             </div>
           </div>
         ))}
