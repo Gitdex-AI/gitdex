@@ -133,7 +133,7 @@ export default async function ProjectDetailPage({
                 steps={workflowProgress}
                 nextAction={nextAction}
                 projectId={project.projectId}
-                activeWorkflows={visibleActiveWorkflows}
+                workflows={visibleActiveWorkflows.length ? visibleActiveWorkflows : doneWorkflows.slice(0, 3)}
                 stepDetails={workflowStepDetails}
               />
             </Stack>
@@ -231,7 +231,7 @@ function buildWorkflowStepDetails(input: {
 }
 
 function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
-  if (!workflows.length) return <Text size="xs" c="dimmed">No active workflow controls for this step.</Text>;
+  if (!workflows.length) return <Text size="xs" c="dimmed">No workflow entries for this project yet.</Text>;
   return workflows.map((workflow) => (
     <div key={workflow.workflowId} className="workflow-control-row">
       <div>
@@ -248,7 +248,7 @@ function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]
         >
           Open
         </Button>
-        <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} />
+        {workflow.status !== "done" ? <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} /> : null}
       </Group>
     </div>
   ));
@@ -386,13 +386,13 @@ function WorkflowProgressList({
   steps,
   nextAction,
   projectId,
-  activeWorkflows,
+  workflows,
   stepDetails
 }: {
   steps: WorkflowProgressStep[];
   nextAction: WorkflowNextAction;
   projectId: string;
-  activeWorkflows: WorkflowRecord[];
+  workflows: WorkflowRecord[];
   stepDetails: Record<WorkflowProgressStep["id"], ReactNode>;
 }) {
   const activeIndex = getActiveWorkflowStepIndex(steps);
@@ -412,11 +412,11 @@ function WorkflowProgressList({
           </Badge>
         </Group>
       </div>
-      {activeWorkflows.length ? (
+      {workflows.length ? (
         <div className="workflow-progress-controls">
-          <Text size="xs" fw={800} tt="uppercase" c="dimmed">Workflow controls</Text>
+          <Text size="xs" fw={800} tt="uppercase" c="dimmed">Workflow entries</Text>
           <Stack gap="xs" mt="xs">
-            {renderWorkflowActionRows(projectId, activeWorkflows)}
+            {renderWorkflowActionRows(projectId, workflows)}
           </Stack>
         </div>
       ) : null}
