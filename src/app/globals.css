@@ -364,47 +364,89 @@ body {
   border-radius: 16px;
 }
 
+.workflow-progress-summary {
+  padding: 12px;
+  background: #f8fbff;
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+}
+
+.workflow-progress-summary.current {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.workflow-progress-summary.blocked {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.workflow-progress-summary.complete {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
 .workflow-progress-step {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 10px;
-  padding: 8px 0;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px;
   position: relative;
+  border: 1px solid transparent;
+  border-radius: 12px;
 }
 
 .workflow-progress-step:not(:last-child)::after {
   position: absolute;
-  top: 24px;
-  bottom: -8px;
-  left: 7px;
+  top: 38px;
+  bottom: -12px;
+  left: 22px;
   width: 2px;
   content: "";
   background: #dbe5f3;
 }
 
+.workflow-progress-step.current {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.workflow-progress-step.blocked {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
 .workflow-progress-marker {
+  display: grid;
+  place-items: center;
   position: relative;
   z-index: 1;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  width: 30px;
+  height: 30px;
+  margin-top: 0;
+  color: #64748b;
   background: #ffffff;
   border: 2px solid #cbd5e1;
   border-radius: 50%;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .workflow-progress-step.complete .workflow-progress-marker {
+  color: #ffffff;
   background: #16a34a;
   border-color: #16a34a;
 }
 
 .workflow-progress-step.current .workflow-progress-marker {
+  color: #ffffff;
   background: #2563eb;
   border-color: #bfdbfe;
   box-shadow: 0 0 0 3px #dbeafe;
 }
 
 .workflow-progress-step.blocked .workflow-progress-marker {
+  color: #ffffff;
   background: #dc2626;
   border-color: #fecaca;
   box-shadow: 0 0 0 3px #fee2e2;
@@ -412,6 +454,29 @@ body {
 
 .workflow-progress-step.upcoming .workflow-progress-copy {
   opacity: 0.72;
+}
+
+.workflow-progress-action {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8fbff;
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+}
+
+.workflow-progress-action.ready {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.workflow-progress-action.running {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.workflow-progress-action.blocked {
+  background: #fff1f2;
+  border-color: #fecdd3;
 }
 
 .workflow-next-action-icon {

@@ -108,36 +108,7 @@ export default async function ProjectDetailPage({
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               {!isInspectingIssueSession && <ProjectHandoffForm projectId={project.projectId} payload={readyForArchitectPayload} />}
-              <WorkflowProgressList steps={workflowProgress} />
-              <div className="workflow-next-action">
-                <Group justify="space-between" gap="sm" align="flex-start">
-                  <Group gap="sm" align="flex-start" wrap="nowrap">
-                    <div className={`workflow-next-action-icon ${nextAction.tone}`}>
-                      {renderWorkflowNextActionIcon(nextAction)}
-                    </div>
-                    <div>
-                      <Group gap="xs">
-                        <Text fw={760}>{nextAction.title}</Text>
-                        <Badge size="xs" variant="light">{nextAction.phase}</Badge>
-                      </Group>
-                      <Text size="sm" c="dimmed" mt={4}>{nextAction.description}</Text>
-                      <Group gap={6} mt="xs">
-                        <Badge size="xs" variant="outline">{nextAction.planningPending} planning pending</Badge>
-                        <Badge size="xs" variant="outline">{nextAction.developerPending} developer pending</Badge>
-                        {nextAction.runningCount ? <Badge size="xs" color="blue" variant="light">{nextAction.runningCount} running</Badge> : null}
-                        {nextAction.failedCount ? <Badge size="xs" color="red" variant="light">{nextAction.failedCount} blocked</Badge> : null}
-                      </Group>
-                    </div>
-                  </Group>
-                  {nextAction.buttonLabel ? (
-                    <ProjectRunJobsForm projectId={project.projectId} label={nextAction.buttonLabel} />
-                  ) : (
-                    <Button type="button" variant="light" size="xs" radius="xl" disabled leftSection={<Play size={14} />}>
-                      {nextAction.disabledLabel}
-                    </Button>
-                  )}
-                </Group>
-              </div>
+              <WorkflowProgressList steps={workflowProgress} nextAction={nextAction} projectId={project.projectId} />
               {query.queued === "1" && queuedWorkflow ? (
                 <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
                   <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -312,20 +283,42 @@ function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
   }
 }
 
-function WorkflowProgressList({ steps }: { steps: WorkflowProgressStep[] }) {
+function WorkflowProgressList({
+  steps,
+  nextAction,
+  projectId
+}: {
+  steps: WorkflowProgressStep[];
+  nextAction: WorkflowNextAction;
+  projectId: string;
+}) {
+  const activeIndex = getActiveWorkflowStepIndex(steps);
+  const activeStep = steps[activeIndex];
+
   return (
     <div className="workflow-progress">
-      <Group justify="space-between" gap="xs" mb="xs">
-        <Text fw={760}>Current workflow step</Text>
-        <Badge size="xs" variant="light">{steps.find((step) => step.status === "current" || step.status === "blocked")?.label ?? "Workflow"}</Badge>
-      </Group>
-      <Stack gap={0}>
-        {steps.map((step) => (
+      <div className={`workflow-progress-summary ${activeStep.status}`}>
+        <Text size="xs" fw={800} tt="uppercase" c="dimmed">Workflow progress</Text>
+        <Group justify="space-between" gap="xs" align="flex-start" mt={4}>
+          <div>
+            <Text fw={840}>Step {activeIndex + 1} of {steps.length}</Text>
+            <Text size="sm" c="dimmed">{activeStep.label.replace(/^\d+\.\s*/, "")}</Text>
+          </div>
+          <Badge color={workflowProgressStatusColor(activeStep.status)} variant="light">
+            {workflowProgressStatusLabel(activeStep.status)}
+          </Badge>
+        </Group>
+      </div>
+
+      <Stack gap={0} mt="sm">
+        {steps.map((step, index) => (
           <div key={step.id} className={`workflow-progress-step ${step.status}`}>
-            <div className="workflow-progress-marker" aria-hidden="true" />
+            <div className="workflow-progress-marker" aria-label={`Step ${index + 1}`}>
+              {index + 1}
+            </div>
             <div className="workflow-progress-copy">
               <Group gap="xs" justify="space-between" align="flex-start">
-                <Text size="sm" fw={760}>{step.label}</Text>
+                <Text size="sm" fw={step.status === "current" || step.status === "blocked" ? 850 : 760}>{step.label}</Text>
                 <Badge size="xs" color={workflowProgressStatusColor(step.status)} variant={step.status === "upcoming" ? "outline" : "light"}>
                   {workflowProgressStatusLabel(step.status)}
                 </Badge>
@@ -335,8 +328,45 @@ function WorkflowProgressList({ steps }: { steps: WorkflowProgressStep[] }) {
           </div>
         ))}
       </Stack>
+
+      <div className={`workflow-progress-action ${nextAction.tone}`}>
+        <Group justify="space-between" gap="sm" align="flex-start">
+          <Group gap="sm" align="flex-start" wrap="nowrap">
+            <div className={`workflow-next-action-icon ${nextAction.tone}`}>
+              {renderWorkflowNextActionIcon(nextAction)}
+            </div>
+            <div>
+              <Group gap="xs">
+                <Text fw={800}>{nextAction.title}</Text>
+                <Badge size="xs" variant="light">{nextAction.phase}</Badge>
+              </Group>
+              <Text size="sm" c="dimmed" mt={4}>{nextAction.description}</Text>
+              <Group gap={6} mt="xs">
+                <Badge size="xs" variant="outline">{nextAction.planningPending} planning pending</Badge>
+                <Badge size="xs" variant="outline">{nextAction.developerPending} developer pending</Badge>
+                {nextAction.runningCount ? <Badge size="xs" color="blue" variant="light">{nextAction.runningCount} running</Badge> : null}
+                {nextAction.failedCount ? <Badge size="xs" color="red" variant="light">{nextAction.failedCount} blocked</Badge> : null}
+              </Group>
+            </div>
+          </Group>
+          {nextAction.buttonLabel ? (
+            <ProjectRunJobsForm projectId={projectId} label={nextAction.buttonLabel} />
+          ) : (
+            <Button type="button" variant="light" size="xs" radius="xl" disabled leftSection={<Play size={14} />}>
+              {nextAction.disabledLabel}
+            </Button>
+          )}
+        </Group>
+      </div>
     </div>
   );
+}
+
+function getActiveWorkflowStepIndex(steps: WorkflowProgressStep[]): number {
+  const activeIndex = steps.findIndex((step) => step.status === "current" || step.status === "blocked");
+  if (activeIndex >= 0) return activeIndex;
+  const doneIndex = steps.findIndex((step) => step.id === "done" && step.status === "complete");
+  return doneIndex >= 0 ? doneIndex : 0;
 }
 
 function workflowProgressStatusLabel(status: WorkflowProgressStep["status"]): string {
