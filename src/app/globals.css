@@ -558,6 +558,16 @@ pre,
   border-bottom: 1px solid #eef2f7;
 }
 
+.workflow-recovery-panel {
+  padding: 10px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.workflow-recovery-panel svg {
+  color: #dc2626;
+  flex: 0 0 auto;
+}
+
 .workflow-control-row {
   display: flex;
   align-items: center;

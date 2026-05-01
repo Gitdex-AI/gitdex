@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { Bot, GitBranch, Info, ListTodo } from "lucide-react";
+import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -218,6 +218,8 @@ function buildWorkflowStepDetails(input: {
 }): Record<WorkflowProgressStep["id"], ReactNode> {
   const developerSessions = input.dynamicSessions.filter((session) => session.role === "developer");
   const qaSessions = input.dynamicSessions.filter((session) => session.role === "qa");
+  const planningJobs = input.jobs.filter((job) => job.type === "workflow_run");
+  const developerJobs = input.jobs.filter((job) => job.type === "issue_run");
 
   return {
     requirement: (
@@ -229,6 +231,14 @@ function buildWorkflowStepDetails(input: {
     ),
     planning: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover architect planning",
+          reason: recoveryReasonForJobs(planningJobs),
+          jobs: planningJobs,
+          sessions: input.sessions.filter((session) => session.role === "architect"),
+          syncLabel: "Sync planning state"
+        })}
         {input.queuedWorkflow ? (
           <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
             <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -239,26 +249,50 @@ function buildWorkflowStepDetails(input: {
           </Alert>
         ) : null}
         {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
-        {renderJobRows(input.projectId, input.jobs.filter((job) => job.type === "workflow_run"), input.queuedJobId)}
+        {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
         {renderSessionRows(input.sessions.filter((session) => session.role === "architect"))}
       </Stack>
     ),
     developer: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover developer PR",
+          reason: recoveryReasonForDeveloperStep(input.visibleActiveWorkflows, developerJobs, developerSessions),
+          jobs: developerJobs,
+          sessions: developerSessions,
+          syncLabel: "Recover PR from GitHub"
+        })}
         {renderStepRunAction(input.projectId, input.jobs, "issue_run", "Run Developer Jobs")}
-        {renderJobRows(input.projectId, input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
+        {renderJobRows(input.projectId, developerJobs, input.queuedJobId)}
         {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
       </Stack>
     ),
     qa: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover QA validation",
+          reason: recoveryReasonForQaStep(input.activeWorkflows, qaSessions),
+          jobs: [],
+          sessions: qaSessions,
+          syncLabel: "Sync QA labels"
+        })}
         {renderQaIssueRows(input.activeWorkflows, input.sessions)}
         {renderSessionRows(qaSessions)}
       </Stack>
     ),
     merge: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover merge readiness",
+          reason: recoveryReasonForMergeStep(input.activeWorkflows),
+          jobs: [],
+          sessions: [],
+          syncLabel: "Sync merge state"
+        })}
         {renderMergeIssueRows(input.projectId, input.activeWorkflows)}
       </Stack>
     ),
@@ -268,6 +302,85 @@ function buildWorkflowStepDetails(input: {
       </Stack>
     )
   };
+}
+
+function renderStepRecovery(input: {
+  projectId: string;
+  title: string;
+  reason: string | null;
+  jobs: JobRecord[];
+  sessions: AgentSessionRecord[];
+  syncLabel: string;
+}): ReactNode {
+  if (!input.reason) return null;
+  const failedJobs = input.jobs.filter((job) => job.status === "failed");
+  const blockedSessions = input.sessions.filter((session) => session.status === "blocked");
+
+  return (
+    <div className="workflow-recovery-panel">
+      <Group justify="space-between" gap="sm" align="flex-start">
+        <div>
+          <Group gap={6}>
+            <RefreshCw size={14} />
+            <Text size="sm" fw={780}>{input.title}</Text>
+          </Group>
+          <Text size="xs" c="dimmed" mt={3}>{input.reason}</Text>
+        </div>
+        <ProjectSyncForm projectId={input.projectId} label={input.syncLabel} compact />
+      </Group>
+      {failedJobs.length || blockedSessions.length ? (
+        <Group gap={6} mt="xs">
+          {failedJobs.map((job) => <ProjectRetryJobButton key={job.jobId} projectId={input.projectId} jobId={job.jobId} />)}
+          {blockedSessions.map((session) => (
+            <Button
+              key={session.sessionKey}
+              component="a"
+              href={`/projects/${input.projectId}?session=${encodeURIComponent(session.sessionKey)}`}
+              variant="light"
+              color="red"
+              size="compact-xs"
+              radius="xl"
+              leftSection={<RotateCcw size={14} />}
+            >
+              Open blocked session
+            </Button>
+          ))}
+        </Group>
+      ) : null}
+    </div>
+  );
+}
+
+function recoveryReasonForJobs(jobs: JobRecord[]): string | null {
+  if (jobs.some((job) => job.status === "failed")) return "A planning job failed. Retry the failed job, or sync GitHub if issues were created before the failure.";
+  if (jobs.some((job) => job.status === "running")) return "Planning is running. If the status does not change after several minutes, sync state or retry after it is marked failed.";
+  return null;
+}
+
+function recoveryReasonForDeveloperStep(workflows: WorkflowRecord[], jobs: JobRecord[], sessions: AgentSessionRecord[]): string | null {
+  if (jobs.some((job) => job.status === "failed")) return "A developer job failed. Retry the failed job; if a branch or PR was already created, recover it from GitHub first.";
+  if (sessions.some((session) => session.status === "blocked")) return "A developer session is blocked. Open the session for the blocker details, then retry or recover the PR from GitHub.";
+  const issues = workflows.flatMap((workflow) => workflow.issues);
+  if (issues.some((issue) => issue.branch && !issue.prUrl)) return "Developer work has a branch but no recorded PR. Use GitHub sync to recover a PR that was created or finish PR creation manually.";
+  if (issues.some((issue) => hasAnyLabel(issue, ["taskix:dev-running"]) && !issue.prUrl)) return "Developer work is marked running without a PR. Sync GitHub to detect a partially completed PR, or retry the developer job.";
+  return null;
+}
+
+function recoveryReasonForQaStep(workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): string | null {
+  if (sessions.some((session) => session.status === "blocked")) return "QA is blocked or failed. Open the QA session for findings, then retry the developer fix path after the issue is updated.";
+  const issues = workflows.flatMap((workflow) => workflow.issues);
+  if (issues.some((issue) => issue.prUrl && hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running"]))) {
+    return "A PR is waiting on QA labels. After QA finishes, sync GitHub so Taskix can move the workflow to pass/fail or merge readiness.";
+  }
+  return null;
+}
+
+function recoveryReasonForMergeStep(workflows: WorkflowRecord[]): string | null {
+  const issues = workflows.flatMap((workflow) => workflow.issues);
+  if (issues.some((issue) => hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"]) && issue.prState !== "MERGED")) {
+    return "QA has passed and the PR is ready. Merge from this step, then sync GitHub if the issue or PR state does not update.";
+  }
+  return null;
 }
 
 function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobRecord["type"], label: string): ReactNode {
