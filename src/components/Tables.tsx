@@ -69,7 +69,7 @@ function WorkflowRow({ workflow }: { workflow: WorkflowRecord }) {
       </TableTd>
       <TableTd>
         <Text size="sm" c="dimmed">
-          {workflow.createdAt}
+          {formatDateTime(workflow.createdAt)}
         </Text>
       </TableTd>
       <TableTd>
