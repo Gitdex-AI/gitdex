@@ -4,6 +4,7 @@ import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, Play, Wrench } 
 import type { CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
+import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
@@ -92,6 +93,11 @@ export default async function ProjectDetailPage({
               <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
               <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
               <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
+              <div className="project-danger-zone">
+                <Text size="xs" fw={780} c="red">Delete local project</Text>
+                <Text size="xs" c="dimmed">Type <Code>{project.slug}</Code> to remove this local project and its local Taskix state. GitHub data is not deleted.</Text>
+                <ProjectDeleteForm projectId={project.projectId} slug={project.slug} />
+              </div>
             </Stack>
           </Paper>
 

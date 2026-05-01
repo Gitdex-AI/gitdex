@@ -237,6 +237,21 @@ pre,
   padding: 16px;
 }
 
+.project-danger-zone {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #fee2e2;
+}
+
+.project-delete-form {
+  margin-top: 8px;
+}
+
+.project-delete-form.compact {
+  min-width: 210px;
+  margin-top: 0;
+}
+
 .section-title {
   margin: 4px 0 -4px;
   color: var(--mantine-color-dimmed);

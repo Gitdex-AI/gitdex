@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
+import { deleteProjectLocalState } from "@/lib/project-delete";
 import type { AgentSessionRecord, JobRecord, JobType, ProjectRecord, Role, WorkflowRecord } from "@/lib/types";
 
 const RUNNING_JOB_TIMEOUT_MS = 2 * 60 * 60 * 1000;
@@ -17,6 +18,13 @@ export async function getProject(projectId: string): Promise<ProjectRecord | nul
 export async function getProjectBySlug(slug: string): Promise<ProjectRecord | null> {
   const row = getDb().prepare("SELECT payload FROM projects WHERE slug = ?").get(slug) as { payload: string } | undefined;
   return row ? normalizeProject(JSON.parse(row.payload) as ProjectRecord) : null;
+}
+
+export async function deleteProject(projectId: string): Promise<ProjectRecord | null> {
+  const project = await getProject(projectId);
+  if (!project) return null;
+  deleteProjectLocalState(getDb(), project);
+  return project;
 }
 
 export async function createProject(input: {
