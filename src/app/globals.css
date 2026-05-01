@@ -394,13 +394,6 @@ pre,
   white-space: pre-wrap;
 }
 
-.workflow-next-action {
-  padding: 14px;
-  background: #f8fbff;
-  border: 1px solid #d8e3f2;
-  border-radius: 16px;
-}
-
 .workflow-progress {
   padding: 0;
 }
@@ -551,53 +544,6 @@ pre,
   border-left: 2px solid #dbe5f3;
 }
 
-.workflow-progress-action {
-  margin-top: 12px;
-  padding: 12px 0 0;
-  border-top: 1px solid #e5edf6;
-}
-
-.workflow-progress-action.ready {
-  border-top-color: #bfdbfe;
-}
-
-.workflow-progress-action.running {
-  border-top-color: #bae6fd;
-}
-
-.workflow-progress-action.blocked {
-  border-top-color: #fecdd3;
-}
-
-.workflow-next-action-icon {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-}
-
-.workflow-next-action-icon.ready {
-  color: #1d4ed8;
-  background: #eaf2ff;
-}
-
-.workflow-next-action-icon.running {
-  color: #0369a1;
-  background: #e0f2fe;
-}
-
-.workflow-next-action-icon.blocked {
-  color: #b42318;
-  background: #fee4e2;
-}
-
-.workflow-next-action-icon.idle {
-  color: #475467;
-  background: #eef2f6;
-}
-
 .workflow-summary-card,
 .workflow-issue-card,
 .workflow-job-row {
@@ -605,6 +551,11 @@ pre,
   background: #ffffff;
   border: 1px solid #e0e7f0;
   border-radius: 16px;
+}
+
+.workflow-step-action {
+  padding: 10px 0;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .workflow-control-row {

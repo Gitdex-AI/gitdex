@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, ListTodo, Play, Wrench } from "lucide-react";
+import { Bot, GitBranch, Info, ListTodo, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -15,7 +15,6 @@ import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
-import { getWorkflowNextAction, type WorkflowNextAction } from "@/lib/workflow-next-action";
 
 export default async function ProjectDetailPage({
   params,
@@ -55,7 +54,6 @@ export default async function ProjectDetailPage({
   const workflowPanelDynamicSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && !session.archivedAt);
   const workflowPanelArchivedSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && session.archivedAt);
   const readyForArchitectPayload = findReadyForArchitectPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
-  const nextAction = getWorkflowNextAction(workflowPanelJobs);
   const workflowProgress = getWorkflowProgress({ workflows: workflowPanelWorkflows, jobs: workflowPanelJobs });
   const workflowStepDetails = buildWorkflowStepDetails({
     projectId: project.projectId,
@@ -140,7 +138,6 @@ export default async function ProjectDetailPage({
                 >
                   GitHub triage
                 </Button>
-                <ProjectRunJobsForm projectId={project.projectId} />
                 <ProjectSyncForm projectId={project.projectId} />
               </Group>
             </Group>
@@ -148,7 +145,6 @@ export default async function ProjectDetailPage({
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               <WorkflowProgressList
                 steps={workflowProgress}
-                nextAction={nextAction}
                 projectId={project.projectId}
                 workflows={workflowPanelWorkflows}
                 stepDetails={workflowStepDetails}
@@ -237,12 +233,14 @@ function buildWorkflowStepDetails(input: {
             </Text>
           </Alert>
         ) : null}
+        {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
         {renderJobRows(input.jobs.filter((job) => job.type === "workflow_run"), input.queuedJobId)}
         {renderSessionRows(input.sessions.filter((session) => session.role === "architect"))}
       </Stack>
     ),
     developer: (
       <Stack gap="xs">
+        {renderStepRunAction(input.projectId, input.jobs, "issue_run", "Run Developer Jobs")}
         {renderJobRows(input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
         {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
@@ -266,6 +264,24 @@ function buildWorkflowStepDetails(input: {
       </Stack>
     )
   };
+}
+
+function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobRecord["type"], label: string): ReactNode {
+  const pendingCount = jobs.filter((job) => job.type === jobType && job.status === "pending").length;
+  if (!pendingCount) return null;
+  return (
+    <div className="workflow-step-action">
+      <Group justify="space-between" gap="sm" wrap="nowrap">
+        <div>
+          <Text size="sm" fw={760}>{label}</Text>
+          <Text size="xs" c="dimmed">
+            {pendingCount} pending {jobType === "workflow_run" ? "planning" : "developer"} job{pendingCount === 1 ? "" : "s"} for this step.
+          </Text>
+        </div>
+        <ProjectRunJobsForm projectId={projectId} label={label} />
+      </Group>
+    </div>
+  );
 }
 
 function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
@@ -410,30 +426,13 @@ function hasAnyLabel(issue: IssueRecord, expected: string[]): boolean {
   return expected.some((label) => labels.has(label));
 }
 
-function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
-  switch (action.icon) {
-    case "clock":
-      return <Clock size={18} />;
-    case "play":
-      return <Play size={18} />;
-    case "git-branch":
-      return <GitBranch size={18} />;
-    case "alert":
-      return <AlertCircle size={18} />;
-    case "check":
-      return <CheckCircle2 size={18} />;
-  }
-}
-
 function WorkflowProgressList({
   steps,
-  nextAction,
   projectId,
   workflows,
   stepDetails
 }: {
   steps: WorkflowProgressStep[];
-  nextAction: WorkflowNextAction;
   projectId: string;
   workflows: WorkflowRecord[];
   stepDetails: Record<WorkflowProgressStep["id"], ReactNode>;
@@ -454,9 +453,6 @@ function WorkflowProgressList({
             <Badge color={workflowProgressStatusColor(activeStep.status)} variant="light">
               {workflowProgressStatusLabel(activeStep.status)}
             </Badge>
-            {nextAction.buttonLabel ? (
-              <ProjectRunJobsForm projectId={projectId} label={nextAction.buttonLabel} />
-            ) : null}
           </Stack>
         </Group>
       </div>
@@ -493,36 +489,6 @@ function WorkflowProgressList({
           </div>
         ))}
       </Stack>
-
-      <div className={`workflow-progress-action ${nextAction.tone}`}>
-        <Group justify="space-between" gap="sm" align="flex-start">
-          <Group gap="sm" align="flex-start" wrap="nowrap">
-            <div className={`workflow-next-action-icon ${nextAction.tone}`}>
-              {renderWorkflowNextActionIcon(nextAction)}
-            </div>
-            <div>
-              <Group gap="xs">
-                <Text fw={800}>{nextAction.title}</Text>
-                <Badge size="xs" variant="light">{nextAction.phase}</Badge>
-              </Group>
-              <Text size="sm" c="dimmed" mt={4}>{nextAction.description}</Text>
-              <Group gap={6} mt="xs">
-                <Badge size="xs" variant="outline">{nextAction.planningPending} planning pending</Badge>
-                <Badge size="xs" variant="outline">{nextAction.developerPending} developer pending</Badge>
-                {nextAction.runningCount ? <Badge size="xs" color="blue" variant="light">{nextAction.runningCount} running</Badge> : null}
-                {nextAction.failedCount ? <Badge size="xs" color="red" variant="light">{nextAction.failedCount} blocked</Badge> : null}
-              </Group>
-            </div>
-          </Group>
-          {nextAction.buttonLabel ? (
-            <ProjectRunJobsForm projectId={projectId} label={nextAction.buttonLabel} />
-          ) : (
-            <Button type="button" variant="light" size="xs" radius="xl" disabled leftSection={<Play size={14} />}>
-              {nextAction.disabledLabel}
-            </Button>
-          )}
-        </Group>
-      </div>
     </div>
   );
 }
