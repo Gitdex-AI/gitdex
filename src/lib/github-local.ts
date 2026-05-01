@@ -199,6 +199,12 @@ export async function mergePullRequestWithGh(repo: string, prUrl: string): Promi
   await execFileAsync("gh", ["pr", "merge", prUrl, "--repo", repo, "--merge"]);
 }
 
+export async function closeIssueWithGh(repo: string, issueNumber: number, comment?: string): Promise<void> {
+  const args = ["issue", "close", String(issueNumber), "--repo", repo];
+  if (comment) args.push("--comment", comment);
+  await execFileAsync("gh", args);
+}
+
 export async function getIssueSnapshotWithGh(repo: string, issueNumber: number): Promise<GhIssueSnapshot> {
   const { stdout: issueStdout } = await execFileAsync("gh", ["issue", "view", String(issueNumber), "--repo", repo, "--json", "number,url,state,labels"]);
   const issue = JSON.parse(issueStdout) as { number: number; url: string; state: string; labels: Array<{ name: string }> };
