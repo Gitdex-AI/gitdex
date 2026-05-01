@@ -5,7 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { allTaskixLabels, roleLabel } from "@/lib/github-labels";
 import { dataDir } from "@/lib/paths";
-import type { IssueSpec } from "@/lib/types";
+import type { IssueSpec, ProjectTriageGroup, ProjectTriageItem } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
 
@@ -29,6 +29,22 @@ export type GhIssueSnapshot = {
   }>;
 };
 
+type GhTriageIssue = {
+  number: number;
+  url: string;
+  state: string;
+  labels: Array<{ name: string }>;
+};
+
+type GhTriagePr = {
+  number: number;
+  url: string;
+  state: string;
+  labels: Array<{ name: string }>;
+  mergeStateStatus?: string | null;
+  closingIssuesReferences?: Array<{ number: number }>;
+};
+
 export async function listLocalGitHubRepos(owner: string): Promise<LocalGitHubRepo[]> {
   const { stdout } = await execFileAsync("gh", ["repo", "list", owner, "--limit", "100", "--json", "nameWithOwner,sshUrl,url,isPrivate"]);
   return JSON.parse(stdout) as LocalGitHubRepo[];
@@ -36,6 +52,89 @@ export async function listLocalGitHubRepos(owner: string): Promise<LocalGitHubRe
 
 export async function verifyLocalGitHubRepo(repo: string): Promise<void> {
   await execFileAsync("gh", ["api", `repos/${repo}`, "--jq", ".full_name"]);
+}
+
+export async function getProjectTriageWithGh(repo: string): Promise<ProjectTriageItem[]> {
+  const { stdout } = await execFileAsync("gh", [
+    "issue",
+    "list",
+    "--repo",
+    repo,
+    "--state",
+    "all",
+    "--limit",
+    "100",
+    "--json",
+    "number,url,state,labels"
+  ]);
+  const issues = JSON.parse(stdout) as GhTriageIssue[];
+  return Promise.all(issues.map((issue) => getTriageItemWithGh(repo, issue)));
+}
+
+async function getTriageItemWithGh(repo: string, issue: GhTriageIssue): Promise<ProjectTriageItem> {
+  const prs = await listLinkedPullRequestsWithGh(repo, issue.number);
+  const primaryPr = pickPrimaryPullRequest(prs);
+  const issueLabels = issue.labels.map((label) => label.name);
+  const primaryLinkedPrLabels = primaryPr?.labels.map((label) => label.name) ?? [];
+  const group = classifyTriageIssue({
+    issueState: issue.state,
+    issueLabels,
+    primaryLinkedPrState: primaryPr?.state ?? null,
+    primaryLinkedPrLabels
+  });
+
+  return {
+    issueNumber: issue.number,
+    issueUrl: issue.url,
+    issueState: issue.state,
+    issueLabels,
+    primaryLinkedPrUrl: primaryPr?.url ?? null,
+    primaryLinkedPrState: primaryPr?.state ?? null,
+    primaryLinkedPrLabels,
+    group
+  };
+}
+
+async function listLinkedPullRequestsWithGh(repo: string, issueNumber: number): Promise<GhTriagePr[]> {
+  const { stdout } = await execFileAsync("gh", [
+    "pr",
+    "list",
+    "--repo",
+    repo,
+    "--state",
+    "all",
+    "--search",
+    `linked:issue-${issueNumber}`,
+    "--json",
+    "number,url,state,labels,mergeStateStatus,closingIssuesReferences",
+    "--limit",
+    "20"
+  ]);
+  const prs = JSON.parse(stdout) as GhTriagePr[];
+  return prs.filter((pr) => pr.closingIssuesReferences?.some((linkedIssue) => linkedIssue.number === issueNumber));
+}
+
+function pickPrimaryPullRequest(prs: GhTriagePr[]): GhTriagePr | null {
+  return prs.find((pr) => pr.state === "OPEN") ?? prs[0] ?? null;
+}
+
+function classifyTriageIssue(input: {
+  issueState: string;
+  issueLabels: string[];
+  primaryLinkedPrState: string | null;
+  primaryLinkedPrLabels: string[];
+}): ProjectTriageGroup {
+  const labels = new Set([...input.issueLabels, ...input.primaryLinkedPrLabels].map((label) => label.toLowerCase()));
+  if (input.issueState === "CLOSED" || input.primaryLinkedPrState === "MERGED" || hasAnyLabel(labels, ["taskix:merged"])) return "done";
+  if (hasAnyLabel(labels, ["taskix:blocked", "qa-failed", "taskix:qa-failed"])) return "blocked";
+  if (hasAnyLabel(labels, ["taskix:need-qa", "qa-running", "taskix:qa-running"])) return "needs_qa";
+  if (hasAnyLabel(labels, ["taskix:ready-to-merge", "qa-passed", "taskix:qa-passed"])) return "ready_to_merge";
+  if (hasAnyLabel(labels, ["taskix:dev-running", "taskix:pr-opened"]) || input.primaryLinkedPrState === "OPEN") return "in_progress";
+  return "untracked";
+}
+
+function hasAnyLabel(labels: Set<string>, expected: string[]): boolean {
+  return expected.some((label) => labels.has(label));
 }
 
 export async function ensureTaskixLabels(repo: string): Promise<void> {
