@@ -325,7 +325,9 @@ Execution rules:
 - Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
+- If this work is a recheck on an existing PR, reuse the existing branch/PR context instead of creating a duplicate PR.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
+- If you cannot determine the PR URL confidently, return an empty string for prUrl instead of inventing one; Taskix will recover existing PR context from GitHub state when possible.
 - If implementation is blocked, comment on the issue, add taskix:blocked, and still return JSON with prUrl as an empty string.
 
 Return JSON with summary, branch, prUrl, changedFiles, testsRun.`;
