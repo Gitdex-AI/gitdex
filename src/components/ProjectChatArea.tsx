@@ -5,38 +5,44 @@ import { AlertTriangle, LoaderCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { AgentMessage, AgentSessionRecord, Role } from "@/lib/types";
+import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
+import type { AgentMessage, AgentSessionRecord } from "@/lib/types";
 
-type ChatRole = Extract<Role, "product_manager" | "architect" | "devops">;
+type TimelineMessage = AgentMessage & {
+  sessionKey: string;
+  sourceLabel: string;
+  sourceRole: AgentSessionRecord["role"];
+  session: AgentSessionRecord | null;
+};
 
 export function ProjectChatArea({
   projectId,
-  activeRole,
-  session,
+  sessions,
+  inspectedSession,
   readOnly
 }: {
   projectId: string;
-  activeRole: ChatRole;
-  session: AgentSessionRecord | null;
+  sessions: AgentSessionRecord[];
+  inspectedSession: AgentSessionRecord | null;
   readOnly: boolean;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
-  const [optimisticMessage, setOptimisticMessage] = useState<AgentMessage | null>(null);
-  const target = activeRole === "product_manager" ? "PM" : activeRole === "architect" ? "Architect" : "DevOps";
+  const [optimisticMessage, setOptimisticMessage] = useState<TimelineMessage | null>(null);
+  const visibleSessions = readOnly && inspectedSession ? [inspectedSession] : sessions;
 
   useEffect(() => {
     setPending(false);
     setOptimisticMessage(null);
-  }, [session?.updatedAt, activeRole]);
+  }, [sessions, inspectedSession?.updatedAt, readOnly]);
 
   useEffect(() => {
     const scroll = scrollRef.current;
     if (!scroll) return;
     scroll.scrollTop = scroll.scrollHeight;
-  }, [session?.sessionKey, session?.updatedAt, session?.messages.length, optimisticMessage?.createdAt, pending]);
+  }, [visibleSessions, optimisticMessage?.createdAt, pending]);
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,9 +52,19 @@ export function ProjectChatArea({
     const formData = new FormData(form);
     const message = String(formData.get("message") ?? "").trim();
     if (!message) return;
+    const target = parseChatTarget(message);
+    const targetLabel = chatRoleLabel(target.role);
 
     setPending(true);
-    setOptimisticMessage({ role: "user", content: message, createdAt: new Date().toISOString() });
+    setOptimisticMessage({
+      role: "user",
+      content: target.message,
+      createdAt: new Date().toISOString(),
+      sessionKey: `pending:${target.role}`,
+      sourceLabel: `You → ${targetLabel}`,
+      sourceRole: target.role,
+      session: null
+    });
     form.reset();
 
     const response = await fetch(form.action, {
@@ -56,7 +72,7 @@ export function ProjectChatArea({
       body: formData,
       redirect: "follow"
     });
-    const destination = response.url ? new URL(response.url).pathname + new URL(response.url).search : `/projects/${projectId}?role=${activeRole}`;
+    const destination = response.url ? new URL(response.url).pathname + new URL(response.url).search : `/projects/${projectId}`;
     router.push(destination);
     router.refresh();
   }
@@ -70,16 +86,15 @@ export function ProjectChatArea({
   return (
     <>
       <div ref={scrollRef} className="chat-scroll">
-        <MessageList projectId={projectId} session={session} optimisticMessage={optimisticMessage} pending={pending} />
+        <MessageList projectId={projectId} sessions={visibleSessions} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
       </div>
       {!readOnly && (
         <div className="chat-composer">
           <form ref={formRef} method="post" action={`/api/projects/${projectId}/chat`} className="chat-composer-form" onSubmit={submitMessage}>
-            <input type="hidden" name="role" value={activeRole} />
             <Textarea
               name="message"
-              aria-label={`Message ${target}`}
-              placeholder="Describe the requirement, paste context, or ask for the next step..."
+              aria-label="Message project agents"
+              placeholder="@PM clarify scope, @architect review the plan, @devops check deployment..."
               autosize
               minRows={2}
               maxRows={7}
@@ -97,7 +112,7 @@ export function ProjectChatArea({
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">
-                    Sending to <Code>{target}</Code>
+                    Default target <Code>PM</Code>
                   </Text>
                 )}
               </div>
@@ -114,16 +129,27 @@ export function ProjectChatArea({
 
 function MessageList({
   projectId,
-  session,
+  sessions,
+  inspectedSession,
   optimisticMessage,
   pending
 }: {
   projectId: string;
-  session: AgentSessionRecord | null;
-  optimisticMessage: AgentMessage | null;
+  sessions: AgentSessionRecord[];
+  inspectedSession: AgentSessionRecord | null;
+  optimisticMessage: TimelineMessage | null;
   pending: boolean;
 }) {
-  const messages = [...(session?.messages ?? []), ...(optimisticMessage ? [optimisticMessage] : [])];
+  const messages = [
+    ...sessions.flatMap((session) => session.messages.map((message) => ({
+      ...message,
+      sessionKey: session.sessionKey,
+      sourceLabel: message.role === "user" ? `You → ${chatRoleLabel(session.role, session.title, session.developerRole)}` : chatRoleLabel(session.role, session.title, session.developerRole),
+      sourceRole: session.role,
+      session
+    } satisfies TimelineMessage))),
+    ...(optimisticMessage ? [optimisticMessage] : [])
+  ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
   if (!messages.length) {
     return <Text c="dimmed" ta="center" mt="xl">No messages yet.</Text>;
@@ -131,14 +157,17 @@ function MessageList({
 
   return (
     <Stack gap="md">
-      {session && <SessionRuntime projectId={projectId} session={session} />}
-      <Text size="sm" c="dimmed" ta="center">Session ID: <Code>{session?.sessionId ?? "local context only"}</Code></Text>
+      {inspectedSession ? <SessionRuntime projectId={projectId} session={inspectedSession} /> : null}
       {messages.map((message, index) => (
-        <div key={`${message.createdAt}-${index}`} className={`chat-message ${message.role}`}>
-          <div className="chat-avatar">{message.role === "user" ? "U" : message.role === "assistant" ? "A" : "S"}</div>
+        <div key={`${message.sessionKey}-${message.createdAt}-${index}`} className={`chat-message ${message.role}`}>
+          <div className="chat-avatar">{chatAvatarText(message)}</div>
           <div className="chat-bubble">
             <Group gap="xs" mb={6} justify="space-between" align="center">
-              <Badge variant="light">{message.role}</Badge>
+              <Group gap={6}>
+                <Badge variant="light">{message.sourceLabel}</Badge>
+                {message.session?.workflowId ? <Badge size="xs" variant="outline">{message.session.workflowId}</Badge> : null}
+                {message.session?.issueId ? <Badge size="xs" variant="outline">{message.session.issueId}</Badge> : null}
+              </Group>
               <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
                 {formatMessageTime(message.createdAt)}
               </Text>
@@ -163,6 +192,16 @@ function MessageList({
       )}
     </Stack>
   );
+}
+
+function chatAvatarText(message: TimelineMessage): string {
+  if (message.role === "user") return "U";
+  if (message.sourceRole === "product_manager") return "PM";
+  if (message.sourceRole === "architect") return "AR";
+  if (message.sourceRole === "devops") return "DO";
+  if (message.sourceRole === "developer") return "DV";
+  if (message.sourceRole === "qa") return "QA";
+  return message.role === "assistant" ? "A" : "S";
 }
 
 function SessionRuntime({ projectId, session }: { projectId: string; session: AgentSessionRecord }) {

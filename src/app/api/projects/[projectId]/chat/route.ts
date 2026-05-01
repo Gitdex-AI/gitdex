@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
 import { CodexClient } from "@/lib/codex";
+import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, getAgentSession, getProject, saveProject } from "@/lib/store";
-import type { Role } from "@/lib/types";
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
   const form = await request.formData();
-  const role = String(form.get("role") ?? "product_manager") as Role;
-  const message = String(form.get("message") ?? "").trim();
-  if (!message) return redirect(request, `/projects/${projectId}?role=${role}&error=${encodeURIComponent("Message is required.")}`);
-  if (role !== "product_manager" && role !== "architect" && role !== "devops") {
-    return redirect(request, `/projects/${projectId}?error=${encodeURIComponent("Only PM, architect, and DevOps chat are supported here.")}`);
+  const rawMessage = String(form.get("message") ?? "").trim();
+  const target = parseChatTarget(rawMessage);
+  if (!target.message) return redirect(request, `/projects/${projectId}?error=${encodeURIComponent("Message is required.")}`);
+  if (target.mention && target.message === rawMessage) {
+    return redirect(request, `/projects/${projectId}?error=${encodeURIComponent(`@${target.mention} is not a supported chat target yet. Use @PM, @architect, or @devops.`)}`);
   }
 
   const [project, settings] = await Promise.all([getProject(projectId), getSettings()]);
   if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);
 
+  const role = target.role;
+  const message = target.message;
   const sessionKey = `${project.projectId}:${role}`;
   const existing = await getAgentSession(sessionKey);
   const codex = new CodexClient(settings);
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     sessionKey,
     projectId: project.projectId,
     role,
-    title: role === "product_manager" ? "Project Manager" : role === "architect" ? "Architect" : "DevOps",
+    title: chatRoleLabel(role),
     sessionId: result.sessionId ?? currentSessionId ?? existing?.sessionId ?? null,
     messages: [
       { role: "user", content: message, createdAt: now },
@@ -53,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     ]
   });
 
-  return redirect(request, `/projects/${project.projectId}?role=${role}`);
+  return redirect(request, `/projects/${project.projectId}`);
 }
 
 function redirect(request: Request, location: string): NextResponse {
