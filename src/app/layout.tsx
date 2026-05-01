@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Badge, Code, Group, Text } from "@mantine/core";
 import { getSettings } from "@/lib/settings";
 import { listProjects, listWorkflows } from "@/lib/store";
+import { HEADER_LABEL } from "@/components/header-label";
 import { Providers } from "@/components/Providers";
 import { ShellLayout } from "@/components/ShellLayout";
 import "@mantine/core/styles.css";
@@ -24,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div className="mark">TB</div>
               <div>
                 <Text fw={800} size="md" c="white" lh={1.15}>
-                  Taskix Hub
+                  {HEADER_LABEL}
                 </Text>
                 <Text size="xs" c="blue.1">
                   Project routing, Codex sessions, GitHub orchestration
