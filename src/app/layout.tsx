@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div className="mark">TB</div>
               <div>
                 <Text fw={800} size="md" c="white" lh={1.15}>
-                  Taskix Console
+                  Taskix Management
                 </Text>
                 <Text size="xs" c="blue.1">
                   Project routing, Codex sessions, GitHub orchestration

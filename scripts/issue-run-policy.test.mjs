@@ -7,6 +7,8 @@ process.chdir(mkdtempSync(`${tmpdir()}/taskix-issue-run-policy-`));
 
 import {
   expectedDeveloperBranch,
+  expectedDeveloperBaseBranch,
+  isRecoverablePrBase,
   manualDeployArchitectPolicyDecision,
   manualDeployFinalLabelPlan,
   prRecoveryBranches
@@ -17,6 +19,10 @@ const issueNumber = 123;
 const expectedBranch = `taskix/${workflowCode}-issue-${issueNumber}`;
 
 assert.equal(expectedDeveloperBranch(workflowCode, issueNumber), expectedBranch);
+assert.equal(expectedDeveloperBaseBranch(), "main");
+assert.equal(isRecoverablePrBase("main"), true);
+assert.equal(isRecoverablePrBase("issue-86-wider-workflow-rail"), false);
+assert.equal(isRecoverablePrBase(null), false);
 
 assert.deepEqual(
   prRecoveryBranches({ developerBranch: "", workflowCode, issueNumberOrId: issueNumber }),

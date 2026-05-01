@@ -12,6 +12,14 @@ export function expectedDeveloperBranch(workflowCode: string, issueNumberOrId: n
   return `taskix/${workflowCode}-issue-${issueNumberOrId}`;
 }
 
+export function expectedDeveloperBaseBranch(): string {
+  return "main";
+}
+
+export function isRecoverablePrBase(baseBranch: string | null | undefined, expectedBaseBranch = expectedDeveloperBaseBranch()): boolean {
+  return baseBranch === expectedBaseBranch;
+}
+
 export function prRecoveryBranches(input: {
   developerBranch?: string | null;
   workflowCode: string;
