@@ -277,21 +277,24 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     });
   }
 
+  const previousBranch = issue.branch ?? null;
   const developerResult = await codex.developerHandleIssue({
     repo: project.githubRepo,
     issueNumber: issue.githubIssueNumber,
     issue,
     workflowId: displayWorkflowCode(workflow)
   });
-  if (!developerResult.prUrl && developerResult.branch) {
-    const recoveredPrUrl = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
+  const recoveryBranch = developerResult.branch || previousBranch || "";
+  if (!developerResult.prUrl && recoveryBranch) {
+    const recoveredPrUrl = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, recoveryBranch);
     if (recoveredPrUrl) {
       developerResult.prUrl = recoveredPrUrl;
+      developerResult.branch = recoveryBranch;
       developerResult.summary = `${developerResult.summary}\n\nTaskix recovered the PR URL after developer publishing returned empty.`;
     }
   }
   issue.prUrl = developerResult.prUrl || null;
-  issue.branch = developerResult.branch || null;
+  issue.branch = developerResult.branch || previousBranch || null;
   if (workflow.projectId) {
     const finishedAt = new Date().toISOString();
     const closeAt = developerResult.prUrl ? finishedAt : null;

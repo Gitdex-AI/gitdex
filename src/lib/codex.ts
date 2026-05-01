@@ -326,7 +326,9 @@ Execution rules:
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
+- If git push succeeds but gh pr create fails, do not delete or rename the pushed branch. Return that branch name with prUrl as an empty string so Taskix can recover the PR creation step deterministically.
 - If implementation is blocked, comment on the issue, add taskix:blocked, and still return JSON with prUrl as an empty string.
+- Always return the actual working branch name in branch once you create or switch to it, even when the PR URL is empty.
 
 Return JSON with summary, branch, prUrl, changedFiles, testsRun.`;
     const result = await this.runJsonResult<DeveloperIssueResult>(prompt, schema, { cwd: workspaceDir });
