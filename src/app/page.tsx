@@ -12,10 +12,10 @@ export default async function DashboardPage() {
     <>
       <PageTitle title="Dashboard" />
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="md">
-        <Stat icon={<Bot size={18} />} label="Codex model" value={settings.codexModel} />
-        <Stat icon={<GitBranch size={18} />} label="Fallback repo" value={settings.githubRepo || "not set"} />
-        <Stat icon={<FolderKanban size={18} />} label="Projects" value={String(projects.length)} />
-        <Stat icon={<Workflow size={18} />} label="Workflows" value={String(workflows.length)} />
+        <Stat href="/tools" icon={<Bot size={18} />} label="Codex model" value={settings.codexModel} />
+        <Stat href="/settings" icon={<GitBranch size={18} />} label="Fallback repo" value={settings.githubRepo || "not set"} />
+        <Stat href="/projects" icon={<FolderKanban size={18} />} label="Projects" value={String(projects.length)} />
+        <Stat href="/projects" icon={<Workflow size={18} />} label="Workflows" value={String(workflows.length)} />
       </SimpleGrid>
       <Paper>
         <Group justify="space-between" p="md" className="section-header">
@@ -33,9 +33,9 @@ export default async function DashboardPage() {
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Stat({ href, icon, label, value }: { href: string; icon: React.ReactNode; label: string; value: string }) {
   return (
-    <Card withBorder shadow="xs" padding="md">
+    <Card component="a" href={href} withBorder shadow="xs" padding="md" className="dashboard-stat-card">
       <Group justify="space-between" align="flex-start">
         <div>
           <Text size="xs" tt="uppercase" fw={800} c="dimmed">
