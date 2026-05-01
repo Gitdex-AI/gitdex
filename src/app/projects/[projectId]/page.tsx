@@ -41,14 +41,16 @@ export default async function ProjectDetailPage({
   const allDynamicSessions = sessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops");
   const archivedSessions = allDynamicSessions.filter((session) => session.archivedAt);
   const dynamicSessions = allDynamicSessions.filter((session) => !session.archivedAt);
-  const activeWorkflows = workflows.filter((workflow) => workflow.status !== "done");
-  const doneWorkflows = workflows.filter((workflow) => workflow.status === "done");
+  const sortedWorkflows = sortWorkflowsLatestFirst(workflows);
+  const activeWorkflows = sortedWorkflows.filter((workflow) => workflow.status !== "done");
+  const doneWorkflows = sortedWorkflows.filter((workflow) => workflow.status === "done");
   const queuedWorkflowId = query.workflow ?? null;
   const queuedJobId = query.job ?? null;
-  const queuedWorkflow = queuedWorkflowId ? workflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
+  const queuedWorkflow = queuedWorkflowId ? sortedWorkflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
   const queuedJob = queuedJobId ? jobs.find((job) => job.jobId === queuedJobId) ?? null : null;
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
-  const workflowPanelWorkflows = visibleActiveWorkflows.length ? visibleActiveWorkflows : doneWorkflows.slice(0, 3);
+  const latestWorkflow = queuedWorkflow ?? visibleActiveWorkflows[0] ?? sortedWorkflows[0] ?? null;
+  const workflowPanelWorkflows = latestWorkflow ? [latestWorkflow] : [];
   const workflowPanelJobs = filterJobsForWorkflows(jobs, workflowPanelWorkflows);
   const workflowPanelSessions = filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
   const workflowPanelDynamicSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && !session.archivedAt);
@@ -64,9 +66,8 @@ export default async function ProjectDetailPage({
     dynamicSessions: workflowPanelDynamicSessions,
     archivedSessions: workflowPanelArchivedSessions,
     jobs: workflowPanelJobs,
-    activeWorkflows: visibleActiveWorkflows,
-    doneWorkflows,
-    visibleActiveWorkflows,
+    activeWorkflows: workflowPanelWorkflows,
+    visibleActiveWorkflows: workflowPanelWorkflows,
     queuedWorkflow,
     queuedJob,
     queuedJobId
@@ -99,33 +100,10 @@ export default async function ProjectDetailPage({
 
         <aside className="project-context">
           <Paper>
-            <Group justify="space-between" p="md" className="section-header">
-              <div>
-                <Text fw={760}>Project</Text>
-                <Text size="sm" c="dimmed">{project.githubRepo}</Text>
-              </div>
-              <Badge variant="light">{project.autoDeploy ? "auto deploy" : "manual deploy"}</Badge>
-            </Group>
-            <Stack p="md" gap="xs">
-              <Text size="sm">Slug: <Code>{project.slug}</Code></Text>
-              <Text size="sm">PM: <Code>{project.projectManagerSessionId ?? "new"}</Code></Text>
-              <Text size="sm">Architect: <Code>{project.architectSessionId ?? "new"}</Code></Text>
-              <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
-              <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
-              <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
-              <div className="project-danger-zone">
-                <Text size="xs" fw={780} c="red">Delete local project</Text>
-                <Text size="xs" c="dimmed">Type <Code>{project.slug}</Code> to remove this local project and its local Taskix state. GitHub data is not deleted.</Text>
-                <ProjectDeleteForm projectId={project.projectId} slug={project.slug} />
-              </div>
-            </Stack>
-          </Paper>
-
-          <Paper mt="md">
             <Group p="md" className="section-header">
               <div>
                 <Text fw={760}>Workflows</Text>
-                <Text size="sm" c="dimmed">Issues assigned by architect.</Text>
+                <Text size="sm" c="dimmed">Current project delivery flow.</Text>
               </div>
               <Group gap="xs">
                 <Button
@@ -149,12 +127,40 @@ export default async function ProjectDetailPage({
                 workflows={workflowPanelWorkflows}
                 stepDetails={workflowStepDetails}
               />
+              <CompletedWorkflowHistory projectId={project.projectId} workflows={doneWorkflows} />
+            </Stack>
+          </Paper>
+
+          <Paper mt="md">
+            <Group justify="space-between" p="md" className="section-header">
+              <div>
+                <Text fw={760}>Project</Text>
+                <Text size="sm" c="dimmed">{project.githubRepo}</Text>
+              </div>
+              <Badge variant="light">{project.autoDeploy ? "auto deploy" : "manual deploy"}</Badge>
+            </Group>
+            <Stack p="md" gap="xs">
+              <Text size="sm">Slug: <Code>{project.slug}</Code></Text>
+              <Text size="sm">PM: <Code>{project.projectManagerSessionId ?? "new"}</Code></Text>
+              <Text size="sm">Architect: <Code>{project.architectSessionId ?? "new"}</Code></Text>
+              <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
+              <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
+              <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
+              <div className="project-danger-zone">
+                <Text size="xs" fw={780} c="red">Delete local project</Text>
+                <Text size="xs" c="dimmed">Type <Code>{project.slug}</Code> to remove this local project and its local Taskix state. GitHub data is not deleted.</Text>
+                <ProjectDeleteForm projectId={project.projectId} slug={project.slug} />
+              </div>
             </Stack>
           </Paper>
         </aside>
       </div>
     </>
   );
+}
+
+function sortWorkflowsLatestFirst(workflows: WorkflowRecord[]): WorkflowRecord[] {
+  return [...workflows].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 }
 
 function prioritizeById<T extends { workflowId?: string; jobId?: string }>(items: T[], selectedId: string | null): T[] {
@@ -205,7 +211,6 @@ function buildWorkflowStepDetails(input: {
   archivedSessions: AgentSessionRecord[];
   jobs: JobRecord[];
   activeWorkflows: WorkflowRecord[];
-  doneWorkflows: WorkflowRecord[];
   visibleActiveWorkflows: WorkflowRecord[];
   queuedWorkflow: WorkflowRecord | null;
   queuedJob: JobRecord | null;
@@ -259,7 +264,6 @@ function buildWorkflowStepDetails(input: {
     ),
     done: (
       <Stack gap="xs">
-        {renderCompletedWorkflowRows(input.projectId, input.doneWorkflows)}
         {renderSessionRows(input.archivedSessions.slice(0, 4), true)}
       </Stack>
     )
@@ -281,6 +285,21 @@ function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobR
         <ProjectRunJobsForm projectId={projectId} label={label} />
       </Group>
     </div>
+  );
+}
+
+function CompletedWorkflowHistory({ projectId, workflows }: { projectId: string; workflows: WorkflowRecord[] }) {
+  if (!workflows.length) return null;
+  return (
+    <details className="completed-workflows">
+      <summary>
+        <span>Completed workflow history</span>
+        <Badge size="xs" variant="light">{workflows.length}</Badge>
+      </summary>
+      <Stack gap="xs" mt="sm">
+        {renderCompletedWorkflowRows(projectId, workflows)}
+      </Stack>
+    </details>
   );
 }
 
