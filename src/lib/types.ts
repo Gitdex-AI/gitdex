@@ -132,6 +132,28 @@ export type ProjectRecord = {
   teamRoles: Role[];
 };
 
+export type ProjectTriageGroup = "blocked" | "needs_qa" | "ready_to_merge" | "in_progress" | "done" | "untracked";
+
+export type ProjectTriageItem = {
+  issueNumber: number;
+  issueUrl: string;
+  issueState: string;
+  issueLabels: string[];
+  primaryLinkedPrUrl: string | null;
+  primaryLinkedPrState: string | null;
+  primaryLinkedPrLabels: string[];
+  group: ProjectTriageGroup;
+};
+
+export type ProjectTriageResponse = {
+  ok: true;
+  projectId: string;
+  repo: string;
+  generatedAt: string;
+  counts: Record<ProjectTriageGroup, number>;
+  groups: Record<ProjectTriageGroup, ProjectTriageItem[]>;
+};
+
 export type AgentMessage = {
   role: AgentMessageRole;
   content: string;
