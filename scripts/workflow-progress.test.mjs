@@ -12,7 +12,7 @@ const issue = (overrides = {}) => ({
   ...overrides
 });
 
-const currentStep = (steps) => steps.find((step) => step.status === "current" || step.status === "blocked");
+const currentStep = (steps) => steps.find((step) => step.status === "current" || step.status === "running" || step.status === "blocked");
 const step = (steps, id) => steps.find((item) => item.id === id);
 
 describe("getWorkflowProgress", () => {
@@ -41,6 +41,26 @@ describe("getWorkflowProgress", () => {
 
     assert.equal(currentStep(steps).id, "developer");
     assert.equal(step(steps, "planning").status, "complete");
+  });
+
+  it("marks running workflow jobs on the planning step", () => {
+    const steps = getWorkflowProgress({
+      workflows: [workflow("created")],
+      jobs: [job("workflow_run", "running")]
+    });
+
+    assert.equal(currentStep(steps).id, "planning");
+    assert.equal(currentStep(steps).status, "running");
+  });
+
+  it("marks running developer jobs on the developer step", () => {
+    const steps = getWorkflowProgress({
+      workflows: [workflow("planned", [issue()])],
+      jobs: [job("issue_run", "running")]
+    });
+
+    assert.equal(currentStep(steps).id, "developer");
+    assert.equal(currentStep(steps).status, "running");
   });
 
   it("moves PR-backed issues to QA", () => {

@@ -423,13 +423,13 @@ function WorkflowProgressList({
             </div>
             <div className="workflow-progress-copy">
               <Group gap="xs" justify="space-between" align="flex-start">
-                <Text size="sm" fw={step.status === "current" || step.status === "blocked" ? 850 : 760}>{step.label}</Text>
+                <Text size="sm" fw={step.status === "current" || step.status === "running" || step.status === "blocked" ? 850 : 760}>{step.label}</Text>
                 <Badge size="xs" color={workflowProgressStatusColor(step.status)} variant={step.status === "upcoming" ? "outline" : "light"}>
                   {workflowProgressStatusLabel(step.status)}
                 </Badge>
               </Group>
               <Text size="xs" c="dimmed" mt={2}>{step.detail}</Text>
-              <details className="workflow-progress-detail" open={step.status === "current" || step.status === "blocked"}>
+              <details className="workflow-progress-detail" open={step.status === "current" || step.status === "running" || step.status === "blocked"}>
                 <summary>View step details</summary>
                 <div className="workflow-progress-detail-body">
                   {stepDetails[step.id]}
@@ -474,7 +474,7 @@ function WorkflowProgressList({
 }
 
 function getActiveWorkflowStepIndex(steps: WorkflowProgressStep[]): number {
-  const activeIndex = steps.findIndex((step) => step.status === "current" || step.status === "blocked");
+  const activeIndex = steps.findIndex((step) => step.status === "current" || step.status === "running" || step.status === "blocked");
   if (activeIndex >= 0) return activeIndex;
   const doneIndex = steps.findIndex((step) => step.id === "done" && step.status === "complete");
   return doneIndex >= 0 ? doneIndex : 0;
@@ -486,6 +486,8 @@ function workflowProgressStatusLabel(status: WorkflowProgressStep["status"]): st
       return "Done";
     case "current":
       return "Current";
+    case "running":
+      return "Running";
     case "blocked":
       return "Blocked";
     case "upcoming":
@@ -499,6 +501,8 @@ function workflowProgressStatusColor(status: WorkflowProgressStep["status"]): st
       return "green";
     case "current":
       return "blue";
+    case "running":
+      return "cyan";
     case "blocked":
       return "red";
     case "upcoming":

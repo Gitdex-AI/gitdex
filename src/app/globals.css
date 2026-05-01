@@ -402,6 +402,11 @@ pre,
   border-left-color: #2563eb;
 }
 
+.workflow-progress-summary.running {
+  background: #f0f9ff;
+  border-left-color: #0284c7;
+}
+
 .workflow-progress-summary.blocked {
   background: #fff1f2;
   border-left-color: #dc2626;
@@ -441,6 +446,10 @@ pre,
   background: #eff6ff;
 }
 
+.workflow-progress-step.running {
+  background: #f0f9ff;
+}
+
 .workflow-progress-step.blocked {
   background: #fff1f2;
 }
@@ -472,6 +481,13 @@ pre,
   background: #2563eb;
   border-color: #bfdbfe;
   box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.workflow-progress-step.running .workflow-progress-marker {
+  color: #ffffff;
+  background: #0284c7;
+  border-color: #bae6fd;
+  box-shadow: 0 0 0 3px #e0f2fe;
 }
 
 .workflow-progress-step.blocked .workflow-progress-marker {
