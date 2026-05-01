@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { Bot, GitBranch, Info, Wrench } from "lucide-react";
-import type { CSSProperties } from "react";
+import { AlertCircle, Bot, CheckCircle2, Clock, GitBranch, Info, Play, Wrench } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
@@ -11,6 +11,7 @@ import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
+import type { JobRecord } from "@/lib/types";
 
 export default async function ProjectDetailPage({
   params,
@@ -46,6 +47,7 @@ export default async function ProjectDetailPage({
   const visibleJobs = prioritizeById(jobs, queuedJobId).slice(0, 4);
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
   const readyForArchitectPayload = findReadyForArchitectPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
+  const nextAction = getWorkflowNextAction(jobs);
 
   return (
     <>
@@ -98,13 +100,41 @@ export default async function ProjectDetailPage({
                 <Text size="sm" c="dimmed">Issues assigned by architect.</Text>
               </div>
               <Group gap="xs">
-                <ProjectRunJobsForm projectId={project.projectId} />
                 <ProjectSyncForm projectId={project.projectId} />
               </Group>
             </Group>
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               {!isInspectingIssueSession && <ProjectHandoffForm projectId={project.projectId} payload={readyForArchitectPayload} />}
+              <div className="workflow-next-action">
+                <Group justify="space-between" gap="sm" align="flex-start">
+                  <Group gap="sm" align="flex-start" wrap="nowrap">
+                    <div className={`workflow-next-action-icon ${nextAction.tone}`}>
+                      {nextAction.icon}
+                    </div>
+                    <div>
+                      <Group gap="xs">
+                        <Text fw={760}>{nextAction.title}</Text>
+                        <Badge size="xs" variant="light">{nextAction.phase}</Badge>
+                      </Group>
+                      <Text size="sm" c="dimmed" mt={4}>{nextAction.description}</Text>
+                      <Group gap={6} mt="xs">
+                        <Badge size="xs" variant="outline">{nextAction.planningPending} planning pending</Badge>
+                        <Badge size="xs" variant="outline">{nextAction.developerPending} developer pending</Badge>
+                        {nextAction.runningCount ? <Badge size="xs" color="blue" variant="light">{nextAction.runningCount} running</Badge> : null}
+                        {nextAction.failedCount ? <Badge size="xs" color="red" variant="light">{nextAction.failedCount} blocked</Badge> : null}
+                      </Group>
+                    </div>
+                  </Group>
+                  {nextAction.buttonLabel ? (
+                    <ProjectRunJobsForm projectId={project.projectId} label={nextAction.buttonLabel} />
+                  ) : (
+                    <Button type="button" variant="light" size="xs" radius="xl" disabled leftSection={<Play size={14} />}>
+                      No Pending Work
+                    </Button>
+                  )}
+                </Group>
+              </div>
               {query.queued === "1" && queuedWorkflow ? (
                 <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
                   <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -263,6 +293,99 @@ const highlightedCardStyle = {
   borderColor: "#93c5fd",
   background: "#eff6ff"
 } satisfies CSSProperties;
+
+type WorkflowNextAction = {
+  title: string;
+  phase: string;
+  description: string;
+  buttonLabel: string | null;
+  tone: "ready" | "running" | "blocked" | "idle";
+  icon: ReactNode;
+  planningPending: number;
+  developerPending: number;
+  runningCount: number;
+  failedCount: number;
+};
+
+function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
+  const planningPending = jobs.filter((job) => job.status === "pending" && job.type === "workflow_run").length;
+  const developerPending = jobs.filter((job) => job.status === "pending" && job.type === "issue_run").length;
+  const runningCount = jobs.filter((job) => job.status === "running").length;
+  const failedCount = jobs.filter((job) => job.status === "failed").length;
+
+  if (runningCount) {
+    return {
+      title: "Workflow step running",
+      phase: "Running",
+      description: "Taskix is executing the current job. Refresh or wait for the session and job status to update before starting another step.",
+      buttonLabel: null,
+      tone: "running",
+      icon: <Clock size={18} />,
+      planningPending,
+      developerPending,
+      runningCount,
+      failedCount
+    };
+  }
+
+  if (developerPending) {
+    return {
+      title: "Start next developer issue",
+      phase: "Developer work",
+      description: "Runs one planned developer issue. The developer should create a branch and pull request, then stop for QA and merge readiness.",
+      buttonLabel: "Start Next Developer Issue",
+      tone: "ready",
+      icon: <Play size={18} />,
+      planningPending,
+      developerPending,
+      runningCount,
+      failedCount
+    };
+  }
+
+  if (planningPending) {
+    return {
+      title: "Run architect planning",
+      phase: "Planning",
+      description: "The architect will split the requirement into GitHub issues. Developer work will not start until you run the next step.",
+      buttonLabel: "Run Architect Planning",
+      tone: "ready",
+      icon: <GitBranch size={18} />,
+      planningPending,
+      developerPending,
+      runningCount,
+      failedCount
+    };
+  }
+
+  if (failedCount) {
+    return {
+      title: "Blocked job needs attention",
+      phase: "Blocked",
+      description: "A previous job failed or timed out. Inspect the session, fix the blocker, then retry from the workflow or session controls.",
+      buttonLabel: null,
+      tone: "blocked",
+      icon: <AlertCircle size={18} />,
+      planningPending,
+      developerPending,
+      runningCount,
+      failedCount
+    };
+  }
+
+  return {
+    title: "No pending work",
+    phase: "Idle",
+    description: "Queue a requirement to start planning, or review existing workflows and PRs before taking another manual step.",
+    buttonLabel: null,
+    tone: "idle",
+    icon: <CheckCircle2 size={18} />,
+    planningPending,
+    developerPending,
+    runningCount,
+    failedCount
+  };
+}
 
 function formatDuration(durationMs: number): string {
   const seconds = Math.max(0, Math.round(durationMs / 1000));
