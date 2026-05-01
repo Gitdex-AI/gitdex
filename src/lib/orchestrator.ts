@@ -541,13 +541,16 @@ async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: st
 async function requestInitialPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
   if (!project.autoDeploy && issue.githubIssueNumber) {
     const labels = ["taskix:need-qa"];
+    const removeLabels = ["taskix:ready-to-merge", "taskix:blocked"];
     await Promise.all([
       addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labels),
-      addLabelsWithGh(project.githubRepo, prUrl, labels)
+      addLabelsWithGh(project.githubRepo, prUrl, labels),
+      removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, removeLabels),
+      removeLabelsWithGh(project.githubRepo, prUrl, removeLabels)
     ]);
     return {
       decision: "need_qa" as const,
-      summary: `Manual-deploy project: Taskix requested QA for ${prUrl} and stopped before merge review.`,
+      summary: `Manual-deploy project: Taskix requested QA for ${prUrl}, cleared any stale ready-to-merge state, and deferred final merge-readiness approval until the architect reviews the QA result.`,
       labelsApplied: labels,
       comments: []
     };
@@ -607,7 +610,7 @@ async function requestFinalPrReview(project: ProjectRecord, issue: IssueRecord, 
     ]);
     return {
       decision: "ready_to_merge" as const,
-      summary: `${architectDecision.summary}\n\nManual-deploy project: architect approved merge readiness after QA; Taskix marked ${prUrl} ready to merge without merging it.`,
+      summary: `${architectDecision.summary}\n\nManual-deploy project: architect explicitly approved merge readiness after QA; Taskix preserved QA-visible evidence, marked ${prUrl} ready to merge, and did not merge the PR.`,
       labelsApplied: [...new Set([...architectDecision.labelsApplied, ...addLabels])],
       comments: architectDecision.comments
     };

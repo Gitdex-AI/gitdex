@@ -403,6 +403,8 @@ Rules:
 - Decide whether the PR is ready to merge, needs changes, or is blocked.
 - Do not merge the PR.
 - Do not add or remove GitHub labels; Taskix will apply labels after your structured decision.
+- Treat "ready_to_merge" as the architect's explicit final approval after QA for a manual-deploy project.
+- Preserve QA-visible evidence in your reasoning; do not rely on or recreate an earlier ready-to-merge state.
 - Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
 - Return "changes_requested" if implementation changes are required.
 - Return "blocked" if readiness cannot be determined from available GitHub state.
