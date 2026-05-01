@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
-import { addLabelsWithGh, createIssueWithGh, createPullRequestWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
+
+const execFileAsync = promisify(execFile);
 
 export async function createWorkflow(requirement: string, chatId: number, project?: ProjectRecord | null): Promise<WorkflowRecord> {
   const createdAt = new Date().toISOString();
@@ -284,12 +288,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     workflowId: displayWorkflowCode(workflow)
   });
   if (!developerResult.prUrl) {
-    const recoveryBranch = developerResult.branch || expectedDeveloperBranch(workflow, issue);
-    const recoveredPrUrl = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, recoveryBranch);
-    if (recoveredPrUrl) {
-      developerResult.prUrl = recoveredPrUrl;
-      developerResult.branch = recoveryBranch;
-      developerResult.summary = `${developerResult.summary}\n\nTaskix recovered the PR URL after developer publishing returned empty.`;
+    const recovery = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
+    if (recovery) {
+      developerResult.prUrl = recovery.prUrl;
+      developerResult.branch = recovery.branch;
+      developerResult.summary = `${developerResult.summary}\n\nTaskix recovered existing PR context after developer publishing returned empty.\nRecovery source: ${recovery.source}.\nRecovered base: ${recovery.base ?? "repository default branch"}.`;
+      timeline.push(`Recovered existing PR context for issue ${issue.issueId} via ${recovery.source}; base ${recovery.base ?? "repository default branch"}.`);
     }
   }
   issue.prUrl = developerResult.prUrl || null;
@@ -479,29 +483,39 @@ function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" 
   return null;
 }
 
-async function recoverDeveloperPullRequest(repo: string, issue: IssueRecord, workflow: WorkflowRecord, branch: string): Promise<string | null> {
+async function recoverDeveloperPullRequest(
+  repo: string,
+  issue: IssueRecord,
+  workflow: WorkflowRecord,
+  branch: string
+): Promise<{ prUrl: string; branch: string; base: string | null; source: string } | null> {
   try {
-    const existingPrUrl = await findPullRequestByHeadWithGh(repo, branch);
-    if (existingPrUrl) return existingPrUrl;
-    const base = await runningWorkflowBaseBranch();
-    const labels = ["taskix:pr-opened", "taskix:architect-review", `role:${issue.developerRole ?? "general_developer"}`];
-    const body = [
-      `Closes #${issue.githubIssueNumber}`,
-      "",
-      `Recovered by Taskix after developer pushed branch ${branch} but did not return a PR URL.`,
-      `Base branch: ${base ?? "repository default branch"}.`,
-      "",
-      `Workflow: ${displayWorkflowCode(workflow)}`,
-      `Issue: ${issue.issueId}`
-    ].join("\n");
-    return await createPullRequestWithGh({
-      repo,
-      head: branch,
-      base,
-      title: issue.title,
-      body,
-      labels
-    });
+    const expectedBranch = expectedDeveloperBranch(workflow, issue);
+    const branchCandidates = [...new Set([branch, expectedBranch].map((value) => value.trim()).filter(Boolean))];
+
+    for (const candidateBranch of branchCandidates) {
+      const existingPrUrl = await findPullRequestByHeadWithGh(repo, candidateBranch);
+      if (!existingPrUrl) continue;
+      const details = await readPullRequestRefs(repo, existingPrUrl);
+      return {
+        prUrl: existingPrUrl,
+        branch: details.head ?? candidateBranch,
+        base: details.base,
+        source: candidateBranch === branch ? "developer branch lookup" : "expected workflow branch lookup"
+      };
+    }
+
+    if (!issue.githubIssueNumber) return null;
+    const snapshot = await getIssueSnapshotWithGh(repo, issue.githubIssueNumber);
+    const linkedPr = choosePrimaryPr(snapshot.linkedPrs);
+    if (!linkedPr) return null;
+    const details = await readPullRequestRefs(repo, linkedPr.url);
+    return {
+      prUrl: linkedPr.url,
+      branch: details.head ?? expectedBranch,
+      base: details.base,
+      source: "linked issue pull request lookup"
+    };
   } catch {
     return null;
   }
@@ -511,15 +525,16 @@ function expectedDeveloperBranch(workflow: WorkflowRecord, issue: IssueRecord): 
   return `taskix/${displayWorkflowCode(workflow)}-issue-${issue.githubIssueNumber ?? issue.issueId}`;
 }
 
-async function runningWorkflowBaseBranch(): Promise<string | null> {
+async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: string | null; base: string | null }> {
   try {
-    const { execFile } = await import("node:child_process");
-    const { promisify } = await import("node:util");
-    const execFileAsync = promisify(execFile);
-    const { stdout } = await execFileAsync("git", ["branch", "--show-current"]);
-    return stdout.trim() || null;
+    const { stdout } = await execFileAsync("gh", ["pr", "view", pr, "--repo", repo, "--json", "headRefName,baseRefName"]);
+    const payload = JSON.parse(stdout) as { headRefName?: string; baseRefName?: string };
+    return {
+      head: payload.headRefName?.trim() || null,
+      base: payload.baseRefName?.trim() || null
+    };
   } catch {
-    return null;
+    return { head: null, base: null };
   }
 }
 

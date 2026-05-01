@@ -325,6 +325,7 @@ Execution rules:
 - Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
+- If this work validates Taskix recovery/ready-to-merge behavior, document observable verification evidence in the PR body, including deterministic recovery, recovered base visibility, ready-to-merge expectations, and no generated PR merge.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
 - If implementation is blocked, comment on the issue, add taskix:blocked, and still return JSON with prUrl as an empty string.
 
@@ -399,6 +400,7 @@ Required GitHub label behavior:
 - Add taskix:qa-running to the issue and PR when you start.
 - Read the issue acceptance criteria and PR diff using gh.
 - Validate implementation, ownedPaths, and relevant tests.
+- When passing QA, comment concise verification evidence on the PR, including commands run and any observable labels/state required by acceptance criteria.
 - If passed, add taskix:qa-passed and remove taskix:qa-running.
 - If failed, comment findings on the PR, add taskix:qa-failed, and remove taskix:qa-running.
 
