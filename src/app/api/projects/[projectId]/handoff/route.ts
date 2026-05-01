@@ -20,12 +20,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   try {
     const requirement = payload ? formatPmHandoffPayload(payload) : directRequirement;
     const workflow = await createWorkflow(requirement, 0, project);
-    await createJob({
+    const job = await createJob({
       projectId: project.projectId,
       type: "workflow_run",
       payload: { workflowId: workflow.workflowId }
     });
-    return redirect(request, `/projects/${project.projectId}?role=architect&autorun=1`);
+    const next = new URL(`/projects/${project.projectId}`, request.url);
+    next.searchParams.set("role", "architect");
+    next.searchParams.set("queued", "1");
+    next.searchParams.set("workflow", workflow.workflowId);
+    next.searchParams.set("job", job.jobId);
+    return NextResponse.redirect(next, { status: 303 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Architect handoff failed.";
     return redirect(request, `/projects/${project.projectId}?role=product_manager&error=${encodeURIComponent(message)}`);

@@ -27,14 +27,14 @@ function DirectRequirementFields() {
 
   return (
     <div className="handoff-box muted">
-      <Text size="sm" fw={700}>Start Workflow</Text>
+      <Text size="sm" fw={700}>Minimal Planning Smoke Path</Text>
       <Text size="xs" c="dimmed">
-        Paste a confirmed requirement here, or use PM chat to produce ready JSON.
+        Paste one confirmed requirement to queue a single architect planning workflow. This is a lightweight smoke path, not the full PM authoring flow.
       </Text>
       <Textarea
         name="requirement"
         aria-label="Direct workflow requirement"
-        placeholder="Describe the workflow requirement for the architect..."
+        placeholder="Describe the confirmed requirement the architect should plan..."
         autosize
         minRows={3}
         maxRows={6}
@@ -51,8 +51,11 @@ function DirectRequirementFields() {
         leftSection={pending ? <LoaderCircle size={15} className="chat-composer-spinner" /> : <GitBranch size={15} />}
         disabled={pending}
       >
-        {pending ? "Queueing workflow..." : "Start From Requirement"}
+        {pending ? "Queueing workflow..." : "Queue Planning Workflow"}
       </Button>
+      <Text size="xs" c="dimmed" mt="xs">
+        After submit, Taskix returns to the architect view with the queued workflow and pending `workflow_run` job highlighted.
+      </Text>
     </div>
   );
 }
@@ -64,7 +67,7 @@ function HandoffButton({ payload }: { payload: PmHandoffPayload }) {
     <div className="handoff-box">
       <Text size="sm" fw={700}>Start Workflow</Text>
       <Text size="xs" c="dimmed">
-        PM marked this requirement ready.
+        PM marked this requirement ready. Queue one planning workflow from the confirmed handoff.
       </Text>
       <Text size="sm" fw={720} mt="xs" lineClamp={2}>{payload.requirement}</Text>
       <Button
@@ -76,7 +79,7 @@ function HandoffButton({ payload }: { payload: PmHandoffPayload }) {
         leftSection={pending ? <LoaderCircle size={15} className="chat-composer-spinner" /> : <GitBranch size={15} />}
         disabled={pending}
       >
-        {pending ? "Queueing workflow..." : "Start Workflow"}
+        {pending ? "Queueing workflow..." : "Queue Workflow"}
       </Button>
     </div>
   );

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
 import { Bot, GitBranch, Info, Wrench } from "lucide-react";
+import type { CSSProperties } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
@@ -16,7 +17,7 @@ export default async function ProjectDetailPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ role?: string; session?: string; error?: string; autorun?: string }>;
+  searchParams: Promise<{ role?: string; session?: string; error?: string; autorun?: string; workflow?: string; job?: string; queued?: string }>;
 }) {
   const [{ projectId }, query] = await Promise.all([params, searchParams]);
   const project = await getProject(projectId);
@@ -38,6 +39,12 @@ export default async function ProjectDetailPage({
   const dynamicSessions = allDynamicSessions.filter((session) => !session.archivedAt);
   const activeWorkflows = workflows.filter((workflow) => workflow.status !== "done");
   const doneWorkflows = workflows.filter((workflow) => workflow.status === "done");
+  const queuedWorkflowId = query.workflow ?? null;
+  const queuedJobId = query.job ?? null;
+  const queuedWorkflow = queuedWorkflowId ? workflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
+  const queuedJob = queuedJobId ? jobs.find((job) => job.jobId === queuedJobId) ?? null : null;
+  const visibleJobs = prioritizeById(jobs, queuedJobId).slice(0, 4);
+  const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
   const readyForArchitectPayload = findReadyForArchitectPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
 
   return (
@@ -98,13 +105,39 @@ export default async function ProjectDetailPage({
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               {!isInspectingIssueSession && <ProjectHandoffForm projectId={project.projectId} payload={readyForArchitectPayload} />}
-              {jobs.slice(0, 4).map((job) => (
-                <Text key={job.jobId} size="xs" c="dimmed">
-                  Job {job.jobId}: {job.type} · {job.status}{job.error ? ` · ${job.error}` : ""}
-                </Text>
+              {query.queued === "1" && queuedWorkflow ? (
+                <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
+                  <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
+                  <Text size="xs" c="dimmed">
+                    {queuedWorkflow.trackingCode ?? queuedWorkflow.workflowId} is waiting in the workflow area below.
+                    {queuedJob ? ` Pending job: ${queuedJob.type} (${queuedJob.status}).` : ""}
+                  </Text>
+                </Alert>
+              ) : null}
+              {visibleJobs.map((job) => (
+                <div
+                  key={job.jobId}
+                  className="workflow-job-row"
+                  style={job.jobId === queuedJobId ? highlightedCardStyle : undefined}
+                >
+                  <Group justify="space-between" gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={700}>{job.type}</Text>
+                    <Badge size="xs" variant="light">{job.status}</Badge>
+                  </Group>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    Job {job.jobId}
+                    {job.payload.workflowId ? ` · workflow ${job.payload.workflowId}` : ""}
+                    {job.error ? ` · ${job.error}` : ""}
+                  </Text>
+                </div>
               ))}
-              {activeWorkflows.map((workflow) => (
-                <div key={workflow.workflowId} className="workflow-summary-card">
+              {!visibleJobs.length ? <Text c="dimmed" size="sm">No queued jobs yet.</Text> : null}
+              {visibleActiveWorkflows.map((workflow) => (
+                <div
+                  key={workflow.workflowId}
+                  className="workflow-summary-card"
+                  style={workflow.workflowId === queuedWorkflowId ? highlightedCardStyle : undefined}
+                >
                   <Group justify="space-between" gap="xs">
                     <div>
                       <Text fw={700} size="sm">
@@ -215,6 +248,21 @@ export default async function ProjectDetailPage({
     </>
   );
 }
+
+function prioritizeById<T extends { workflowId?: string; jobId?: string }>(items: T[], selectedId: string | null): T[] {
+  if (!selectedId) return items;
+  return [...items].sort((left, right) => {
+    const leftSelected = left.workflowId === selectedId || left.jobId === selectedId;
+    const rightSelected = right.workflowId === selectedId || right.jobId === selectedId;
+    if (leftSelected === rightSelected) return 0;
+    return leftSelected ? -1 : 1;
+  });
+}
+
+const highlightedCardStyle = {
+  borderColor: "#93c5fd",
+  background: "#eff6ff"
+} satisfies CSSProperties;
 
 function formatDuration(durationMs: number): string {
   const seconds = Math.max(0, Math.round(durationMs / 1000));
