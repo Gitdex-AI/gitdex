@@ -11,6 +11,8 @@ Taskix is a Next.js 16 TypeScript app. Application routes and API handlers live 
 - `npm run build`: create a production build and catch Next.js build errors.
 - `npm run start`: serve the production build on `127.0.0.1:8000`.
 - `npm run typecheck`: run `tsc --noEmit` for TypeScript validation.
+- `npm test`: run the Node-based automated test suite in `scripts/*.test.mjs`.
+- `npm run test:issue-run`: run the focused issue-run policy simulation.
 
 Before running workflows, confirm the external CLIs work locally: `codex --version`, `codex login`, and `gh auth status`.
 
@@ -20,19 +22,24 @@ Use TypeScript and React server components by default in `src/app`; mark compone
 
 ## Testing Guidelines
 
-There is no dedicated test runner configured yet. For now, use `npm run typecheck` and `npm run build` as the baseline verification for code changes. If adding tests, keep them close to the behavior under test and prefer clear names such as `pm-handoff.test.ts` or `ProjectChatArea.test.tsx`. Document any new test command in `package.json` and this file.
+Use the Node built-in test runner for repeatable behavior checks. Test files live in `scripts/*.test.mjs` and may import TypeScript source through `node --experimental-strip-types`. Run `npm test`, `npm run typecheck`, and `npm run build` before handing work to QA. Add or update tests for changed business logic, workflow state derivation, label policy, parsing, and other deterministic behavior. If a change cannot reasonably be automated, state why in the PR and provide a targeted manual QA scenario.
+
+Prefer tests that exercise pure helpers in `src/lib`, for example `scripts/workflow-next-action.test.mjs`. Keep test names behavior-focused and cover the practical states QA must verify, such as pending, running, blocked, and idle workflow states.
 
 ## Developer and QA Workflow
 
 All development work should start from a GitHub issue. Create a feature branch from the latest `main` using a descriptive issue-based name such as `issue-12-add-retry-controls`, implement the change there, and open a pull request back to `main`. Do not commit feature work directly to `main` except for explicit repository setup or emergency maintenance.
 
-Developers implement the requested change, run baseline checks, and create or update the GitHub issue with QA instructions. Treat QA as an independent validator, not as a code co-author. The QA issue should include the requirement, changed files, acceptance criteria, commands to run, and manual scenarios to verify.
+Developers implement the requested change, add repeatable test cases where feasible, run baseline checks, and create or update the GitHub issue with QA instructions. Treat QA as an independent validator, not as a code co-author. The QA issue should include the requirement, changed files, acceptance criteria, automated test commands, expected test cases, and any targeted browser scenarios to verify.
+
+QA should validate the submitted test cases first, then perform focused web UI checks for the user-visible path. Manual clicking is not a substitute for repeatable tests; it is used to confirm that the tested behavior is wired correctly in the browser. For workflow UI changes, QA should run `npm run dev`, visit the affected project page, trigger the relevant controls, and confirm the visible next action matches the issue acceptance criteria.
 
 QA should test from user-visible behavior and leave a GitHub issue comment with:
 
 - `Status: pass`, `fail`, or `blocked`.
-- Commands run, including `npm run typecheck` and `npm run build`.
-- Manual scenarios tested.
+- Commands run, including `npm test`, `npm run typecheck`, and `npm run build`.
+- Automated test cases covered and their result.
+- Manual browser scenarios tested.
 - For UI or interaction changes, browser validation run with `npm run dev` at `http://127.0.0.1:8000`.
 - Pages visited, controls clicked, and observed results for browser validation.
 - Screenshots, or a concise visual description when screenshots are not available.

@@ -15,7 +15,15 @@ type RunJobResponse = {
   } | null;
 };
 
-export function ProjectRunJobsForm({ projectId }: { projectId: string }) {
+export function ProjectRunJobsForm({
+  projectId,
+  label = "Run Jobs",
+  disabled = false
+}: {
+  projectId: string;
+  label?: string;
+  disabled?: boolean;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -50,8 +58,17 @@ export function ProjectRunJobsForm({ projectId }: { projectId: string }) {
 
   return (
     <Group gap={6} wrap="nowrap">
-      <Button type="button" variant="light" size="xs" radius="xl" leftSection={<Play size={14} />} loading={pending} onClick={runJob}>
-        Run Jobs
+      <Button
+        type="button"
+        variant="light"
+        size="xs"
+        radius="xl"
+        leftSection={<Play size={14} />}
+        loading={pending}
+        disabled={disabled}
+        onClick={runJob}
+      >
+        {label}
       </Button>
       {message ? (
         <Text size="xs" c={messageColor} lineClamp={1} maw={180} title={message}>
