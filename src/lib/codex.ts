@@ -348,7 +348,7 @@ Return JSON with summary, branch, prUrl, changedFiles, testsRun.`;
     qaPassed?: boolean;
   }): Promise<ArchitectPrReviewResult> {
     const schema = objectSchema({
-      decision: { type: "string", enum: ["need_qa", "ready_to_merge", "changes_requested", "merged", "blocked"] },
+      decision: { type: "string", enum: ["need_qa", "ready_to_merge", "changes_requested", "blocked"] },
       summary: { type: "string" },
       labelsApplied: { type: "array", items: { type: "string" } },
       comments: { type: "array", items: { type: "string" } }
@@ -366,8 +366,9 @@ Required GitHub label behavior:
 - If QA is required before merge, add taskix:need-qa to the PR and issue, then return decision "need_qa".
 - If changes are required from developer, comment on the PR, add taskix:blocked, and return decision "changes_requested".
 - If QA is already passed or QA is not needed and the PR is acceptable, add taskix:ready-to-merge and return decision "ready_to_merge".
-- If auto deploy is disabled, do not merge the PR; stop at taskix:ready-to-merge.
-- If auto deploy is enabled and QA has passed, you may merge only when repository checks and branch state are safe.
+- This is a merge-readiness decision, not merge execution. Never merge the PR and never return a merged state.
+- If auto deploy is disabled, stop at taskix:ready-to-merge.
+- If auto deploy is enabled and QA has passed, verify repository checks and branch state, then still stop at decision "ready_to_merge" without merging.
 
 Return JSON with decision, summary, labelsApplied, comments.`;
     return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
@@ -402,6 +403,7 @@ Rules:
 - Read the linked issue, PR diff, labels, and QA result with gh.
 - Decide whether the PR is ready to merge, needs changes, or is blocked.
 - Do not merge the PR.
+- Preserve manual-deploy handling by stopping at merge readiness only; do not generate merge, deploy, or PR-closing actions.
 - Do not add or remove GitHub labels; Taskix will apply labels after your structured decision.
 - Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
 - Return "changes_requested" if implementation changes are required.
