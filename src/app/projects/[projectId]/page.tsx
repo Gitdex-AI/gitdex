@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { Bot, GitBranch, Info, ListTodo, Wrench } from "lucide-react";
+import { Bot, GitBranch, Info, ListTodo } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -90,12 +90,11 @@ export default async function ProjectDetailPage({
               </Text>
             </div>
             <Group gap="xs">
-              <Button component="a" href={`/projects/${project.projectId}?role=product_manager`} variant={!isInspectingIssueSession && activeRole === "product_manager" ? "filled" : "light"} leftSection={<Bot size={16} />}>PM</Button>
-              <Button component="a" href={`/projects/${project.projectId}?role=architect`} variant={!isInspectingIssueSession && activeRole === "architect" ? "filled" : "light"} leftSection={<GitBranch size={16} />}>Architect</Button>
-              <Button component="a" href={`/projects/${project.projectId}?role=devops`} variant={!isInspectingIssueSession && activeRole === "devops" ? "filled" : "light"} leftSection={<Wrench size={16} />}>DevOps</Button>
+              <Badge variant="light" leftSection={<Bot size={12} />}>All agents</Badge>
+              {isInspectingIssueSession ? <Badge variant="outline">Read-only session</Badge> : null}
             </Group>
           </div>
-          <ProjectChatArea projectId={project.projectId} activeRole={activeRole} session={roleSession} readOnly={isInspectingIssueSession} />
+          <ProjectChatArea projectId={project.projectId} sessions={sessions} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
         </Paper>
 
         <aside className="project-context">
