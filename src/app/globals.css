@@ -3,6 +3,23 @@
   --app-shell: #ffffff;
   --app-border: #dde5ee;
   --app-ink: #172033;
+  --font-ui: "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-reading: "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-ui: 14px;
+  --text-md: 15px;
+  --text-chat: 15px;
+  --leading-tight: 1.25;
+  --leading-ui: 1.42;
+  --leading-reading: 1.68;
+  --weight-regular: 400;
+  --weight-medium: 560;
+  --weight-semibold: 700;
+  --weight-bold: 780;
+  --weight-heavy: 850;
 }
 
 * {
@@ -15,8 +32,17 @@ body {
   background:
     linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(244, 247, 251, 0) 240px),
     var(--app-bg);
-  font-family: "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   font-feature-settings: "ss01", "cv05";
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+code,
+kbd,
+pre,
+.mantine-Code-root {
+  font-family: var(--font-mono);
 }
 
 .topbar {
@@ -38,8 +64,9 @@ body {
   height: 34px;
   border-radius: 8px;
   background: linear-gradient(135deg, #2563eb, #0f766e);
-  font-size: 15px;
-  font-weight: 850;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-heavy);
 }
 
 .shell {
@@ -88,8 +115,8 @@ body {
 .nav-kicker {
   padding: 6px 10px 10px;
   color: #667085;
-  font-size: 11px;
-  font-weight: 760;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -105,8 +132,8 @@ body {
   border: 1px solid transparent;
   border-radius: 10px;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 690;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
   transition:
     background 140ms ease,
     border-color 140ms ease,
@@ -213,8 +240,8 @@ body {
 .section-title {
   margin: 4px 0 -4px;
   color: var(--mantine-color-dimmed);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
 }
 
@@ -289,8 +316,9 @@ body {
   border: 0;
   box-shadow: none;
   color: #111827;
-  font-size: 15px;
-  line-height: 1.55;
+  font-family: var(--font-reading);
+  font-size: var(--text-chat);
+  line-height: var(--leading-reading);
 }
 
 .chat-composer-input:focus {
@@ -345,8 +373,9 @@ body {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid #dbe5f3;
   border-radius: 12px;
-  font-size: 11px;
-  line-height: 1.45;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-ui);
   white-space: pre-wrap;
 }
 
@@ -571,8 +600,8 @@ body {
   justify-content: space-between;
   color: #475569;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 780;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   list-style: none;
 }
 
@@ -692,8 +721,8 @@ body {
 
 .runtime-link {
   color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 750;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-decoration: none;
 }
 
@@ -745,16 +774,31 @@ body {
   color: #ffffff;
   background: #111827;
   border-radius: 50%;
-  font-size: 12px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .chat-bubble {
+  max-width: 780px;
   padding: 12px 14px;
   background: #ffffff;
   border: 1px solid #e0e7f0;
   border-radius: 16px;
+  font-family: var(--font-reading);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.chat-bubble .mantine-Text-root {
+  font-size: var(--text-chat);
+  line-height: var(--leading-reading);
+  font-weight: var(--weight-regular);
+}
+
+.chat-bubble time,
+.chat-bubble .mantine-Badge-root {
+  font-family: var(--font-ui);
+  line-height: var(--leading-tight);
 }
 
 .project-context {
