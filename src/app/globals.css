@@ -357,6 +357,63 @@ body {
   border-radius: 16px;
 }
 
+.workflow-progress {
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d8e3f2;
+  border-radius: 16px;
+}
+
+.workflow-progress-step {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 0;
+  position: relative;
+}
+
+.workflow-progress-step:not(:last-child)::after {
+  position: absolute;
+  top: 24px;
+  bottom: -8px;
+  left: 7px;
+  width: 2px;
+  content: "";
+  background: #dbe5f3;
+}
+
+.workflow-progress-marker {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+}
+
+.workflow-progress-step.complete .workflow-progress-marker {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.workflow-progress-step.current .workflow-progress-marker {
+  background: #2563eb;
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.workflow-progress-step.blocked .workflow-progress-marker {
+  background: #dc2626;
+  border-color: #fecaca;
+  box-shadow: 0 0 0 3px #fee2e2;
+}
+
+.workflow-progress-step.upcoming .workflow-progress-copy {
+  opacity: 0.72;
+}
+
 .workflow-next-action-icon {
   display: grid;
   flex: 0 0 auto;

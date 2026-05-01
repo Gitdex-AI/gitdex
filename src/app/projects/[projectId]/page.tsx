@@ -11,6 +11,7 @@ import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
+import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
 import { getWorkflowNextAction, type WorkflowNextAction } from "@/lib/workflow-next-action";
 
 export default async function ProjectDetailPage({
@@ -48,6 +49,7 @@ export default async function ProjectDetailPage({
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
   const readyForArchitectPayload = findReadyForArchitectPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
   const nextAction = getWorkflowNextAction(jobs);
+  const workflowProgress = getWorkflowProgress({ workflows, jobs });
 
   return (
     <>
@@ -106,6 +108,7 @@ export default async function ProjectDetailPage({
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               {!isInspectingIssueSession && <ProjectHandoffForm projectId={project.projectId} payload={readyForArchitectPayload} />}
+              <WorkflowProgressList steps={workflowProgress} />
               <div className="workflow-next-action">
                 <Group justify="space-between" gap="sm" align="flex-start">
                   <Group gap="sm" align="flex-start" wrap="nowrap">
@@ -306,6 +309,59 @@ function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
       return <AlertCircle size={18} />;
     case "check":
       return <CheckCircle2 size={18} />;
+  }
+}
+
+function WorkflowProgressList({ steps }: { steps: WorkflowProgressStep[] }) {
+  return (
+    <div className="workflow-progress">
+      <Group justify="space-between" gap="xs" mb="xs">
+        <Text fw={760}>Current workflow step</Text>
+        <Badge size="xs" variant="light">{steps.find((step) => step.status === "current" || step.status === "blocked")?.label ?? "Workflow"}</Badge>
+      </Group>
+      <Stack gap={0}>
+        {steps.map((step) => (
+          <div key={step.id} className={`workflow-progress-step ${step.status}`}>
+            <div className="workflow-progress-marker" aria-hidden="true" />
+            <div className="workflow-progress-copy">
+              <Group gap="xs" justify="space-between" align="flex-start">
+                <Text size="sm" fw={760}>{step.label}</Text>
+                <Badge size="xs" color={workflowProgressStatusColor(step.status)} variant={step.status === "upcoming" ? "outline" : "light"}>
+                  {workflowProgressStatusLabel(step.status)}
+                </Badge>
+              </Group>
+              <Text size="xs" c="dimmed" mt={2}>{step.detail}</Text>
+            </div>
+          </div>
+        ))}
+      </Stack>
+    </div>
+  );
+}
+
+function workflowProgressStatusLabel(status: WorkflowProgressStep["status"]): string {
+  switch (status) {
+    case "complete":
+      return "Done";
+    case "current":
+      return "Current";
+    case "blocked":
+      return "Blocked";
+    case "upcoming":
+      return "Next";
+  }
+}
+
+function workflowProgressStatusColor(status: WorkflowProgressStep["status"]): string {
+  switch (status) {
+    case "complete":
+      return "green";
+    case "current":
+      return "blue";
+    case "blocked":
+      return "red";
+    case "upcoming":
+      return "gray";
   }
 }
 

@@ -1,0 +1,104 @@
+import type { IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
+
+export type WorkflowProgressStepId = "requirement" | "planning" | "developer" | "qa" | "merge" | "done";
+export type WorkflowProgressStepStatus = "complete" | "current" | "blocked" | "upcoming";
+
+export type WorkflowProgressStep = {
+  id: WorkflowProgressStepId;
+  label: string;
+  detail: string;
+  status: WorkflowProgressStepStatus;
+};
+
+const stepOrder: WorkflowProgressStepId[] = ["requirement", "planning", "developer", "qa", "merge", "done"];
+
+const stepCopy: Record<WorkflowProgressStepId, { label: string; detail: string }> = {
+  requirement: {
+    label: "1. PM requirement",
+    detail: "Capture the request in chat, then queue it for architect planning."
+  },
+  planning: {
+    label: "2. Architect planning",
+    detail: "Split the request into GitHub issues and developer-owned work."
+  },
+  developer: {
+    label: "3. Developer PR",
+    detail: "Run one planned developer issue and create a pull request."
+  },
+  qa: {
+    label: "4. QA validation",
+    detail: "Run automated tests first, then verify the targeted browser flow."
+  },
+  merge: {
+    label: "5. Ready to merge",
+    detail: "Wait for QA pass and architect merge readiness."
+  },
+  done: {
+    label: "6. Done",
+    detail: "The workflow is complete or there is no active work left."
+  }
+};
+
+export function getWorkflowProgress(input: {
+  workflows: Pick<WorkflowRecord, "status" | "issues">[];
+  jobs: Pick<JobRecord, "status" | "type">[];
+}): WorkflowProgressStep[] {
+  const workflows = input.workflows;
+  const jobs = input.jobs;
+  const issues = workflows.flatMap((workflow) => workflow.issues);
+  const hasAnyWorkflow = workflows.length > 0;
+  const hasActiveWorkflow = workflows.some((workflow) => workflow.status !== "done");
+  const hasDoneWorkflow = workflows.some((workflow) => workflow.status === "done");
+  const blockedStep = getBlockedStep(workflows, jobs, issues);
+  const currentStep = blockedStep ?? getCurrentStep({ hasAnyWorkflow, hasActiveWorkflow, hasDoneWorkflow, issues, jobs });
+  const currentIndex = stepOrder.indexOf(currentStep);
+
+  return stepOrder.map((id, index) => ({
+    id,
+    label: stepCopy[id].label,
+    detail: stepCopy[id].detail,
+    status: blockedStep === id ? "blocked" : index < currentIndex || isDoneComplete(id, hasDoneWorkflow, hasActiveWorkflow) ? "complete" : id === currentStep ? "current" : "upcoming"
+  }));
+}
+
+function getBlockedStep(
+  workflows: Pick<WorkflowRecord, "status">[],
+  jobs: Pick<JobRecord, "status" | "type">[],
+  issues: Pick<IssueRecord, "labels" | "prLabels" | "prUrl" | "prState">[]
+): WorkflowProgressStepId | null {
+  if (jobs.some((job) => job.status === "failed" && job.type === "workflow_run")) return "planning";
+  if (jobs.some((job) => job.status === "failed" && job.type === "issue_run")) return "developer";
+  if (workflows.some((workflow) => workflow.status === "blocked")) return "developer";
+  if (issues.some((issue) => hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"]))) return "qa";
+  const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["taskix:blocked"]));
+  if (blockedIssue) return blockedIssue.prUrl || blockedIssue.prState ? "qa" : "developer";
+  return null;
+}
+
+function getCurrentStep(input: {
+  hasAnyWorkflow: boolean;
+  hasActiveWorkflow: boolean;
+  hasDoneWorkflow: boolean;
+  issues: Pick<IssueRecord, "labels" | "prLabels" | "prUrl" | "prState">[];
+  jobs: Pick<JobRecord, "status" | "type">[];
+}): WorkflowProgressStepId {
+  if (!input.hasAnyWorkflow && !input.jobs.length) return "requirement";
+  if (input.jobs.some((job) => job.status !== "done" && job.type === "workflow_run")) return "planning";
+  if (input.jobs.some((job) => job.status !== "done" && job.type === "issue_run")) return "developer";
+  if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["taskix:ready-to-merge"]))) return "merge";
+  if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["qa-passed", "taskix:qa-passed"]))) return "merge";
+  if (input.issues.some((issue) => issue.prUrl || issue.prState)) return "qa";
+  if (input.issues.length) return "developer";
+  if (input.hasActiveWorkflow) return "planning";
+  if (input.hasDoneWorkflow) return "done";
+  return "requirement";
+}
+
+function isDoneComplete(id: WorkflowProgressStepId, hasDoneWorkflow: boolean, hasActiveWorkflow: boolean): boolean {
+  return id === "done" && hasDoneWorkflow && !hasActiveWorkflow;
+}
+
+function hasAnyIssueLabel(issue: Pick<IssueRecord, "labels" | "prLabels">, expected: string[]): boolean {
+  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
+  return expected.some((label) => labels.has(label));
+}
