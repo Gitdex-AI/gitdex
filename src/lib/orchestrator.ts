@@ -283,10 +283,12 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     issue,
     workflowId: displayWorkflowCode(workflow)
   });
-  if (!developerResult.prUrl && developerResult.branch) {
-    const recoveredPrUrl = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
+  if (!developerResult.prUrl) {
+    const recoveryBranch = developerResult.branch || expectedDeveloperBranch(workflow, issue);
+    const recoveredPrUrl = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, recoveryBranch);
     if (recoveredPrUrl) {
       developerResult.prUrl = recoveredPrUrl;
+      developerResult.branch = recoveryBranch;
       developerResult.summary = `${developerResult.summary}\n\nTaskix recovered the PR URL after developer publishing returned empty.`;
     }
   }
@@ -481,12 +483,13 @@ async function recoverDeveloperPullRequest(repo: string, issue: IssueRecord, wor
   try {
     const existingPrUrl = await findPullRequestByHeadWithGh(repo, branch);
     if (existingPrUrl) return existingPrUrl;
-    const base = await currentBranch();
+    const base = await runningWorkflowBaseBranch();
     const labels = ["taskix:pr-opened", "taskix:architect-review", `role:${issue.developerRole ?? "general_developer"}`];
     const body = [
       `Closes #${issue.githubIssueNumber}`,
       "",
       `Recovered by Taskix after developer pushed branch ${branch} but did not return a PR URL.`,
+      `Base branch: ${base ?? "repository default branch"}.`,
       "",
       `Workflow: ${displayWorkflowCode(workflow)}`,
       `Issue: ${issue.issueId}`
@@ -504,7 +507,11 @@ async function recoverDeveloperPullRequest(repo: string, issue: IssueRecord, wor
   }
 }
 
-async function currentBranch(): Promise<string | null> {
+function expectedDeveloperBranch(workflow: WorkflowRecord, issue: IssueRecord): string {
+  return `taskix/${displayWorkflowCode(workflow)}-issue-${issue.githubIssueNumber ?? issue.issueId}`;
+}
+
+async function runningWorkflowBaseBranch(): Promise<string | null> {
   try {
     const { execFile } = await import("node:child_process");
     const { promisify } = await import("node:util");
