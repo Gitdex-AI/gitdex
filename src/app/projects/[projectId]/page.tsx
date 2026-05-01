@@ -369,6 +369,9 @@ function recoveryReasonForDeveloperStep(workflows: WorkflowRecord[], jobs: JobRe
 function recoveryReasonForQaStep(workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): string | null {
   if (sessions.some((session) => session.status === "blocked")) return "QA is blocked or failed. Open the QA session for findings, then retry the developer fix path after the issue is updated.";
   const issues = workflows.flatMap((workflow) => workflow.issues);
+  if (issues.some((issue) => (issue.prUrl || issue.prState?.toUpperCase() === "OPEN") && !hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"]))) {
+    return "A PR is open but QA labels are missing. Sync GitHub to recover labels, or request QA before this workflow can move forward.";
+  }
   if (issues.some((issue) => issue.prUrl && hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running"]))) {
     return "A PR is waiting on QA labels. After QA finishes, sync GitHub so Taskix can move the workflow to pass/fail or merge readiness.";
   }
