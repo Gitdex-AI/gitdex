@@ -295,12 +295,14 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
         testsRun: []
       };
     }
+    const baseBranch = await currentAppBranch();
     const prompt = `${rolePrompts.developer}
 
 GitHub repo: ${input.repo}
 GitHub issue: #${input.issueNumber}
 Workflow: ${input.workflowId}
 Workspace: ${workspaceDir}
+Base branch: ${baseBranch ?? "repository default branch"}
 
 Developer role: ${input.issue.developerRole ?? "general_developer"}
 Role profile:
@@ -319,6 +321,7 @@ Execution rules:
 - Use gh to read issue #${input.issueNumber}; treat GitHub as the source of truth.
 - Do not modify the current Taskix app checkout or its .git directory.
 - The current working directory is the isolated clone for this issue: ${workspaceDir}.
+- Start from the checked-out base branch in the current working directory.
 - Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
@@ -601,6 +604,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
     if (!existsSync(path.join(workspaceDir, ".git"))) {
       await mkdir(path.dirname(workspaceDir), { recursive: true });
       await execFileAsync("gh", ["repo", "clone", repo, workspaceDir]);
+      await checkoutWorkspaceBase(workspaceDir);
       return workspaceDir;
     }
 
@@ -609,6 +613,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
     } catch {
       // A stale clone is still a safer execution directory than the app checkout.
     }
+    await checkoutWorkspaceBase(workspaceDir);
     return workspaceDir;
   }
 }
@@ -635,6 +640,26 @@ async function chooseWorkspaceDir(baseDir: string): Promise<string> {
 
 function sanitizePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_.-]/g, "-");
+}
+
+async function checkoutWorkspaceBase(workspaceDir: string): Promise<void> {
+  const branch = await currentAppBranch();
+  if (!branch) return;
+  try {
+    await execFileAsync("git", ["-C", workspaceDir, "fetch", "origin", branch]);
+    await execFileAsync("git", ["-C", workspaceDir, "checkout", "-B", branch, `origin/${branch}`]);
+  } catch {
+    // If the running app branch is not available remotely, keep the clone's default branch.
+  }
+}
+
+async function currentAppBranch(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", rootDir, "branch", "--show-current"]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function mockIssues(): IssueSpec[] {
