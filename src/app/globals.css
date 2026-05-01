@@ -872,6 +872,17 @@ pre,
   scrollbar-gutter: stable;
 }
 
+@media (max-width: 1320px) {
+  .project-chat-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .project-context {
+    position: static;
+    max-height: none;
+  }
+}
+
 @media (max-width: 1180px) {
   .layout {
     grid-template-columns: 1fr;
