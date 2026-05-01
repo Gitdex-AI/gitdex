@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { Bot, GitBranch, Info, ListTodo } from "lucide-react";
+import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -16,6 +16,13 @@ import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
+import {
+  hasAnyLabel,
+  recoveryReasonForDeveloperStep,
+  recoveryReasonForJobs,
+  recoveryReasonForMergeStep,
+  recoveryReasonForQaStep
+} from "@/lib/workflow-recovery";
 
 export default async function ProjectDetailPage({
   params,
@@ -218,6 +225,8 @@ function buildWorkflowStepDetails(input: {
 }): Record<WorkflowProgressStep["id"], ReactNode> {
   const developerSessions = input.dynamicSessions.filter((session) => session.role === "developer");
   const qaSessions = input.dynamicSessions.filter((session) => session.role === "qa");
+  const planningJobs = input.jobs.filter((job) => job.type === "workflow_run");
+  const developerJobs = input.jobs.filter((job) => job.type === "issue_run");
 
   return {
     requirement: (
@@ -229,6 +238,14 @@ function buildWorkflowStepDetails(input: {
     ),
     planning: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover architect planning",
+          reason: recoveryReasonForJobs(planningJobs),
+          jobs: planningJobs,
+          sessions: input.sessions.filter((session) => session.role === "architect"),
+          syncLabel: "Sync planning state"
+        })}
         {input.queuedWorkflow ? (
           <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
             <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
@@ -239,26 +256,50 @@ function buildWorkflowStepDetails(input: {
           </Alert>
         ) : null}
         {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
-        {renderJobRows(input.projectId, input.jobs.filter((job) => job.type === "workflow_run"), input.queuedJobId)}
+        {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
         {renderSessionRows(input.sessions.filter((session) => session.role === "architect"))}
       </Stack>
     ),
     developer: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover developer PR",
+          reason: recoveryReasonForDeveloperStep(input.visibleActiveWorkflows, developerJobs, developerSessions),
+          jobs: developerJobs,
+          sessions: developerSessions,
+          syncLabel: "Recover PR from GitHub"
+        })}
         {renderStepRunAction(input.projectId, input.jobs, "issue_run", "Run Developer Jobs")}
-        {renderJobRows(input.projectId, input.jobs.filter((job) => job.type === "issue_run"), input.queuedJobId)}
+        {renderJobRows(input.projectId, developerJobs, input.queuedJobId)}
         {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
       </Stack>
     ),
     qa: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover QA validation",
+          reason: recoveryReasonForQaStep(input.activeWorkflows, qaSessions),
+          jobs: [],
+          sessions: qaSessions,
+          syncLabel: "Sync QA labels"
+        })}
         {renderQaIssueRows(input.activeWorkflows, input.sessions)}
         {renderSessionRows(qaSessions)}
       </Stack>
     ),
     merge: (
       <Stack gap="xs">
+        {renderStepRecovery({
+          projectId: input.projectId,
+          title: "Recover merge readiness",
+          reason: recoveryReasonForMergeStep(input.activeWorkflows),
+          jobs: [],
+          sessions: [],
+          syncLabel: "Sync merge state"
+        })}
         {renderMergeIssueRows(input.projectId, input.activeWorkflows)}
       </Stack>
     ),
@@ -268,6 +309,53 @@ function buildWorkflowStepDetails(input: {
       </Stack>
     )
   };
+}
+
+function renderStepRecovery(input: {
+  projectId: string;
+  title: string;
+  reason: string | null;
+  jobs: JobRecord[];
+  sessions: AgentSessionRecord[];
+  syncLabel: string;
+}): ReactNode {
+  if (!input.reason) return null;
+  const failedJobs = input.jobs.filter((job) => job.status === "failed");
+  const blockedSessions = input.sessions.filter((session) => session.status === "blocked");
+
+  return (
+    <div className="workflow-recovery-panel">
+      <Group justify="space-between" gap="sm" align="flex-start">
+        <div>
+          <Group gap={6}>
+            <RefreshCw size={14} />
+            <Text size="sm" fw={780}>{input.title}</Text>
+          </Group>
+          <Text size="xs" c="dimmed" mt={3}>{input.reason}</Text>
+        </div>
+        <ProjectSyncForm projectId={input.projectId} label={input.syncLabel} compact />
+      </Group>
+      {failedJobs.length || blockedSessions.length ? (
+        <Group gap={6} mt="xs">
+          {failedJobs.map((job) => <ProjectRetryJobButton key={job.jobId} projectId={input.projectId} jobId={job.jobId} />)}
+          {blockedSessions.map((session) => (
+            <Button
+              key={session.sessionKey}
+              component="a"
+              href={`/projects/${input.projectId}?session=${encodeURIComponent(session.sessionKey)}`}
+              variant="light"
+              color="red"
+              size="compact-xs"
+              radius="xl"
+              leftSection={<RotateCcw size={14} />}
+            >
+              Open blocked session
+            </Button>
+          ))}
+        </Group>
+      ) : null}
+    </div>
+  );
 }
 
 function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobRecord["type"], label: string): ReactNode {
@@ -442,11 +530,6 @@ function SessionLink({ session, archived = false }: { session: AgentSessionRecor
       {session.ownedPaths?.length ? <Text size="xs" c="dimmed" lineClamp={1}>Paths: {session.ownedPaths.join(", ")}</Text> : null}
     </a>
   );
-}
-
-function hasAnyLabel(issue: IssueRecord, expected: string[]): boolean {
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  return expected.some((label) => labels.has(label));
 }
 
 function WorkflowProgressList({
