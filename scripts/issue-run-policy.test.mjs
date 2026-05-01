@@ -1,4 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import process from "node:process";
+
+process.chdir(mkdtempSync(`${tmpdir()}/taskix-issue-run-policy-`));
+
 import {
   expectedDeveloperBranch,
   manualDeployArchitectPolicyDecision,

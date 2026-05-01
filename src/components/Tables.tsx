@@ -11,6 +11,7 @@ import {
   TableTr,
   Text
 } from "@mantine/core";
+import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
 import { getWorkflowQaStatus } from "@/lib/qa-status";
 import type { ProjectRecord, WorkflowRecord } from "@/lib/types";
 
@@ -95,6 +96,7 @@ export function ProjectsTable({ projects }: { projects: ProjectTableRecord[] }) 
             <TableTh>Repo</TableTh>
             <TableTh>Deploy</TableTh>
             <TableTh>PM Session</TableTh>
+            <TableTh>Delete</TableTh>
           </TableTr>
         </TableThead>
         <TableTbody>
@@ -130,11 +132,14 @@ export function ProjectsTable({ projects }: { projects: ProjectTableRecord[] }) 
                 <TableTd>
                   <a className="row-link" href={`/projects/${project.projectId}`}>{project.projectManagerSessionId ?? "new"}</a>
                 </TableTd>
+                <TableTd>
+                  <ProjectDeleteForm projectId={project.projectId} slug={project.slug} compact />
+                </TableTd>
               </TableTr>
             ))
           ) : (
             <TableTr>
-              <TableTd colSpan={7}>
+              <TableTd colSpan={8}>
                 <Text c="dimmed" ta="center" py="md">
                   No projects yet.
                 </Text>
