@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 8000",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test scripts/*.test.mjs",
     "test:issue-run": "node --experimental-strip-types scripts/issue-run-policy.test.mjs"
   },
   "dependencies": {

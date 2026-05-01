@@ -11,7 +11,7 @@ import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
-import type { JobRecord } from "@/lib/types";
+import { getWorkflowNextAction, type WorkflowNextAction } from "@/lib/workflow-next-action";
 
 export default async function ProjectDetailPage({
   params,
@@ -110,7 +110,7 @@ export default async function ProjectDetailPage({
                 <Group justify="space-between" gap="sm" align="flex-start">
                   <Group gap="sm" align="flex-start" wrap="nowrap">
                     <div className={`workflow-next-action-icon ${nextAction.tone}`}>
-                      {nextAction.icon}
+                      {renderWorkflowNextActionIcon(nextAction)}
                     </div>
                     <div>
                       <Group gap="xs">
@@ -294,103 +294,19 @@ const highlightedCardStyle = {
   background: "#eff6ff"
 } satisfies CSSProperties;
 
-type WorkflowNextAction = {
-  title: string;
-  phase: string;
-  description: string;
-  buttonLabel: string | null;
-  disabledLabel: string;
-  tone: "ready" | "running" | "blocked" | "idle";
-  icon: ReactNode;
-  planningPending: number;
-  developerPending: number;
-  runningCount: number;
-  failedCount: number;
-};
-
-function getWorkflowNextAction(jobs: JobRecord[]): WorkflowNextAction {
-  const planningPending = jobs.filter((job) => job.status === "pending" && job.type === "workflow_run").length;
-  const developerPending = jobs.filter((job) => job.status === "pending" && job.type === "issue_run").length;
-  const runningCount = jobs.filter((job) => job.status === "running").length;
-  const failedCount = jobs.filter((job) => job.status === "failed").length;
-
-  if (runningCount) {
-    return {
-      title: "Workflow step running",
-      phase: "Running",
-      description: "Taskix is executing the current job. Refresh or wait for the session and job status to update before starting another step.",
-      buttonLabel: null,
-      disabledLabel: "Running",
-      tone: "running",
-      icon: <Clock size={18} />,
-      planningPending,
-      developerPending,
-      runningCount,
-      failedCount
-    };
+function renderWorkflowNextActionIcon(action: WorkflowNextAction): ReactNode {
+  switch (action.icon) {
+    case "clock":
+      return <Clock size={18} />;
+    case "play":
+      return <Play size={18} />;
+    case "git-branch":
+      return <GitBranch size={18} />;
+    case "alert":
+      return <AlertCircle size={18} />;
+    case "check":
+      return <CheckCircle2 size={18} />;
   }
-
-  if (developerPending) {
-    return {
-      title: "Start next developer issue",
-      phase: "Developer work",
-      description: "Runs one planned developer issue. The developer should create a branch and pull request, then stop for QA and merge readiness.",
-      buttonLabel: "Start Next Developer Issue",
-      disabledLabel: "Start Next Developer Issue",
-      tone: "ready",
-      icon: <Play size={18} />,
-      planningPending,
-      developerPending,
-      runningCount,
-      failedCount
-    };
-  }
-
-  if (planningPending) {
-    return {
-      title: "Run architect planning",
-      phase: "Planning",
-      description: "The architect will split the requirement into GitHub issues. Developer work will not start until you run the next step.",
-      buttonLabel: "Run Architect Planning",
-      disabledLabel: "Run Architect Planning",
-      tone: "ready",
-      icon: <GitBranch size={18} />,
-      planningPending,
-      developerPending,
-      runningCount,
-      failedCount
-    };
-  }
-
-  if (failedCount) {
-    return {
-      title: "Blocked job needs attention",
-      phase: "Blocked",
-      description: "A previous job failed or timed out. Inspect the session, fix the blocker, then retry from the workflow or session controls.",
-      buttonLabel: null,
-      disabledLabel: "Blocked",
-      tone: "blocked",
-      icon: <AlertCircle size={18} />,
-      planningPending,
-      developerPending,
-      runningCount,
-      failedCount
-    };
-  }
-
-  return {
-    title: "No pending work",
-    phase: "Idle",
-    description: "Queue a requirement to start planning, or review existing workflows and PRs before taking another manual step.",
-    buttonLabel: null,
-    disabledLabel: "No Pending Work",
-    tone: "idle",
-    icon: <CheckCircle2 size={18} />,
-    planningPending,
-    developerPending,
-    runningCount,
-    failedCount
-  };
 }
 
 function formatDuration(durationMs: number): string {
