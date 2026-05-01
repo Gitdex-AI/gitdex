@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
 import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
-import { expectedDeveloperBranch, manualDeployArchitectPolicyDecision, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
+import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, manualDeployArchitectPolicyDecision, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
@@ -501,6 +501,7 @@ async function recoverDeveloperPullRequest(
       const existingPrUrl = await findPullRequestByHeadWithGh(repo, candidateBranch);
       if (!existingPrUrl) continue;
       const details = await readPullRequestRefs(repo, existingPrUrl);
+      if (!isRecoverablePrBase(details.base, expectedDeveloperBaseBranch())) continue;
       return {
         prUrl: existingPrUrl,
         branch: details.head ?? candidateBranch,
@@ -514,6 +515,7 @@ async function recoverDeveloperPullRequest(
     const linkedPr = choosePrimaryPr(snapshot.linkedPrs);
     if (!linkedPr) return null;
     const details = await readPullRequestRefs(repo, linkedPr.url);
+    if (!isRecoverablePrBase(details.base, expectedDeveloperBaseBranch())) return null;
     return {
       prUrl: linkedPr.url,
       branch: details.head ?? expectedDeveloperBranch(displayWorkflowCode(workflow), issue.githubIssueNumber ?? issue.issueId),

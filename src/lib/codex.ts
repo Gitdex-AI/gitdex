@@ -5,6 +5,7 @@ import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { developerRoleIds, developerRoleProfile, formatDeveloperRoleCatalog } from "@/lib/developer-roles";
+import { expectedDeveloperBaseBranch } from "@/lib/issue-run-policy";
 import type { ArchitectPrReviewResult, ArchitectReviewResult, DeveloperIssueResult, DeveloperResult, IssueSpec, QaPrReviewResult, QaResult } from "@/lib/types";
 import { dataDir, rootDir } from "@/lib/paths";
 import type { Settings } from "@/lib/types";
@@ -295,7 +296,7 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
         testsRun: []
       };
     }
-    const baseBranch = await currentAppBranch();
+    const baseBranch = expectedDeveloperBaseBranch();
     const prompt = `${rolePrompts.developer}
 
 GitHub repo: ${input.repo}
@@ -685,22 +686,12 @@ function sanitizePathSegment(value: string): string {
 }
 
 async function checkoutWorkspaceBase(workspaceDir: string): Promise<void> {
-  const branch = await currentAppBranch();
-  if (!branch) return;
+  const branch = expectedDeveloperBaseBranch();
   try {
     await execFileAsync("git", ["-C", workspaceDir, "fetch", "origin", branch]);
     await execFileAsync("git", ["-C", workspaceDir, "checkout", "-B", branch, `origin/${branch}`]);
   } catch {
-    // If the running app branch is not available remotely, keep the clone's default branch.
-  }
-}
-
-async function currentAppBranch(): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync("git", ["-C", rootDir, "branch", "--show-current"]);
-    return stdout.trim() || null;
-  } catch {
-    return null;
+    // If the target branch is not available remotely, keep the clone's default branch.
   }
 }
 
