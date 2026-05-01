@@ -228,11 +228,15 @@ body {
 .chat-panel {
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 108px);
   min-height: calc(100vh - 180px);
   overflow: hidden;
 }
 
 .chat-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -244,10 +248,14 @@ body {
 
 .chat-scroll {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px min(8vw, 84px) 12px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
     #f8fbff;
+  scrollbar-gutter: stable;
 }
 
 .chat-composer {
@@ -616,6 +624,10 @@ body {
   .project-context {
     position: static;
   }
+
+  .chat-panel {
+    height: calc(100vh - 128px);
+  }
 }
 
 @media (max-width: 720px) {
@@ -631,6 +643,11 @@ body {
 
   .chat-composer {
     padding: 14px;
+  }
+
+  .chat-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .chat-composer-actions {

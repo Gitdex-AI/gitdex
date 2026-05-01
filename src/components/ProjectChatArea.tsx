@@ -22,6 +22,7 @@ export function ProjectChatArea({
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
   const [optimisticMessage, setOptimisticMessage] = useState<AgentMessage | null>(null);
   const target = activeRole === "product_manager" ? "PM" : activeRole === "architect" ? "Architect" : "DevOps";
@@ -30,6 +31,12 @@ export function ProjectChatArea({
     setPending(false);
     setOptimisticMessage(null);
   }, [session?.updatedAt, activeRole]);
+
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) return;
+    scroll.scrollTop = scroll.scrollHeight;
+  }, [session?.sessionKey, session?.updatedAt, session?.messages.length, optimisticMessage?.createdAt, pending]);
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,7 +69,7 @@ export function ProjectChatArea({
 
   return (
     <>
-      <div className="chat-scroll">
+      <div ref={scrollRef} className="chat-scroll">
         <MessageList projectId={projectId} session={session} optimisticMessage={optimisticMessage} pending={pending} />
       </div>
       {!readOnly && (
@@ -130,7 +137,12 @@ function MessageList({
         <div key={`${message.createdAt}-${index}`} className={`chat-message ${message.role}`}>
           <div className="chat-avatar">{message.role === "user" ? "U" : message.role === "assistant" ? "A" : "S"}</div>
           <div className="chat-bubble">
-            <Badge variant="light" mb={6}>{message.role}</Badge>
+            <Group gap="xs" mb={6} justify="space-between" align="center">
+              <Badge variant="light">{message.role}</Badge>
+              <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
+                {formatMessageTime(message.createdAt)}
+              </Text>
+            </Group>
             <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>{message.content}</Text>
           </div>
         </div>
@@ -139,7 +151,12 @@ function MessageList({
         <div className="chat-message assistant pending">
           <div className="chat-avatar">A</div>
           <div className="chat-bubble">
-            <Badge variant="light" mb={6}>assistant</Badge>
+            <Group gap="xs" mb={6} justify="space-between" align="center">
+              <Badge variant="light">assistant</Badge>
+              <Text component="time" dateTime={new Date().toISOString()} size="xs" c="dimmed">
+                now
+              </Text>
+            </Group>
             <Text size="sm" c="dimmed">Codex agent is thinking...</Text>
           </div>
         </div>
@@ -245,6 +262,17 @@ function formatDateTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatMessageTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function formatDuration(durationMs: number): string {
