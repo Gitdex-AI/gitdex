@@ -441,6 +441,10 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     }
   }
 
+  if (qaPassed && !project.autoDeploy && architectReview.decision === "ready_to_merge") {
+    timeline.push(`Manual-deploy guard kept PR open for issue ${issue.issueId}; final state is ready_to_merge.`);
+  }
+
   const blocked = architectReview.decision === "blocked" || architectReview.decision === "changes_requested" || (architectReview.decision === "need_qa" && !qaPassed);
 
   return {

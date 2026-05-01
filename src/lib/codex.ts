@@ -283,6 +283,7 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
 GitHub repo: ${input.repo}
 GitHub issue: #${input.issueNumber}
 Workflow: ${input.workflowId}
+Workspace: ${rootDir}
 
 Developer role: ${input.issue.developerRole ?? "general_developer"}
 Role profile:
@@ -299,7 +300,9 @@ Required GitHub label behavior:
 
 Execution rules:
 - Use gh to read issue #${input.issueNumber}; treat GitHub as the source of truth.
-- Clone or use the repo in a workspace under this project if needed.
+- Do not modify the primary Taskix app checkout or its .git directory.
+- The current working directory is the isolated clone/workspace for this issue: ${rootDir}
+- Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
@@ -342,10 +345,12 @@ Required GitHub label behavior:
 - If QA is required before merge, add taskix:need-qa to the PR and issue, then return decision "need_qa".
 - If changes are required from developer, comment on the PR, add taskix:blocked, and return decision "changes_requested".
 - If QA is already passed or QA is not needed and the PR is acceptable, add taskix:ready-to-merge.
-- Merge only when it is safe. If merged, add taskix:merged. If auto deploy is enabled and deployment succeeds, add taskix:deployed.
+- If auto deploy is disabled, do not merge the PR automatically. Keep it open and return decision "ready_to_merge" after QA passes.
+- Merge only when it is safe and auto deploy is enabled. If merged, add taskix:merged. If auto deploy is enabled and deployment succeeds, add taskix:deployed.
 
 Return JSON with decision, summary, labelsApplied, comments.`;
-    return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
+    const review = await this.runJson<ArchitectPrReviewResult>(prompt, schema);
+    return this.normalizeArchitectReviewPrResult(input, review) ?? {
       decision: "blocked",
       summary: `Architect runner did not complete PR review for ${input.prUrl}.`,
       labelsApplied: [],
@@ -488,6 +493,28 @@ Summarize code review outcome, merge readiness, and deployment status according 
 
   private async runJson<T>(prompt: string, schema: object): Promise<T | null> {
     return (await this.runJsonResult<T>(prompt, schema)).value;
+  }
+
+  private normalizeArchitectReviewPrResult(
+    input: { autoDeploy: boolean; qaPassed?: boolean },
+    review: ArchitectPrReviewResult | null
+  ): ArchitectPrReviewResult | null {
+    if (!review) return null;
+    if (input.autoDeploy || review.decision !== "merged") return review;
+
+    const labelsApplied = review.labelsApplied.includes("taskix:ready-to-merge")
+      ? review.labelsApplied
+      : [...review.labelsApplied, "taskix:ready-to-merge"];
+    const summary = input.qaPassed
+      ? `${review.summary} Automatic merge was skipped because this project requires manual deployment approval.`
+      : `${review.summary} Automatic merge is disabled for manual-deploy projects.`;
+
+    return {
+      ...review,
+      decision: "ready_to_merge",
+      summary,
+      labelsApplied
+    };
   }
 
   private async runJsonResult<T>(prompt: string, schema: object): Promise<{ value: T | null; error: string | null }> {
