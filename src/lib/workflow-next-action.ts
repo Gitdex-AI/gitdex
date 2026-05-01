@@ -73,9 +73,9 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
 
   if (failedCount) {
     return {
-      title: "Blocked job needs attention",
+      title: "Resolve blocker before continuing",
       phase: "Blocked",
-      description: "A previous job failed or timed out. Inspect the session, fix the blocker, then retry from the workflow or session controls.",
+      description: "Open the related step details, inspect the failed session, fix the blocker, then retry from the workflow or session controls.",
       buttonLabel: null,
       disabledLabel: "Blocked",
       tone: "blocked",

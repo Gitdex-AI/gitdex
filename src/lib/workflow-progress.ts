@@ -1,7 +1,7 @@
 import type { IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 
 export type WorkflowProgressStepId = "requirement" | "planning" | "developer" | "qa" | "merge" | "done";
-export type WorkflowProgressStepStatus = "complete" | "current" | "blocked" | "upcoming";
+export type WorkflowProgressStepStatus = "complete" | "current" | "running" | "blocked" | "upcoming";
 
 export type WorkflowProgressStep = {
   id: WorkflowProgressStepId;
@@ -50,15 +50,33 @@ export function getWorkflowProgress(input: {
   const hasActiveWorkflow = workflows.some((workflow) => workflow.status !== "done");
   const hasDoneWorkflow = workflows.some((workflow) => workflow.status === "done");
   const blockedStep = getBlockedStep(workflows, jobs, issues);
-  const currentStep = blockedStep ?? getCurrentStep({ hasAnyWorkflow, hasActiveWorkflow, hasDoneWorkflow, issues, jobs });
+  const runningStep = blockedStep ? null : getRunningStep(jobs);
+  const currentStep = blockedStep ?? runningStep ?? getCurrentStep({ hasAnyWorkflow, hasActiveWorkflow, hasDoneWorkflow, issues, jobs });
   const currentIndex = stepOrder.indexOf(currentStep);
 
   return stepOrder.map((id, index) => ({
     id,
     label: stepCopy[id].label,
     detail: stepCopy[id].detail,
-    status: blockedStep === id ? "blocked" : index < currentIndex || isDoneComplete(id, hasDoneWorkflow, hasActiveWorkflow) ? "complete" : id === currentStep ? "current" : "upcoming"
+    status: getStepStatus({ id, index, currentIndex, blockedStep, runningStep, currentStep, hasDoneWorkflow, hasActiveWorkflow })
   }));
+}
+
+function getStepStatus(input: {
+  id: WorkflowProgressStepId;
+  index: number;
+  currentIndex: number;
+  blockedStep: WorkflowProgressStepId | null;
+  runningStep: WorkflowProgressStepId | null;
+  currentStep: WorkflowProgressStepId;
+  hasDoneWorkflow: boolean;
+  hasActiveWorkflow: boolean;
+}): WorkflowProgressStepStatus {
+  if (input.blockedStep === input.id) return "blocked";
+  if (input.runningStep === input.id) return "running";
+  if (input.index < input.currentIndex || isDoneComplete(input.id, input.hasDoneWorkflow, input.hasActiveWorkflow)) return "complete";
+  if (input.id === input.currentStep) return "current";
+  return "upcoming";
 }
 
 function getBlockedStep(
@@ -72,6 +90,12 @@ function getBlockedStep(
   if (issues.some((issue) => hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"]))) return "qa";
   const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["taskix:blocked"]));
   if (blockedIssue) return blockedIssue.prUrl || blockedIssue.prState ? "qa" : "developer";
+  return null;
+}
+
+function getRunningStep(jobs: Pick<JobRecord, "status" | "type">[]): WorkflowProgressStepId | null {
+  if (jobs.some((job) => job.status === "running" && job.type === "workflow_run")) return "planning";
+  if (jobs.some((job) => job.status === "running" && job.type === "issue_run")) return "developer";
   return null;
 }
 
