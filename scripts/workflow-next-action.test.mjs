@@ -50,7 +50,7 @@ describe("getWorkflowNextAction", () => {
   it("marks failed jobs as blocked", () => {
     const action = getWorkflowNextAction([job("issue_run", "failed")]);
 
-    assert.equal(action.title, "Blocked job needs attention");
+    assert.equal(action.title, "Resolve blocker before continuing");
     assert.equal(action.buttonLabel, null);
     assert.equal(action.disabledLabel, "Blocked");
     assert.equal(action.tone, "blocked");
