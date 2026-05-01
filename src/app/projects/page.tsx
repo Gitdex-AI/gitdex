@@ -2,10 +2,22 @@ import { Alert, Button, Group, Paper, Text } from "@mantine/core";
 import { FolderPlus, Info } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { ProjectsTable } from "@/components/Tables";
-import { listProjects } from "@/lib/store";
+import { listProjects, listWorkflows } from "@/lib/store";
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ message?: string; error?: string }> }) {
-  const [{ message, error }, projects] = await Promise.all([searchParams, listProjects()]);
+  const [{ message, error }, projects, workflows] = await Promise.all([searchParams, listProjects(), listWorkflows()]);
+  const latestWorkflowByProject = new Map<string, string>();
+  for (const workflow of workflows) {
+    if (!workflow.projectId) continue;
+    const current = latestWorkflowByProject.get(workflow.projectId);
+    if (!current || workflow.createdAt > current) latestWorkflowByProject.set(workflow.projectId, workflow.createdAt);
+  }
+  const projectsWithLatest = projects
+    .map((project) => ({
+      ...project,
+      latestAt: latestWorkflowByProject.get(project.projectId) ?? project.createdAt
+    }))
+    .sort((a, b) => b.latestAt.localeCompare(a.latestAt));
 
   return (
     <>
@@ -27,7 +39,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             Add Project
           </Button>
         </Group>
-        <ProjectsTable projects={projects} />
+        <ProjectsTable projects={projectsWithLatest} />
       </Paper>
     </>
   );

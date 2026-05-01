@@ -1,10 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
-import { createIssueWithGh, getIssueSnapshotWithGh } from "@/lib/github-local";
+import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { expectedDeveloperBranch, manualDeployArchitectPolicyDecision, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
+
+const execFileAsync = promisify(execFile);
 
 export async function createWorkflow(requirement: string, chatId: number, project?: ProjectRecord | null): Promise<WorkflowRecord> {
   const createdAt = new Date().toISOString();
@@ -283,6 +288,15 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     issue,
     workflowId: displayWorkflowCode(workflow)
   });
+  if (!developerResult.prUrl) {
+    const recovery = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
+    if (recovery) {
+      developerResult.prUrl = recovery.prUrl;
+      developerResult.branch = recovery.branch;
+      developerResult.summary = `${developerResult.summary}\n\nTaskix recovered existing PR context after developer publishing returned empty.\nRecovery source: ${recovery.source}.\nRecovered base: ${recovery.base ?? "repository default branch"}.`;
+      timeline.push(`Recovered existing PR context for issue ${issue.issueId} via ${recovery.source}; base ${recovery.base ?? "repository default branch"}.`);
+    }
+  }
   issue.prUrl = developerResult.prUrl || null;
   issue.branch = developerResult.branch || null;
   if (workflow.projectId) {
@@ -331,12 +345,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     };
   }
 
-  let architectReview = await codex.architectReviewPr({
-    repo: project.githubRepo,
-    issueNumber: issue.githubIssueNumber,
-    prUrl: developerResult.prUrl,
-    autoDeploy: project.autoDeploy
-  });
+  let architectReview = await requestInitialPrReview(project, issue, developerResult.prUrl, codex);
   if (workflow.projectId) {
     await appendAgentMessages({
       sessionKey: `${workflow.projectId}:architect`,
@@ -414,13 +423,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   }
     if (qaResult.passed) {
       timeline.push(`QA passed PR for issue ${issue.issueId}.`);
-      architectReview = await codex.architectReviewPr({
-        repo: project.githubRepo,
-        issueNumber: issue.githubIssueNumber,
-        prUrl: developerResult.prUrl,
-        autoDeploy: project.autoDeploy,
-        qaPassed: true
-      });
+      architectReview = await requestFinalPrReview(project, issue, developerResult.prUrl, codex);
       if (workflow.projectId) {
         await appendAgentMessages({
           sessionKey: `${workflow.projectId}:architect`,
@@ -479,6 +482,148 @@ function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" 
   if (labels.includes("taskix:qa-failed")) return "blocked";
   if (labels.includes("taskix:need-qa") || labels.includes("taskix:qa-running")) return "active";
   return null;
+}
+
+async function recoverDeveloperPullRequest(
+  repo: string,
+  issue: IssueRecord,
+  workflow: WorkflowRecord,
+  branch: string
+): Promise<{ prUrl: string; branch: string; base: string | null; source: string } | null> {
+  try {
+    const branchCandidates = prRecoveryBranches({
+      developerBranch: branch,
+      workflowCode: displayWorkflowCode(workflow),
+      issueNumberOrId: issue.githubIssueNumber ?? issue.issueId
+    });
+
+    for (const candidateBranch of branchCandidates) {
+      const existingPrUrl = await findPullRequestByHeadWithGh(repo, candidateBranch);
+      if (!existingPrUrl) continue;
+      const details = await readPullRequestRefs(repo, existingPrUrl);
+      return {
+        prUrl: existingPrUrl,
+        branch: details.head ?? candidateBranch,
+        base: details.base,
+        source: branch && candidateBranch === branch ? "developer branch lookup" : "expected workflow branch lookup"
+      };
+    }
+
+    if (!issue.githubIssueNumber) return null;
+    const snapshot = await getIssueSnapshotWithGh(repo, issue.githubIssueNumber);
+    const linkedPr = choosePrimaryPr(snapshot.linkedPrs);
+    if (!linkedPr) return null;
+    const details = await readPullRequestRefs(repo, linkedPr.url);
+    return {
+      prUrl: linkedPr.url,
+      branch: details.head ?? expectedDeveloperBranch(displayWorkflowCode(workflow), issue.githubIssueNumber ?? issue.issueId),
+      base: details.base,
+      source: "linked issue pull request lookup"
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: string | null; base: string | null; state: string | null; merged: boolean }> {
+  try {
+    const { stdout } = await execFileAsync("gh", ["pr", "view", pr, "--repo", repo, "--json", "headRefName,baseRefName,state,mergedAt"]);
+    const payload = JSON.parse(stdout) as { headRefName?: string; baseRefName?: string; state?: string; mergedAt?: string | null };
+    return {
+      head: payload.headRefName?.trim() || null,
+      base: payload.baseRefName?.trim() || null,
+      state: payload.state?.trim() || null,
+      merged: Boolean(payload.mergedAt)
+    };
+  } catch {
+    return { head: null, base: null, state: null, merged: false };
+  }
+}
+
+async function requestInitialPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
+  if (!project.autoDeploy && issue.githubIssueNumber) {
+    const labels = ["taskix:need-qa"];
+    await Promise.all([
+      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labels),
+      addLabelsWithGh(project.githubRepo, prUrl, labels)
+    ]);
+    return {
+      decision: "need_qa" as const,
+      summary: `Manual-deploy project: Taskix requested QA for ${prUrl} and stopped before merge review.`,
+      labelsApplied: labels,
+      comments: []
+    };
+  }
+
+  const review = await codex.architectReviewPr({
+    repo: project.githubRepo,
+    issueNumber: issue.githubIssueNumber ?? 0,
+    prUrl,
+    autoDeploy: project.autoDeploy
+  });
+  if (review.decision === "blocked" && !review.labelsApplied.length && review.summary.includes("Architect runner did not complete PR review") && issue.githubIssueNumber) {
+    const labels = ["taskix:need-qa"];
+    await Promise.all([
+      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labels),
+      addLabelsWithGh(project.githubRepo, prUrl, labels)
+    ]);
+    return {
+      decision: "need_qa" as const,
+      summary: `Architect runner did not complete structured PR review. Taskix conservatively requested QA for ${prUrl}.`,
+      labelsApplied: labels,
+      comments: []
+    };
+  }
+  return review;
+}
+
+async function requestFinalPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
+  if (!project.autoDeploy && issue.githubIssueNumber) {
+    const prRefs = await readPullRequestRefs(project.githubRepo, prUrl);
+    const architectDecision = manualDeployArchitectPolicyDecision({
+      prUrl,
+      qaPassed: true,
+      prState: prRefs.state,
+      prMerged: prRefs.merged
+    });
+    const labelPlan = manualDeployFinalLabelPlan({ prUrl, architectDecision });
+    if (labelPlan.decision !== "ready_to_merge") {
+      await Promise.all([
+        addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
+        addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
+        removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
+        removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
+      ]);
+      return {
+        ...architectDecision,
+        decision: labelPlan.decision,
+        summary: labelPlan.summary,
+        labelsApplied: labelPlan.labelsApplied,
+        comments: labelPlan.comments
+      };
+    }
+
+    await Promise.all([
+      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
+      addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
+      removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
+      removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
+    ]);
+    return {
+      decision: "ready_to_merge" as const,
+      summary: labelPlan.summary,
+      labelsApplied: labelPlan.labelsApplied,
+      comments: labelPlan.comments
+    };
+  }
+
+  return codex.architectReviewPr({
+    repo: project.githubRepo,
+    issueNumber: issue.githubIssueNumber ?? 0,
+    prUrl,
+    autoDeploy: project.autoDeploy,
+    qaPassed: true
+  });
 }
 
 function deriveWorkflowStatus(workflow: WorkflowRecord): WorkflowRecord["status"] {

@@ -1,13 +1,18 @@
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import { developerRoleIds, developerRoleProfile, formatDeveloperRoleCatalog } from "@/lib/developer-roles";
 import type { ArchitectPrReviewResult, ArchitectReviewResult, DeveloperIssueResult, DeveloperResult, IssueSpec, QaPrReviewResult, QaResult } from "@/lib/types";
-import { rootDir } from "@/lib/paths";
+import { dataDir, rootDir } from "@/lib/paths";
 import type { Settings } from "@/lib/types";
 
 type CodexTextResult = { text: string; sessionId?: string | null };
+type RunJsonOptions = { cwd?: string };
+type RunCodexOptions = { cwd?: string };
+const execFileAsync = promisify(execFile);
 const codexTimeoutMs = 10 * 60 * 1000;
 export type ArchitectBlockerResolution = {
   action: "retry_developer" | "request_user_input" | "mark_blocked";
@@ -278,11 +283,26 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
       changedFiles: { type: "array", items: { type: "string" } },
       testsRun: { type: "array", items: { type: "string" } }
     });
+    let workspaceDir: string;
+    try {
+      workspaceDir = await this.prepareDeveloperWorkspace(input.repo, input.workflowId, input.issueNumber);
+    } catch (error) {
+      return {
+        summary: `Developer workspace preparation failed for issue #${input.issueNumber}: ${error instanceof Error ? error.message : String(error)}`,
+        branch: "",
+        prUrl: "",
+        changedFiles: [],
+        testsRun: []
+      };
+    }
+    const baseBranch = await currentAppBranch();
     const prompt = `${rolePrompts.developer}
 
 GitHub repo: ${input.repo}
 GitHub issue: #${input.issueNumber}
 Workflow: ${input.workflowId}
+Workspace: ${workspaceDir}
+Base branch: ${baseBranch ?? "repository default branch"}
 
 Developer role: ${input.issue.developerRole ?? "general_developer"}
 Role profile:
@@ -299,14 +319,18 @@ Required GitHub label behavior:
 
 Execution rules:
 - Use gh to read issue #${input.issueNumber}; treat GitHub as the source of truth.
-- Clone or use the repo in a workspace under this project if needed.
+- Do not modify the current Taskix app checkout or its .git directory.
+- The current working directory is the isolated clone for this issue: ${workspaceDir}.
+- Start from the checked-out base branch in the current working directory.
+- Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
 - Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
+- If this work validates Taskix recovery/ready-to-merge behavior, document observable verification evidence in the PR body, including deterministic recovery, recovered base visibility, ready-to-merge expectations, and no generated PR merge.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
 - If implementation is blocked, comment on the issue, add taskix:blocked, and still return JSON with prUrl as an empty string.
 
 Return JSON with summary, branch, prUrl, changedFiles, testsRun.`;
-    const result = await this.runJsonResult<DeveloperIssueResult>(prompt, schema);
+    const result = await this.runJsonResult<DeveloperIssueResult>(prompt, schema, { cwd: workspaceDir });
     return result.value ?? {
       summary: `Developer runner did not complete issue #${input.issueNumber}.${result.error ? `\n\nCodex error:\n${result.error}` : ""}`,
       branch: "",
@@ -341,13 +365,52 @@ Required GitHub label behavior:
 - Read the linked issue and PR with gh.
 - If QA is required before merge, add taskix:need-qa to the PR and issue, then return decision "need_qa".
 - If changes are required from developer, comment on the PR, add taskix:blocked, and return decision "changes_requested".
-- If QA is already passed or QA is not needed and the PR is acceptable, add taskix:ready-to-merge.
-- Merge only when it is safe. If merged, add taskix:merged. If auto deploy is enabled and deployment succeeds, add taskix:deployed.
+- If QA is already passed or QA is not needed and the PR is acceptable, add taskix:ready-to-merge and return decision "ready_to_merge".
+- If auto deploy is disabled, do not merge the PR; stop at taskix:ready-to-merge.
+- If auto deploy is enabled and QA has passed, you may merge only when repository checks and branch state are safe.
 
 Return JSON with decision, summary, labelsApplied, comments.`;
     return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
       decision: "blocked",
       summary: `Architect runner did not complete PR review for ${input.prUrl}.`,
+      labelsApplied: [],
+      comments: []
+    };
+  }
+
+  async architectConfirmManualReady(input: {
+    repo: string;
+    issueNumber: number;
+    prUrl: string;
+  }): Promise<ArchitectPrReviewResult> {
+    const schema = objectSchema({
+      decision: { type: "string", enum: ["ready_to_merge", "changes_requested", "blocked"] },
+      summary: { type: "string" },
+      labelsApplied: { type: "array", items: { type: "string" } },
+      comments: { type: "array", items: { type: "string" } }
+    });
+    const prompt = `${rolePrompts.architect}
+
+GitHub repo: ${input.repo}
+Issue: #${input.issueNumber}
+PR: ${input.prUrl}
+Project deployment policy: manual deploy; do not merge.
+
+You are the architect and own final merge-readiness review after QA has passed.
+
+Rules:
+- Read the linked issue, PR diff, labels, and QA result with gh.
+- Decide whether the PR is ready to merge, needs changes, or is blocked.
+- Do not merge the PR.
+- Do not add or remove GitHub labels; Taskix will apply labels after your structured decision.
+- Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
+- Return "changes_requested" if implementation changes are required.
+- Return "blocked" if readiness cannot be determined from available GitHub state.
+
+Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied to an empty array.`;
+    return (await this.runJson<ArchitectPrReviewResult>(prompt, schema)) ?? {
+      decision: "blocked",
+      summary: `Architect runner did not complete manual ready review for ${input.prUrl}.`,
       labelsApplied: [],
       comments: []
     };
@@ -375,6 +438,7 @@ Required GitHub label behavior:
 - Add taskix:qa-running to the issue and PR when you start.
 - Read the issue acceptance criteria and PR diff using gh.
 - Validate implementation, ownedPaths, and relevant tests.
+- When passing QA, comment concise verification evidence on the PR, including commands run and any observable labels/state required by acceptance criteria.
 - If passed, add taskix:qa-passed and remove taskix:qa-running.
 - If failed, comment findings on the PR, add taskix:qa-failed, and remove taskix:qa-running.
 
@@ -490,7 +554,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
     return (await this.runJsonResult<T>(prompt, schema)).value;
   }
 
-  private async runJsonResult<T>(prompt: string, schema: object): Promise<{ value: T | null; error: string | null }> {
+  private async runJsonResult<T>(prompt: string, schema: object, options: RunJsonOptions = {}): Promise<{ value: T | null; error: string | null }> {
     const tmp = await this.tmpDir();
     const schemaPath = path.join(tmp, "schema.json");
     const outputPath = path.join(tmp, "output.json");
@@ -507,7 +571,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
       "-o",
       outputPath,
       prompt
-    ]);
+    ], { cwd: options.cwd });
     if (!result.ok) return { value: null, error: result.stderr.trim() || "Codex exited with a non-zero status." };
     try {
       return { value: JSON.parse(await readFile(outputPath, "utf8")) as T, error: null };
@@ -529,12 +593,12 @@ Summarize code review outcome, merge readiness, and deployment status according 
     }
   }
 
-  private async runCodex(args: string[]): Promise<{ ok: boolean; stderr: string }> {
+  private async runCodex(args: string[], options: RunCodexOptions = {}): Promise<{ ok: boolean; stderr: string }> {
     const codexHome = this.settings.codexHome;
     await mkdir(codexHome, { recursive: true });
     return new Promise((resolve) => {
       const child = spawn(this.settings.codexBin, ["exec", ...args], {
-        cwd: rootDir,
+        cwd: options.cwd ?? rootDir,
         env: { ...process.env, CODEX_HOME: codexHome },
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -570,6 +634,28 @@ Summarize code review outcome, merge readiness, and deployment status according 
       return dir;
     });
   }
+
+  private async prepareDeveloperWorkspace(repo: string, workflowId: string, issueNumber: number): Promise<string> {
+    const workspaceRoot = path.join(dataDir, "taskix-workspaces");
+    await mkdir(workspaceRoot, { recursive: true });
+    const baseDir = path.join(workspaceRoot, sanitizePathSegment(`${workflowId}-issue-${issueNumber}`));
+    const workspaceDir = await chooseWorkspaceDir(baseDir);
+
+    if (!existsSync(path.join(workspaceDir, ".git"))) {
+      await mkdir(path.dirname(workspaceDir), { recursive: true });
+      await execFileAsync("gh", ["repo", "clone", repo, workspaceDir]);
+      await checkoutWorkspaceBase(workspaceDir);
+      return workspaceDir;
+    }
+
+    try {
+      await execFileAsync("git", ["-C", workspaceDir, "fetch", "origin", "--prune"]);
+    } catch {
+      // A stale clone is still a safer execution directory than the app checkout.
+    }
+    await checkoutWorkspaceBase(workspaceDir);
+    return workspaceDir;
+  }
 }
 
 function objectSchema(properties: Record<string, unknown>): object {
@@ -583,6 +669,37 @@ function extractSessionId(stderr: string): string | null {
 
 function approvalArgs(policy: string): string[] {
   return policy === "never" ? ["--full-auto"] : [];
+}
+
+async function chooseWorkspaceDir(baseDir: string): Promise<string> {
+  if (!existsSync(baseDir) || existsSync(path.join(baseDir, ".git"))) return baseDir;
+  const fallback = `${baseDir}-${Date.now().toString(36)}`;
+  await mkdir(path.dirname(fallback), { recursive: true });
+  return fallback;
+}
+
+function sanitizePathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_.-]/g, "-");
+}
+
+async function checkoutWorkspaceBase(workspaceDir: string): Promise<void> {
+  const branch = await currentAppBranch();
+  if (!branch) return;
+  try {
+    await execFileAsync("git", ["-C", workspaceDir, "fetch", "origin", branch]);
+    await execFileAsync("git", ["-C", workspaceDir, "checkout", "-B", branch, `origin/${branch}`]);
+  } catch {
+    // If the running app branch is not available remotely, keep the clone's default branch.
+  }
+}
+
+async function currentAppBranch(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", rootDir, "branch", "--show-current"]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function mockIssues(): IssueSpec[] {

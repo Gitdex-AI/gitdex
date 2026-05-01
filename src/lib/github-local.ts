@@ -80,6 +80,29 @@ export async function commentIssueWithGh(repo: string, issueNumber: number, body
   await execFileAsync("gh", ["issue", "comment", String(issueNumber), "--repo", repo, "--body", body]);
 }
 
+export async function findPullRequestByHeadWithGh(repo: string, branch: string): Promise<string | null> {
+  const { stdout } = await execFileAsync("gh", ["pr", "list", "--repo", repo, "--head", branch, "--state", "all", "--json", "url", "--limit", "1"]);
+  const prs = JSON.parse(stdout) as Array<{ url: string }>;
+  return prs[0]?.url ?? null;
+}
+
+export async function createPullRequestWithGh(input: {
+  repo: string;
+  head: string;
+  base: string | null;
+  title: string;
+  body: string;
+  labels: string[];
+}): Promise<string> {
+  await ensureTaskixLabels(input.repo);
+  const args = ["pr", "create", "--repo", input.repo, "--head", input.head, "--title", input.title, "--body", input.body];
+  if (input.base) args.push("--base", input.base);
+  const { stdout } = await execFileAsync("gh", args);
+  const prUrl = stdout.trim();
+  if (input.labels.length) await addLabelsWithGh(input.repo, prUrl, input.labels);
+  return prUrl;
+}
+
 export async function addLabelsWithGh(repo: string, target: number | string, labels: string[]): Promise<void> {
   if (!labels.length) return;
   await ensureTaskixLabels(repo);

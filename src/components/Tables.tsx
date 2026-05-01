@@ -80,7 +80,9 @@ function WorkflowRow({ workflow }: { workflow: WorkflowRecord }) {
   );
 }
 
-export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
+type ProjectTableRecord = ProjectRecord & { latestAt?: string };
+
+export function ProjectsTable({ projects }: { projects: ProjectTableRecord[] }) {
   return (
     <TableScrollContainer minWidth={780}>
       <Table highlightOnHover verticalSpacing="sm">
@@ -88,6 +90,7 @@ export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
           <TableTr>
             <TableTh>Slug</TableTh>
             <TableTh>Name</TableTh>
+            <TableTh>Latest</TableTh>
             <TableTh>Account</TableTh>
             <TableTh>Repo</TableTh>
             <TableTh>Deploy</TableTh>
@@ -105,6 +108,11 @@ export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
                 </TableTd>
                 <TableTd>
                   <a className="row-link" href={`/projects/${project.projectId}`}>{project.name}</a>
+                </TableTd>
+                <TableTd>
+                  <a className="row-link" href={`/projects/${project.projectId}`}>
+                    <Text size="sm" c="dimmed">{formatDateTime(project.latestAt ?? project.createdAt)}</Text>
+                  </a>
                 </TableTd>
                 <TableTd>
                   <a className="row-link" href={`/projects/${project.projectId}`}>{project.githubAccount}</a>
@@ -126,7 +134,7 @@ export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
             ))
           ) : (
             <TableTr>
-              <TableTd colSpan={6}>
+              <TableTd colSpan={7}>
                 <Text c="dimmed" ta="center" py="md">
                   No projects yet.
                 </Text>
@@ -137,4 +145,15 @@ export function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
       </Table>
     </TableScrollContainer>
   );
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
