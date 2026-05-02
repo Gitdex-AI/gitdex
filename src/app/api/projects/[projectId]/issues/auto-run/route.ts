@@ -10,6 +10,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const body = await request.json().catch(() => ({})) as { workflowIds?: unknown; issueIds?: unknown };
   const workflowIds = Array.isArray(body.workflowIds) ? body.workflowIds.filter((item): item is string => typeof item === "string") : [];
   const issueIds = Array.isArray(body.issueIds) ? body.issueIds.filter((item): item is string => typeof item === "string") : [];
+  if (!issueIds.length) return NextResponse.json({ error: "Auto Run requires the current visible issue list." }, { status: 400 });
   const result = await runProjectIssueAutoRun(project, { workflowIds, issueIds });
   return NextResponse.json({ ok: true, ...result });
 }

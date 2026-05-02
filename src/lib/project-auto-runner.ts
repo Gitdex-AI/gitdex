@@ -52,6 +52,16 @@ function filterWorkflows(workflows: WorkflowRecord[], workflowScope: Set<string>
   return workflowScope.size ? workflows.filter((workflow) => workflowScope.has(workflow.workflowId)) : workflows;
 }
 
+function filterWorkflowsForIssueScope(workflows: WorkflowRecord[], issueScope: Set<string>): WorkflowRecord[] {
+  if (!issueScope.size) return workflows;
+  return workflows
+    .map((workflow) => ({
+      ...workflow,
+      issues: workflow.issues.filter((issue) => issueScope.has(issue.issueId))
+    }))
+    .filter((workflow) => workflow.issues.length);
+}
+
 function filterJobsForIssueScope(jobs: JobRecord[], workflows: WorkflowRecord[], issueScope: Set<string>): JobRecord[] {
   if (!issueScope.size) return jobs;
   const visibleIssueIds = new Set(workflows.flatMap((workflow) => workflow.issues.map((issue) => issue.issueId)).filter((issueId) => issueScope.has(issueId)));
@@ -68,7 +78,8 @@ async function findOrCreateNextBatch(
   const pending = selectRunnableJobs(workflows, jobs.filter((job) => job.status === "pending" && autoRunnableJobTypes.includes(job.type)));
   if (pending.jobIds.length) return pending;
 
-  const issueRows = workflows
+  const scopedWorkflows = filterWorkflowsForIssueScope(workflows, issueScope);
+  const issueRows = scopedWorkflows
     .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })))
     .filter(({ issue }) => !issueScope.size || issueScope.has(issue.issueId));
   const failedReturnRows = issueRows.filter(({ workflow, issue }) => shouldReturnFailedJobToDeveloper(issue, workflow, jobs));
@@ -102,7 +113,10 @@ async function findOrCreateNextBatch(
 function selectRunnableJobs(workflows: WorkflowRecord[], jobs: JobRecord[]): AutoRunStep {
   const rows = jobs
     .map((job) => ({ job, issue: findIssueForJob(workflows, job) }))
-    .filter((row): row is { job: JobRecord; issue: IssueRecord } => Boolean(row.issue));
+    .filter((row): row is { job: JobRecord; issue: IssueRecord } => {
+      if (!row.issue) return false;
+      return !isClosedIssue(row.issue);
+    });
   if (!rows.length) return { action: "idle", jobIds: [] };
   return { action: "pending", jobIds: rows.map((row) => row.job.jobId) };
 }
@@ -113,7 +127,7 @@ function findIssueForJob(workflows: WorkflowRecord[], job: JobRecord): IssueReco
 }
 
 function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolean {
-  if (issue.prUrl || issue.prState === "MERGED" || issue.githubState === "CLOSED") return false;
+  if (isClosedIssue(issue) || issue.prUrl || issue.prState === "MERGED") return false;
   if (hasAnyIssueLabel(issue, ["taskix:dev-running", "taskix:pr-opened", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "taskix:ready-to-merge", "taskix:merged"])) return false;
   const dependencies = issue.dependsOn ?? [];
   if (!dependencies.length) return true;
@@ -125,23 +139,26 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
 
 function canRunQa(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
+    && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
     && !hasAnyIssueLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:merged"]);
 }
 
 function canRunArchitectReview(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
+    && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
     && hasAnyIssueLabel(issue, ["qa-passed", "taskix:qa-passed"])
     && !hasAnyIssueLabel(issue, ["taskix:ready-to-merge", "taskix:merged"]);
 }
 
 function canRunMerge(issue: IssueRecord): boolean {
-  return Boolean(issue.prUrl) && issue.prState !== "MERGED" && hasAnyIssueLabel(issue, ["taskix:ready-to-merge"]);
+  return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && hasAnyIssueLabel(issue, ["taskix:ready-to-merge"]);
 }
 
 function shouldReturnQaFailureToDeveloper(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
+    && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
     && hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"])
     && !hasAnyIssueLabel(issue, ["taskix:spec-blocked"]);
@@ -151,7 +168,11 @@ function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: Workflow
   const latest = jobs
     .filter((job) => job.payload.workflowId === workflow.workflowId && job.payload.issueId === issue.issueId && (job.type === "architect_review_run" || job.type === "merge_run"))
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
-  return Boolean(issue.prUrl) && issue.prState !== "MERGED" && latest?.status === "failed";
+  return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && latest?.status === "failed";
+}
+
+function isClosedIssue(issue: IssueRecord): boolean {
+  return issue.githubState === "CLOSED" || issue.prState === "CLOSED" || issue.prState === "MERGED";
 }
 
 function hasAnyIssueLabel(issue: IssueRecord, labels: string[]): boolean {
