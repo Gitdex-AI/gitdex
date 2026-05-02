@@ -177,7 +177,7 @@ export function ProjectChatArea({
                 {pending ? (
                   <>
                     <LoaderCircle size={14} className="chat-composer-spinner" />
-                    <Text size="xs" c="dimmed">Message sent. Codex agent is thinking...</Text>
+                    <Text size="xs" c="dimmed">Message sent. Codex agent is working...</Text>
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">
@@ -186,7 +186,7 @@ export function ProjectChatArea({
                 )}
               </div>
               <Button type="submit" radius="xl" leftSection={<Send size={16} />} loading={pending} disabled={pending}>
-                {pending ? "Thinking" : "Send"}
+                {pending ? "Working" : "Send"}
               </Button>
             </div>
           </form>
@@ -229,7 +229,7 @@ function RunningAgentStatus({ jobs, sessions, workflows }: { jobs: JobRecord[]; 
               <div key={job.jobId} className="running-agent-item">
                 <Text size="sm" c="dimmed" className="running-agent-line">
                   <LoaderCircle size={13} className="chat-composer-spinner" />
-                  <span>{label} thinking{issueLabel ? ` on ${issueLabel}` : ""} ...({formatElapsed(startedAt)})</span>
+                  <span>{label} working{issueLabel ? ` on ${issueLabel}` : ""} ...({formatElapsed(startedAt)})</span>
                 </Text>
                 {outputTail ? (
                   <RunningAgentLog label={label} output={outputTail} />
@@ -383,7 +383,7 @@ function MessageList({
                 now
               </Text>
             </Group>
-            <Text size="sm" c="dimmed">Codex agent is thinking...</Text>
+            <Text size="sm" c="dimmed">Codex agent is working...</Text>
           </div>
         </div>
       )}

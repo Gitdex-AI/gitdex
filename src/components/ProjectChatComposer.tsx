@@ -46,7 +46,7 @@ function ComposerFields({ activeRole }: { activeRole: Extract<Role, "product_man
           {pending ? (
             <>
               <LoaderCircle size={14} className="chat-composer-spinner" />
-              <Text size="xs" c="dimmed">Sending. Codex agent is thinking...</Text>
+              <Text size="xs" c="dimmed">Sending. Codex agent is working...</Text>
             </>
           ) : (
             <Text size="xs" c="dimmed">
@@ -55,7 +55,7 @@ function ComposerFields({ activeRole }: { activeRole: Extract<Role, "product_man
           )}
         </div>
         <Button type="submit" radius="xl" leftSection={<Send size={16} />} loading={pending} disabled={pending}>
-          {pending ? "Thinking" : "Send"}
+          {pending ? "Working" : "Send"}
         </Button>
       </div>
     </>
