@@ -38,7 +38,7 @@ export function ProjectHandoffToQaButton({
   return (
     <>
       <Button type="button" variant="light" color="blue" size="compact-xs" radius="xl" leftSection={<ClipboardCheck size={14} />} loading={pending} onClick={handoffToQa}>
-        Handoff to QA
+        Run QA
       </Button>
       {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
     </>

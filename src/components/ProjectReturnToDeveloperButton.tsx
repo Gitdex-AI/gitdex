@@ -23,13 +23,13 @@ export function ProjectReturnToDeveloperButton({
       const response = await fetch(`/api/projects/${projectId}/issues/${issueId}/return-to-developer`, { method: "POST" });
       const payload = await response.json() as { error?: string; redirectTo?: string };
       if (!response.ok) {
-        setError(payload.error ?? "Return to developer failed");
+        setError(payload.error ?? "Run Dev failed");
         return;
       }
       if (payload.redirectTo) router.push(payload.redirectTo);
       router.refresh();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Return to developer failed");
+      setError(error instanceof Error ? error.message : "Run Dev failed");
     } finally {
       setPending(false);
     }
@@ -38,7 +38,7 @@ export function ProjectReturnToDeveloperButton({
   return (
     <>
       <Button type="button" variant="light" color="orange" size="compact-xs" radius="xl" leftSection={<RotateCcw size={14} />} loading={pending} onClick={returnToDeveloper}>
-        Return to developer
+        Run Dev
       </Button>
       {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
     </>

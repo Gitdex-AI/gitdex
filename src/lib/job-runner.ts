@@ -1,11 +1,21 @@
 import { runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
-import { claimNextPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
+import { claimNextPendingJob, claimPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
 import type { JobRecord } from "@/lib/types";
 
 export async function runNextJob(projectId?: string): Promise<{ job: JobRecord | null; ran: boolean }> {
   const job = await claimNextPendingJob(projectId);
   if (!job) return { job: null, ran: false };
+  return runClaimedJob(job);
+}
+
+export async function runJobById(jobId: string, projectId?: string): Promise<{ job: JobRecord | null; ran: boolean }> {
+  const job = await claimPendingJob(jobId, projectId);
+  if (!job) return { job: await getJob(jobId), ran: false };
+  return runClaimedJob(job);
+}
+
+async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; ran: boolean }> {
   let skipped = false;
 
   try {

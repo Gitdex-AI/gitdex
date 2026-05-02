@@ -48,7 +48,7 @@ export function ProjectArchitectReviewButton({
           loading={pending}
           onClick={reviewPr}
         >
-          Architect review
+          Run Review
         </Button>
         {result?.ok ? <Text size="xs" c="green">{result.message}</Text> : null}
       </Group>

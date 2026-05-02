@@ -226,6 +226,44 @@ export async function claimNextPendingJob(projectId?: string): Promise<JobRecord
   }
 }
 
+export async function claimPendingJob(jobId: string, projectId?: string): Promise<JobRecord | null> {
+  await recoverStaleRunningJobs(projectId);
+
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const row = projectId
+      ? db.prepare("SELECT job_id, payload FROM jobs WHERE job_id = ? AND status = 'pending' AND project_id = ?").get(jobId, projectId) as { job_id: string; payload: string } | undefined
+      : db.prepare("SELECT job_id, payload FROM jobs WHERE job_id = ? AND status = 'pending'").get(jobId) as { job_id: string; payload: string } | undefined;
+    if (!row) {
+      db.exec("COMMIT");
+      return null;
+    }
+
+    const job = JSON.parse(row.payload) as JobRecord;
+    job.status = "running";
+    job.attempts += 1;
+    const now = new Date().toISOString();
+    job.updatedAt = now;
+    job.runtime = {
+      ...(job.runtime ?? {}),
+      pid: null,
+      startedAt: now,
+      lastHeartbeatAt: now,
+      lastOutputAt: null,
+      finishedAt: null
+    };
+    const result = db
+      .prepare("UPDATE jobs SET status = ?, updated_at = ?, payload = ? WHERE job_id = ? AND status = 'pending'")
+      .run(job.status, job.updatedAt, JSON.stringify(job), row.job_id) as { changes: number };
+    db.exec("COMMIT");
+    return result.changes ? job : null;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 async function recoverStaleRunningJobs(projectId?: string): Promise<void> {
   const rows = projectId
     ? getDb().prepare("SELECT payload FROM jobs WHERE status = 'running' AND project_id = ?").all(projectId) as { payload: string }[]

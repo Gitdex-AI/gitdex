@@ -62,7 +62,7 @@ export function ProjectMergePrButton({
           loading={pending}
           onClick={mergePr}
         >
-          Ask architect
+          Run Merge
         </Button>
         {result?.ok ? <Text size="xs" c="green">{result.message}</Text> : null}
       </Group>

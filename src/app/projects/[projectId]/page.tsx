@@ -12,6 +12,7 @@ import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
 import { ProjectPhaseSwitcher } from "@/components/ProjectPhaseSwitcher";
 import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
 import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
+import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -292,7 +293,6 @@ function ThreePhaseWorkflowPanel(input: {
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
-          <ProjectRunJobsForm projectId={input.projectId} label="Run Ready Jobs" />
         </Group>
         <Stack gap="xs" mt="sm">
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions, input.jobs, input.queuedJobId)}
@@ -683,17 +683,43 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
             ) : null}
           </div>
           <Group gap={6} wrap="wrap" justify="flex-end">
-            {activeJob?.status === "failed" ? <ProjectRetryJobButton projectId={projectId} jobId={activeJob.jobId} /> : null}
-            {activeJob?.status === "running" ? <ProjectRetryJobButton projectId={projectId} jobId={activeJob.jobId} status="running" /> : null}
-            {canHandoffToQa ? <ProjectHandoffToQaButton projectId={projectId} issueId={issue.issueId} /> : null}
-            {qaStatus.id === "failed" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
-            {canArchitectReview ? <ProjectArchitectReviewButton projectId={projectId} issueId={issue.issueId} /> : null}
-            {canMerge ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
+            {renderIssueStageAction({
+              projectId,
+              issue,
+              activeJob,
+              qaStatusId: qaStatus.id,
+              canHandoffToQa,
+              canArchitectReview,
+              canMerge
+            })}
           </Group>
         </Group>
       </div>
     );
   });
+}
+
+function renderIssueStageAction(input: {
+  projectId: string;
+  issue: IssueRecord;
+  activeJob: JobRecord | null;
+  qaStatusId: ReturnType<typeof getIssueQaStatus>["id"];
+  canHandoffToQa: boolean;
+  canArchitectReview: boolean;
+  canMerge: boolean;
+}): ReactNode {
+  if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (input.activeJob?.status === "pending") return <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
+  if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
+  if (input.activeJob?.status === "running") return null;
+  if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
+  if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  return null;
+}
+
+function runLabelForJob(job: JobRecord): string {
+  return job.type === "qa_run" ? "Run QA" : "Run Dev";
 }
 
 function latestIssueJob(issueId: string, jobs: JobRecord[]): JobRecord | null {
@@ -734,7 +760,6 @@ function renderQaIssueRows(projectId: string, workflows: WorkflowRecord[], sessi
         key={issue.issueId}
         issue={issue}
         qaStatus={qaStatus}
-        action={qaStatus.id === "failed" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
       />
     );
   });
@@ -757,7 +782,6 @@ function renderMergeIssueRows(projectId: string, workflows: WorkflowRecord[]): R
           </div>
           <Group gap={6} wrap="nowrap">
             <Badge size="xs" color={reviewed ? "green" : "blue"} variant="light">{reviewed ? "reviewed" : "needs review"}</Badge>
-            {issue.prUrl && issue.prState !== "MERGED" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
             {issue.prUrl && issue.prState !== "MERGED" && !reviewed ? <ProjectArchitectReviewButton projectId={projectId} issueId={issue.issueId} /> : null}
             {issue.prUrl && issue.prState !== "MERGED" && reviewed ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
           </Group>
