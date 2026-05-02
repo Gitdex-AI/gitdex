@@ -496,12 +496,14 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   timeline.push(developerResult.prUrl ? `Developer opened PR ${developerResult.prUrl} for issue ${issue.issueId}.` : `Developer did not return a PR for issue ${issue.issueId}.`);
 
   if (!developerResult.prUrl) {
+    const blockedLabels = developerResult.blockedType === "spec" ? ["taskix:spec-blocked", "taskix:blocked"] : ["taskix:blocked"];
+    const blockedCleanupLabels = ["taskix:dev-running", "taskix:qa-failed", "qa-failed"];
+    issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !blockedCleanupLabels.includes(label.toLowerCase())), ...blockedLabels])];
+    issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !blockedCleanupLabels.includes(label.toLowerCase())), ...blockedLabels])];
     if (developerResult.blockedType === "spec") {
-      issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !["taskix:dev-running", "taskix:qa-failed", "qa-failed"].includes(label.toLowerCase())), "taskix:spec-blocked", "taskix:blocked"])];
-      issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !["taskix:dev-running", "taskix:qa-failed", "qa-failed"].includes(label.toLowerCase())), "taskix:spec-blocked", "taskix:blocked"])];
       if (issue.githubIssueNumber) {
-        await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, ["taskix:dev-running", "taskix:qa-failed", "qa-failed"]);
-        await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, ["taskix:spec-blocked", "taskix:blocked"]);
+        await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, blockedCleanupLabels);
+        await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, blockedLabels);
         await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, [
           "Developer blocked on issue specification.",
           "",
@@ -512,6 +514,20 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
         ].join("\n"));
       }
       timeline.push(`Developer marked ${issue.issueId} spec-blocked for architect clarification.`);
+    } else {
+      if (issue.githubIssueNumber) {
+        await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, blockedCleanupLabels);
+        await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, blockedLabels);
+        await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, [
+          "Developer blocked before PR creation.",
+          "",
+          `Blocked type: ${developerResult.blockedType || "unknown"}`,
+          "",
+          "## Summary",
+          developerResult.summary
+        ].join("\n"));
+      }
+      timeline.push(`Developer marked ${issue.issueId} blocked before PR creation: ${developerResult.blockedType}.`);
     }
     return {
       timeline,
@@ -522,7 +538,11 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
         ownedPaths,
         developerSummary: developerResult.summary,
         blocked: true,
-        reason: developerResult.blockedType === "spec" ? "Developer requested architect clarification" : "Developer did not return PR URL"
+        reason: developerResult.blockedType === "spec"
+          ? "Developer requested architect clarification"
+          : developerResult.blockedType === "environment"
+            ? "Developer environment blocked before PR creation"
+            : "Developer did not return PR URL"
       },
       blocked: true
     };

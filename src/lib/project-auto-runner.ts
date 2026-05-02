@@ -1,6 +1,6 @@
 import { runJobsById } from "@/lib/job-runner";
 import { shouldCancelAutoRun, shouldPauseAutoRun, startAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
-import { canAutoRunQa, isClosedIssue } from "@/lib/auto-run-policy";
+import { canAutoRunDeveloper, canAutoRunQa, isClosedIssue } from "@/lib/auto-run-policy";
 import { addLabelsWithGh, commentIssueWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
@@ -163,8 +163,7 @@ function findIssueForJob(workflows: WorkflowRecord[], job: JobRecord): IssueReco
 }
 
 function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolean {
-  if (isClosedIssue(issue) || issue.prUrl || issue.prState === "MERGED") return false;
-  if (hasAnyIssueLabel(issue, ["taskix:dev-running", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "taskix:ready-to-merge", "taskix:merged"])) return false;
+  if (!canAutoRunDeveloper(issue)) return false;
   const dependencies = issue.dependsOn ?? [];
   if (!dependencies.length) return true;
   return dependencies.every((dependency) => {

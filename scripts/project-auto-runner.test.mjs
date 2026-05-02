@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canAutoRunQa } from "../src/lib/auto-run-policy.ts";
+import { canAutoRunDeveloper, canAutoRunQa } from "../src/lib/auto-run-policy.ts";
 
 const issue = (overrides = {}) => ({
   title: "Issue",
@@ -27,5 +27,19 @@ describe("canAutoRunQa", () => {
 
   it("does not start QA for closed PRs", () => {
     assert.equal(canAutoRunQa(issue({ prState: "CLOSED" })), false);
+  });
+});
+
+describe("canAutoRunDeveloper", () => {
+  it("allows open issues without a PR or blocking labels", () => {
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null })), true);
+  });
+
+  it("does not start developer work for blocked issues", () => {
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:blocked"] })), false);
+  });
+
+  it("does not start developer work for spec-blocked issues", () => {
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:spec-blocked"] })), false);
   });
 });
