@@ -3,6 +3,7 @@ import { Badge, Code, Group, Text } from "@mantine/core";
 import { getSettings } from "@/lib/settings";
 import { listProjects, listWorkflows } from "@/lib/store";
 import { Providers } from "@/components/Providers";
+import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { ShellLayout } from "@/components/ShellLayout";
 import packageJson from "../../package.json";
 import "@mantine/core/styles.css";
@@ -39,9 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Badge color="dark" variant="light">
                 Webhook <Code>{settings.appBaseUrl.replace(/\/$/, "")}/telegram/webhook</Code>
               </Badge>
-              <button className="topbar-version" type="button" aria-label={`Taskix version ${packageJson.version}`}>
-                v{packageJson.version}
-              </button>
+              <SelfUpdateDialog version={packageJson.version} />
             </Group>
           </header>
           <div className="shell">
