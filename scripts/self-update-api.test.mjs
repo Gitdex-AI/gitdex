@@ -52,12 +52,18 @@ test("non-localhost callers are rejected even when enabled", () => {
   assert.match(guard.error, /localhost/);
 });
 
+test("host headers do not prove a localhost caller", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  assert.equal(isLocalhostRequest(new Headers({ host: "127.0.0.1:8000" })), false);
+  assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-host": "127.0.0.1:8000" })), false);
+  assert.equal(selfUpdateGuard(new Headers({ host: "127.0.0.1:8000" })).ok, false);
+});
+
 test("localhost detection accepts loopback address forms", () => {
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-for": "127.0.0.1" })), true);
   assert.equal(isLocalhostRequest(new Headers({ "x-real-ip": "::1" })), true);
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-for": "::ffff:127.0.0.1" })), true);
-  assert.equal(isLocalhostRequest(new Headers({ host: "127.0.0.1:8000" })), true);
-  assert.equal(isLocalhostRequest(new Headers({ host: "[::1]:8000" })), true);
 });
 
 test("successful update runs commands in order and enables restart", async () => {

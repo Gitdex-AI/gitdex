@@ -72,8 +72,6 @@ export function isLocalhostRequest(headers: Headers) {
 
   return (
     isLocalhostAddress(headers.get("x-real-ip")) ||
-    isLocalhostAddress(hostnameFromHeader(headers.get("x-forwarded-host"))) ||
-    isLocalhostAddress(hostnameFromHeader(headers.get("host"))) ||
     isLocalhostAddress(forwardedFor?.split(",")[0])
   );
 }
@@ -194,22 +192,4 @@ function stringifyOutput(value: string | Buffer | undefined) {
   }
 
   return Buffer.isBuffer(value) ? value.toString("utf8") : value;
-}
-
-function hostnameFromHeader(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const host = value.split(",")[0]?.trim();
-  if (!host) {
-    return null;
-  }
-
-  if (host.startsWith("[")) {
-    const bracketIndex = host.indexOf("]");
-    return bracketIndex === -1 ? host : host.slice(0, bracketIndex + 1);
-  }
-
-  return host.split(":")[0] ?? host;
 }
