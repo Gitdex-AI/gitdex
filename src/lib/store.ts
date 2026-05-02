@@ -167,26 +167,39 @@ export async function listJobs(projectId?: string): Promise<JobRecord[]> {
 export async function claimNextPendingJob(projectId?: string): Promise<JobRecord | null> {
   await recoverStaleRunningJobs(projectId);
 
-  const row = projectId
-    ? getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' AND project_id = ? ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get(projectId) as { payload: string } | undefined
-    : getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get() as { payload: string } | undefined;
-  if (!row) return null;
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const row = projectId
+      ? db.prepare("SELECT job_id, payload FROM jobs WHERE status = 'pending' AND project_id = ? ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get(projectId) as { job_id: string; payload: string } | undefined
+      : db.prepare("SELECT job_id, payload FROM jobs WHERE status = 'pending' ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get() as { job_id: string; payload: string } | undefined;
+    if (!row) {
+      db.exec("COMMIT");
+      return null;
+    }
 
-  const job = JSON.parse(row.payload) as JobRecord;
-  job.status = "running";
-  job.attempts += 1;
-  const now = new Date().toISOString();
-  job.updatedAt = now;
-  job.runtime = {
-    ...(job.runtime ?? {}),
-    pid: null,
-    startedAt: now,
-    lastHeartbeatAt: now,
-    lastOutputAt: null,
-    finishedAt: null
-  };
-  await saveJob(job);
-  return job;
+    const job = JSON.parse(row.payload) as JobRecord;
+    job.status = "running";
+    job.attempts += 1;
+    const now = new Date().toISOString();
+    job.updatedAt = now;
+    job.runtime = {
+      ...(job.runtime ?? {}),
+      pid: null,
+      startedAt: now,
+      lastHeartbeatAt: now,
+      lastOutputAt: null,
+      finishedAt: null
+    };
+    const result = db
+      .prepare("UPDATE jobs SET status = ?, updated_at = ?, payload = ? WHERE job_id = ? AND status = 'pending'")
+      .run(job.status, job.updatedAt, JSON.stringify(job), row.job_id) as { changes: number };
+    db.exec("COMMIT");
+    return result.changes ? job : null;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 async function recoverStaleRunningJobs(projectId?: string): Promise<void> {
