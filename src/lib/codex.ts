@@ -434,15 +434,17 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
 GitHub repo: ${input.repo}
 Issue: #${input.issueNumber}
 PR: ${input.prUrl}
-Project deployment policy: manual deploy; do not merge.
+Project deployment policy: manual deployment. This review stage must not merge, but an approved PR should proceed to the dedicated merge step.
 
 Task:
 - Read the issue, PR diff, labels, comments, and QA evidence with gh. Treat GitHub as the source of truth.
 - Perform architect code review and merge-readiness review after QA has passed.
 
 Hard rules:
-- Do not merge the PR.
-- Preserve manual-deploy handling by stopping at merge readiness only; do not generate merge, deploy, or PR-closing actions.
+- Do not merge the PR during this review stage.
+- Manual deployment only restricts deployment after merge; it does not mean the PR should remain unmerged.
+- If approved, state clearly that the PR is ready for the dedicated merge step.
+- Do not generate deployment actions.
 - Do not add or remove GitHub labels; Taskix will apply labels after your structured decision.
 - Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
 - Return "changes_requested" if implementation changes are required.

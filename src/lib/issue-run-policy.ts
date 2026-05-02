@@ -47,7 +47,7 @@ export function manualDeployFinalLabelPlan(input: {
 
   return {
     decision: "ready_to_merge",
-    summary: `${input.architectDecision.summary}\n\nManual-deploy project: architect approved merge readiness after QA; Taskix marked ${input.prUrl} ready to merge without merging it.`,
+    summary: `${input.architectDecision.summary}\n\nArchitect review passed. This PR is ready for the dedicated merge step. Manual deployment only controls post-merge deployment and does not block merging.`,
     labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "taskix:ready-to-merge"])],
     labelsRemoved: ["taskix:need-qa", "taskix:qa-running", "taskix:blocked"],
     comments: input.architectDecision.comments
@@ -87,7 +87,7 @@ export function manualDeployArchitectPolicyDecision(input: {
   }
   return {
     decision: "ready_to_merge",
-    summary: `Architect policy approved ${input.prUrl} after QA passed; manual deployment keeps the PR open for human merge.`,
+    summary: `Architect policy approved ${input.prUrl} after QA passed; it is ready for the dedicated merge step. Manual deployment controls post-merge deployment only.`,
     labelsApplied: [],
     comments: []
   };

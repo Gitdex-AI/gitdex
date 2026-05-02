@@ -49,7 +49,8 @@ const ready = manualDeployFinalLabelPlan({
 assert.equal(ready.decision, "ready_to_merge");
 assert.deepEqual(ready.labelsApplied, ["taskix:ready-to-merge"]);
 assert.deepEqual(ready.labelsRemoved, ["taskix:need-qa", "taskix:qa-running", "taskix:blocked"]);
-assert.match(ready.summary, /without merging it/);
+assert.match(ready.summary, /ready for the dedicated merge step/);
+assert.match(ready.summary, /does not block merging/);
 
 const blocked = manualDeployFinalLabelPlan({
   prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
