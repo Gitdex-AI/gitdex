@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 const {
   adminSessionCookieName,
   authorizeConsoleApiRequest,
+  authorizeConsolePageRequest,
   hasAdminSessionCookie,
   isConsoleApiPath,
   isConsolePagePath,
@@ -31,9 +32,11 @@ describe("console auth guard", () => {
     assert.equal(isConsolePagePath("/favicon.ico"), false);
   });
 
-  it("uses the admin session cookie as the middleware preflight signal", () => {
+  it("recognizes the admin session cookie without treating it as verified page auth", () => {
     assert.equal(hasAdminSessionCookie(new Set()), false);
     assert.equal(hasAdminSessionCookie(new Set([adminSessionCookieName])), true);
+    assert.equal(authorizeConsolePageRequest({ authenticated: false }), "login");
+    assert.equal(authorizeConsolePageRequest({ authenticated: true }), "allow");
   });
 
   it("allows uninitialized and authenticated API requests but rejects initialized anonymous access", () => {

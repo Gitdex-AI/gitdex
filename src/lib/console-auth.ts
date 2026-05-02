@@ -41,6 +41,10 @@ export function authorizeConsoleApiRequest({ initialized, authenticated }: { ini
   return Response.json({ ok: false, error: "Authentication required." }, { status: 401 });
 }
 
+export function authorizeConsolePageRequest({ authenticated }: { authenticated: boolean }): "allow" | "login" {
+  return authenticated ? "allow" : "login";
+}
+
 export async function requireConsoleApiAuth(pathname = ""): Promise<Response | null> {
   if (pathname && isPublicConsoleApiPath(pathname)) return null;
   const { isAdminInitialized } = await import("@/lib/admin-auth");

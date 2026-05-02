@@ -8,7 +8,7 @@ const publicConsoleApiPaths = new Set([
   "/api/admin/setup"
 ]);
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (isPublicConsoleApiPath(pathname)) {
     return NextResponse.next();
@@ -20,11 +20,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
   }
 
-  if (isConsolePagePath(pathname) && !hasAdminSessionCookie(request.cookies)) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(loginUrl);
+  if (isConsolePagePath(pathname)) {
+    if (!hasAdminSessionCookie(request.cookies)) {
+      return redirectToLogin(request);
+    }
+    const pageAuth = authorizeConsolePageRequest({ authenticated: await hasVerifiedAdminSession(request) });
+    if (pageAuth === "login") {
+      return redirectToLogin(request);
+    }
   }
 
   return NextResponse.next();
@@ -48,6 +51,32 @@ function isConsolePagePath(pathname: string): boolean {
 
 function hasAdminSessionCookie(cookies: { has(name: string): boolean }): boolean {
   return cookies.has(adminSessionCookieName);
+}
+
+function authorizeConsolePageRequest({ authenticated }: { authenticated: boolean }): "allow" | "login" {
+  return authenticated ? "allow" : "login";
+}
+
+async function hasVerifiedAdminSession(request: NextRequest): Promise<boolean> {
+  const sessionUrl = request.nextUrl.clone();
+  sessionUrl.pathname = "/api/admin/session";
+  sessionUrl.search = "";
+
+  const response = await fetch(sessionUrl, {
+    cache: "no-store",
+    headers: {
+      cookie: request.headers.get("cookie") ?? ""
+    }
+  }).catch(() => null);
+
+  return response?.ok === true;
+}
+
+function redirectToLogin(request: NextRequest): NextResponse {
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(loginUrl);
 }
 
 function normalizePath(pathname: string): string {
