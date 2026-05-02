@@ -11,6 +11,7 @@ import {
   hasTrustedCallerAddress,
   mintSelfUpdateOperatorIntent,
   resetSelfUpdateStateForTests,
+  runOperatorSelfUpdateAndRestart,
   runOperatorSelfUpdate,
   runSelfUpdate,
   selfUpdateGuard,
@@ -227,6 +228,82 @@ test("operator self-update flow requires a valid server-minted intent token", as
   );
   assert.equal(replay.status, 403);
   assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
+});
+
+test("operator self-update flow requests restart through internal server integration", async () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  const calls = [];
+  let restartCalls = 0;
+  setSelfUpdateCommandRunnerForTests(async (command) => {
+    calls.push(command.command);
+    return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
+  });
+  const restartTaskixService = async () => {
+    restartCalls += 1;
+    return {
+      ok: true,
+      manager: "systemctl",
+      serviceName: "taskix-next.service",
+      stdout: "restarted",
+      stderr: "",
+      error: null
+    };
+  };
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  const response = await runOperatorSelfUpdateAndRestart(
+    { nonce: intent.cookie.value, token: intent.token },
+    restartTaskixService,
+    "/tmp/taskix-self-update-operator-restart-test"
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.ok, true);
+  assert.equal(response.update?.ok, true);
+  assert.equal(response.restart?.restartRequested, true);
+  assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
+  assert.equal(restartCalls, 1);
+  assert.equal(getSelfUpdateState().restartStatus, "requested");
+  assert.equal(getSelfUpdateState().restartAvailable, false);
+});
+
+test("operator self-update flow reports terminal restart failure distinctly", async () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  setSelfUpdateCommandRunnerForTests(async (command) => {
+    return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
+  });
+  const restartTaskixService = async () => {
+    return {
+      ok: false,
+      manager: "systemctl",
+      serviceName: "taskix-next.service",
+      stdout: "",
+      stderr: "restart failed",
+      error: "Taskix service restart failed."
+    };
+  };
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  const response = await runOperatorSelfUpdateAndRestart(
+    { nonce: intent.cookie.value, token: intent.token },
+    restartTaskixService,
+    "/tmp/taskix-self-update-operator-restart-failure-test"
+  );
+
+  assert.equal(response.status, 500);
+  assert.equal(response.ok, false);
+  assert.equal(response.update?.ok, true);
+  assert.equal(response.restart?.restartRequested, false);
+
+  const state = getSelfUpdateState();
+  assert.equal(state.restartStatus, "failed");
+  assert.match(state.restartError, /restart failed/i);
 });
 
 test("runtime loopback addresses prove localhost route callers", () => {

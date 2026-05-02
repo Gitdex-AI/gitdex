@@ -99,13 +99,10 @@ export function SelfUpdateDialog({ version }: { version: string }) {
         throw new Error("Operator self-update submission is not available for this UI session.");
       }
 
+      preRestartBootId.current = status?.bootId ?? null;
       const updateResult = await postJson<SelfUpdateRunResult>("/api/operator/self-update/update", { operatorIntentToken });
       setStatus((current) => current ? { ...current, lastRun: updateResult, restartAvailable: updateResult.restartAvailable } : current);
       if (!updateResult.ok) throw new Error(`Self-update failed at ${updateResult.failedCommand ?? "unknown command"}.`);
-
-      setPhase("restarting");
-      preRestartBootId.current = status?.bootId ?? null;
-      await postJson("/api/self-update/restart");
 
       pollStartedAt.current = Date.now();
       setPhase("polling");
