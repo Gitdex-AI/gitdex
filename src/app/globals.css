@@ -1035,9 +1035,9 @@ pre,
   margin: 12px 0 0;
   padding: 12px;
   overflow: auto;
-  color: #1f2937;
-  background: #f8fafc;
-  border: 1px solid #dbe5f3;
+  color: #dbeafe;
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: 12px;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -1045,7 +1045,7 @@ pre,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
-  scrollbar-color: #94a3b8 transparent;
+  scrollbar-color: #64748b transparent;
   scrollbar-width: thin;
 }
 
@@ -1059,13 +1059,13 @@ pre,
 }
 
 .execution-log-content::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border: 2px solid #f8fafc;
+  background: #64748b;
+  border: 2px solid #0f172a;
   border-radius: 999px;
 }
 
 .execution-log-content::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #94a3b8;
 }
 
 .project-context {
