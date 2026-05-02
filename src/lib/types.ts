@@ -91,6 +91,7 @@ export type ArchitectPrReviewResult = {
 
 export type QaPrReviewResult = {
   passed: boolean;
+  failureType: "none" | "implementation" | "spec" | "environment" | "stale";
   summary: string;
   findings: string[];
   labelsApplied: string[];

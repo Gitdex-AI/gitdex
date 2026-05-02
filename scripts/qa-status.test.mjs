@@ -22,4 +22,8 @@ describe("getIssueQaStatus", () => {
     assert.equal(getIssueQaStatus(issue({ labels: ["taskix:qa-failed"] })).id, "failed");
     assert.equal(getIssueQaStatus(issue({ prLabels: ["qa-failed"] })).id, "failed");
   });
+
+  it("reports spec blocked separately from implementation QA failure", () => {
+    assert.equal(getIssueQaStatus(issue({ labels: ["taskix:spec-blocked", "taskix:blocked"] })).id, "spec_blocked");
+  });
 });

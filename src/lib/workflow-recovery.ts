@@ -26,9 +26,10 @@ export function recoveryReasonForDeveloperStep(
 }
 
 export function recoveryReasonForQaStep(workflows: RecoveryWorkflow[], sessions: RecoverySession[]): string | null {
-  if (sessions.some((session) => session.status === "blocked")) return "QA is blocked or failed. Open the QA session for findings, then retry the developer fix path after the issue is updated.";
   const issues = workflows.flatMap((workflow) => workflow.issues);
-  if (issues.some((issue) => (issue.prUrl || issue.prState?.toUpperCase() === "OPEN") && !hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"]))) {
+  if (issues.some((issue) => hasAnyLabel(issue, ["taskix:spec-blocked"]))) return "QA found a specification or architecture blocker. Send the QA session to Architect for issue clarification before retrying developer work.";
+  if (sessions.some((session) => session.status === "blocked")) return "QA is blocked or failed. Open the QA session for findings, then retry the developer fix path after the issue is updated.";
+  if (issues.some((issue) => (issue.prUrl || issue.prState?.toUpperCase() === "OPEN") && !hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge"]))) {
     return "A PR is open but QA labels are missing. Sync GitHub to recover labels, or request QA before this workflow can move forward.";
   }
   if (issues.some((issue) => issue.prUrl && hasAnyLabel(issue, ["taskix:need-qa", "taskix:qa-running"]))) {

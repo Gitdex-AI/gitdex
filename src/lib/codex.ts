@@ -132,6 +132,7 @@ GitHub repo: ${input.githubRepo}
 You are resolving a blocked Taskix workflow, not just giving advice.
 
 Resolution rules:
+- QA may send two different blocked states: implementation failure goes back to developer; spec or architecture blocker comes to you. If QA identified missing, contradictory, or technically non-executable acceptance criteria, update the issue criteria before retrying developer.
 - If the blocker can be fixed by narrowing scope, correcting ownedPaths, or making acceptance criteria executable, return action "retry_developer".
 - For retry_developer, return a complete revised issue title, description, ownedPaths, developerRole, and acceptanceCriteria that a developer can execute immediately.
 - If the blocker needs a user decision that cannot be inferred, return action "request_user_input" and put the exact question in comment.
@@ -450,6 +451,7 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
   }): Promise<QaPrReviewResult> {
     const schema = objectSchema({
       passed: { type: "boolean" },
+      failureType: { type: "string", enum: ["none", "implementation", "spec", "environment", "stale"] },
       summary: { type: "string" },
       findings: { type: "array", items: { type: "string" } },
       labelsApplied: { type: "array", items: { type: "string" } },
@@ -461,6 +463,7 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
     } catch (error) {
       return {
         passed: false,
+        failureType: "environment",
         summary: `QA workspace preparation failed for issue #${input.issueNumber}: ${error instanceof Error ? error.message : String(error)}`,
         findings: ["QA could not start because its isolated workspace could not be prepared."],
         labelsApplied: [],
@@ -484,16 +487,23 @@ Hard rules:
 - Do not create/edit GitHub issues, PRs, labels, or comments. Taskix server will publish QA evidence and labels after you return JSON.
 - Enforce ownedPaths, but allow minimal changes to automated test files that directly verify this issue's acceptance criteria, even when the architect omitted those test files from ownedPaths. Do not fail QA for that narrow test-scope exception; mention it in summary if relevant.
 - When passing QA, include concise verification evidence in summary, including commands run and any observable state required by acceptance criteria.
-- When failing QA, include actionable findings and reproduction notes.
+- Classify the result with failureType:
+  - "none" only when passed is true.
+  - "implementation" when the issue requirements are clear and the PR implementation does not satisfy them. These go back to developer.
+  - "spec" when acceptance criteria are missing, contradictory, or not executable in this stack without an architect decision. These go back to architect, not developer.
+  - "environment" when validation is blocked by local tooling/runtime constraints unrelated to the PR.
+  - "stale" when the expected PR head SHA no longer matches.
+- When failing QA, include actionable findings and reproduction notes. For spec failures, explain the architectural decision that is missing and do not prescribe code changes as if the developer can choose the policy alone.
 - If a required baseline command fails for a repo-level reason that is clearly unrelated to the PR diff, report it as an environment or repository blocker in findings, but do not mark the PR implementation failed solely for that unrelated baseline failure when the acceptance criteria and PR-scoped automated tests pass.
 - Do not modify the current Taskix app checkout or its .git directory.
 - The current working directory is the isolated QA clone for this PR: ${workspaceDir}.
 - Run git, npm, and browser validation commands only in the current working directory unless explicitly inspecting GitHub with gh.
 
-Return JSON with passed, summary, findings, labelsApplied, testsRun.`;
+Return JSON with passed, failureType, summary, findings, labelsApplied, testsRun.`;
     const result = await this.runJsonResult<QaPrReviewResult>(prompt, schema, { cwd: workspaceDir });
     return result.value ? { ...result.value, executionLog: result.executionLog } : {
       passed: false,
+      failureType: "environment",
       summary: `QA runner did not complete PR review for ${input.prUrl}.`,
       findings: ["QA runner did not return a result."],
       labelsApplied: [],

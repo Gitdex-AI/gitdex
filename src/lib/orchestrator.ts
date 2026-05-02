@@ -184,8 +184,12 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
   });
   const qaFinishedAt = new Date().toISOString();
   const qaCloseAt = qaResult.passed ? qaFinishedAt : null;
-  const appliedLabels = qaResult.passed ? ["taskix:qa-passed"] : ["taskix:qa-failed"];
-  const qaStateLabels = ["qa-passed", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"];
+  const appliedLabels = qaResult.passed
+    ? ["taskix:qa-passed"]
+    : qaResult.failureType === "spec"
+      ? ["taskix:spec-blocked", "taskix:blocked"]
+      : ["taskix:qa-failed"];
+  const qaStateLabels = ["qa-passed", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge"];
   await publishQaResultToGitHub(project.githubRepo, issue, qaPrUrl, qaResult, appliedLabels, qaStateLabels);
   issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !qaStateLabels.includes(label.toLowerCase())), ...appliedLabels])];
   issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !qaStateLabels.includes(label.toLowerCase())), ...appliedLabels])];
@@ -200,7 +204,7 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
       issueId: issue.issueId,
       ownedPaths: issueOwnedPaths,
       status: qaResult.passed ? "done" : "blocked",
-      currentStep: qaResult.passed ? "QA passed" : "QA failed",
+      currentStep: qaResult.passed ? "QA passed" : qaResult.failureType === "spec" ? "QA blocked by issue specification" : "QA failed",
       startedAt: qaStartedAt,
       finishedAt: qaFinishedAt,
       durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime()),
@@ -218,12 +222,16 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
         durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime())
       }] : [],
       messages: [
-        { role: "assistant", content: `Passed: ${qaResult.passed}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${appliedLabels.join(", ")}`, createdAt: new Date().toISOString() }
+        { role: "assistant", content: `Passed: ${qaResult.passed}\nFailure type: ${qaResult.failureType}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${appliedLabels.join(", ")}`, createdAt: new Date().toISOString() }
       ]
     });
   }
 
-  workflow.timeline.push(qaResult.passed ? `QA passed PR for issue ${issue.issueId}. Awaiting architect merge handoff.` : `QA failed PR for issue ${issue.issueId}: ${qaResult.summary}`);
+  workflow.timeline.push(qaResult.passed
+    ? `QA passed PR for issue ${issue.issueId}. Awaiting architect merge handoff.`
+    : qaResult.failureType === "spec"
+      ? `QA marked ${issue.issueId} spec-blocked for architect clarification: ${qaResult.summary}`
+      : `QA failed PR for issue ${issue.issueId}: ${qaResult.summary}`);
   workflow.status = deriveWorkflowStatus(workflow);
   if (!qaResult.passed) workflow.status = "blocked";
   await saveWorkflow(workflow);
@@ -476,7 +484,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     };
   }
 
-  const developerCompletionCleanupLabels = ["taskix:dev-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:architect-review", "taskix:ready-to-merge", "taskix:blocked"];
+  const developerCompletionCleanupLabels = ["taskix:dev-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:architect-review", "taskix:ready-to-merge", "taskix:blocked"];
   issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !developerCompletionCleanupLabels.includes(label.toLowerCase())), "taskix:pr-opened"])];
   issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !developerCompletionCleanupLabels.includes(label.toLowerCase())), "taskix:pr-opened"])];
   timeline.push(`Developer completed PR for issue ${issue.issueId}. Awaiting QA handoff.`);
@@ -559,7 +567,7 @@ function isDeveloperIssueReady(issue: IssueRecord, issues: IssueRecord[]): boole
 function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" | null {
   const normalizedLabels = labels.map((label) => label.toLowerCase());
   if (normalizedLabels.includes("taskix:qa-passed")) return "done";
-  if (normalizedLabels.includes("taskix:qa-failed")) return "blocked";
+  if (normalizedLabels.includes("taskix:qa-failed") || normalizedLabels.includes("taskix:spec-blocked")) return "blocked";
   if (normalizedLabels.includes("taskix:need-qa") || normalizedLabels.includes("taskix:qa-running")) return "active";
   return null;
 }
@@ -594,7 +602,7 @@ async function createDeveloperPullRequest(repo: string, issue: IssueRecord, work
 
 async function publishDeveloperPrStateToGitHub(repo: string, issue: IssueRecord, prUrl: string): Promise<void> {
   const labelsToApply = ["taskix:pr-opened", "taskix:architect-review", issue.developerRole ? `role:${issue.developerRole}` : ""].filter((label): label is string => Boolean(label));
-  const labelsToClear = ["taskix:dev-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"];
+  const labelsToClear = ["taskix:dev-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:blocked"];
   if (issue.githubIssueNumber) {
     await removeLabelsWithGh(repo, issue.githubIssueNumber, labelsToRemove(issue.labels ?? [], labelsToClear, labelsToApply));
     await addLabelsWithGh(repo, issue.githubIssueNumber, labelsToApply);
@@ -612,9 +620,11 @@ async function publishQaResultToGitHub(
   qaStateLabels: string[]
 ): Promise<void> {
   const body = [
-    `QA ${qaResult.passed ? "passed" : "failed"} for ${issue.githubIssueNumber ? `issue #${issue.githubIssueNumber}` : issue.issueId}.`,
+    `QA ${qaResult.passed ? "passed" : qaResult.failureType === "spec" ? "blocked on specification" : "failed"} for ${issue.githubIssueNumber ? `issue #${issue.githubIssueNumber}` : issue.issueId}.`,
     "",
     "## Summary",
+    `Failure type: ${qaResult.failureType}`,
+    "",
     qaResult.summary,
     "",
     "## Findings",
@@ -701,7 +711,7 @@ async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: st
 function deriveWorkflowStatus(workflow: WorkflowRecord): WorkflowRecord["status"] {
   if (!workflow.issues.length) return workflow.status;
   const issues = workflow.issues;
-  const hasBlocked = issues.some((issue) => includesAny([...(issue.labels ?? []), ...(issue.prLabels ?? [])], ["taskix:blocked", "taskix:qa-failed"]));
+  const hasBlocked = issues.some((issue) => includesAny([...(issue.labels ?? []), ...(issue.prLabels ?? [])], ["taskix:blocked", "taskix:qa-failed", "taskix:spec-blocked"]));
   if (hasBlocked) return "blocked";
   const allDone = issues.every((issue) => includesAny([...(issue.labels ?? []), ...(issue.prLabels ?? [])], ["taskix:merged", "taskix:deployed"]) || issue.prState === "MERGED");
   if (allDone) return "done";

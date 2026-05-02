@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 
-const removeReadyLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running"];
+const removeReadyLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked"];
 const addDeveloperLabels = ["taskix:dev-running"];
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {

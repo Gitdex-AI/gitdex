@@ -52,6 +52,14 @@ describe("workflow recovery reasons", () => {
     assert.match(reason, /waiting on QA labels/);
   });
 
+  it("routes specification blockers back to architect", () => {
+    const reason = recoveryReasonForQaStep([
+      workflow([issue({ labels: ["taskix:spec-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
+    ], []);
+
+    assert.match(reason, /Architect/);
+  });
+
   it("shows planning recovery for failed jobs", () => {
     assert.match(recoveryReasonForJobs([job("workflow_run", "failed")]), /planning job failed/);
   });
