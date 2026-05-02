@@ -163,7 +163,7 @@ export function ProjectChatArea({
               aria-label="Message project agents"
               placeholder="@PM clarify scope, @architect review the plan, @devops check deployment..."
               autosize
-              minRows={2}
+              minRows={1}
               maxRows={7}
               required
               disabled={pending}

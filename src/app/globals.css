@@ -308,7 +308,7 @@ pre,
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 18px 20px 12px;
+  padding: 18px 20px 28px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
     #f8fbff;
@@ -322,9 +322,7 @@ pre,
   flex: 0 0 auto;
   padding: 10px 20px 18px;
   border-top: 0;
-  background:
-    radial-gradient(circle at 10% -160%, rgba(37, 99, 235, 0.06), transparent 34%),
-    linear-gradient(180deg, #f8fbff 0%, #f8fbff 55%, rgba(255, 255, 255, 0.92) 100%);
+  background: transparent;
 }
 
 .chat-composer-form {
@@ -340,8 +338,8 @@ pre,
 }
 
 .chat-composer-input {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 32px;
+  padding: 4px 10px;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -361,7 +359,7 @@ pre,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 2px 0 10px;
+  padding: 6px 2px 0 10px;
 }
 
 .chat-composer-status {
