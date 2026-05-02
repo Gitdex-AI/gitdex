@@ -280,16 +280,16 @@ function ThreePhaseWorkflowPanel(input: {
   if (input.selectedPhase === "requirements") {
     return (
       <section className="phase-panel">
-        <Group justify="flex-end" gap="xs">
-          <Button component="a" href={`/projects/${input.projectId}/requirements`} variant="subtle" size="compact-xs" radius="xl">
-            View All Requirements
-          </Button>
-        </Group>
         <Stack gap="xs">
           <Text size="xs" c="dimmed">PM confirms scope, then architect creates GitHub issues.</Text>
           {!input.isInspectingIssueSession && input.readyForArchitectPayload ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
           {renderRequirementRows(input.projectId, input.requirementWorkflows, input.jobs)}
         </Stack>
+        <Group justify="flex-end" gap="xs" mt="xs">
+          <Button component="a" href={`/projects/${input.projectId}/requirements`} variant="subtle" size="compact-xs" radius="xl">
+            View All Requirements
+          </Button>
+        </Group>
       </section>
     );
   }
@@ -300,16 +300,16 @@ function ThreePhaseWorkflowPanel(input: {
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
-          <Group gap={6} wrap="nowrap">
-            <Button component="a" href={`/projects/${input.projectId}/github-triage`} variant="subtle" size="compact-xs" radius="xl">
-              View All Issues
-            </Button>
-            <ProjectRunJobBatchButton projectId={input.projectId} jobIds={runnableBatch.jobIds} disabledReason={runnableBatch.reason} />
-          </Group>
+          <ProjectRunJobBatchButton projectId={input.projectId} jobIds={runnableBatch.jobIds} disabledReason={runnableBatch.reason} />
         </Group>
         <Stack gap="xs" mt="sm">
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions, input.jobs, input.queuedJobId)}
         </Stack>
+        <Group justify="flex-end" gap="xs" mt="xs">
+          <Button component="a" href={`/projects/${input.projectId}/github-triage`} variant="subtle" size="compact-xs" radius="xl">
+            View All Issues
+          </Button>
+        </Group>
       </section>
     );
   }
