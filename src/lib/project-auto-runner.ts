@@ -16,21 +16,22 @@ type AutoRunStep = {
   jobIds: string[];
 };
 
-export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[] } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
+export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[]; issueIds?: string[] } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
   if (!project.githubRepo) throw new Error("Project has no GitHub repo configured.");
   const workflowScope = new Set(options.workflowIds ?? []);
+  const issueScope = new Set(options.issueIds ?? []);
   const steps: AutoRunStep[] = [];
 
   for (let cycle = 0; cycle < 40; cycle += 1) {
     await syncProjectWorkflows(project, workflowScope);
-    const jobs = await listJobs(project.projectId);
+    const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
+    const jobs = filterJobsForIssueScope(await listJobs(project.projectId), workflows, issueScope);
     if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
       return { completed: false, steps, message: "Auto Run paused because issue jobs are still running." };
     }
 
-    const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
     const sessions = await listAgentSessions(project.projectId);
-    const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs);
+    const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs, issueScope);
     if (!batch.jobIds.length) return { completed: true, steps, message: "No runnable issue jobs remain." };
 
     steps.push(batch);
@@ -51,16 +52,25 @@ function filterWorkflows(workflows: WorkflowRecord[], workflowScope: Set<string>
   return workflowScope.size ? workflows.filter((workflow) => workflowScope.has(workflow.workflowId)) : workflows;
 }
 
+function filterJobsForIssueScope(jobs: JobRecord[], workflows: WorkflowRecord[], issueScope: Set<string>): JobRecord[] {
+  if (!issueScope.size) return jobs;
+  const visibleIssueIds = new Set(workflows.flatMap((workflow) => workflow.issues.map((issue) => issue.issueId)).filter((issueId) => issueScope.has(issueId)));
+  return jobs.filter((job) => job.payload.issueId ? visibleIssueIds.has(job.payload.issueId) : false);
+}
+
 async function findOrCreateNextBatch(
   project: ProjectRecord,
   workflows: WorkflowRecord[],
   sessions: AgentSessionRecord[],
-  jobs: JobRecord[]
+  jobs: JobRecord[],
+  issueScope: Set<string>
 ): Promise<AutoRunStep> {
   const pending = selectRunnableJobs(workflows, jobs.filter((job) => job.status === "pending" && autoRunnableJobTypes.includes(job.type)));
   if (pending.jobIds.length) return pending;
 
-  const issueRows = workflows.flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })));
+  const issueRows = workflows
+    .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })))
+    .filter(({ issue }) => !issueScope.size || issueScope.has(issue.issueId));
   const failedReturnRows = issueRows.filter(({ workflow, issue }) => shouldReturnFailedJobToDeveloper(issue, workflow, jobs));
   const returnRows = failedReturnRows.length ? failedReturnRows : issueRows.filter(({ issue }) => shouldReturnQaFailureToDeveloper(issue));
   const jobsToRun: JobRecord[] = [];

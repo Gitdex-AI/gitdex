@@ -7,8 +7,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const project = await getProject(projectId);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
 
-  const body = await request.json().catch(() => ({})) as { workflowIds?: unknown };
+  const body = await request.json().catch(() => ({})) as { workflowIds?: unknown; issueIds?: unknown };
   const workflowIds = Array.isArray(body.workflowIds) ? body.workflowIds.filter((item): item is string => typeof item === "string") : [];
-  const result = await runProjectIssueAutoRun(project, { workflowIds });
+  const issueIds = Array.isArray(body.issueIds) ? body.issueIds.filter((item): item is string => typeof item === "string") : [];
+  const result = await runProjectIssueAutoRun(project, { workflowIds, issueIds });
   return NextResponse.json({ ok: true, ...result });
 }
