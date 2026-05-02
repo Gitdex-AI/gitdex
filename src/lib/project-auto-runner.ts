@@ -1,4 +1,5 @@
 import { runJobsById } from "@/lib/job-runner";
+import { shouldCancelAutoRun, shouldPauseAutoRun, startAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
 import { addLabelsWithGh, commentIssueWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
@@ -20,25 +21,59 @@ export async function runProjectIssueAutoRun(project: ProjectRecord, options: { 
   if (!project.githubRepo) throw new Error("Project has no GitHub repo configured.");
   const workflowScope = new Set(options.workflowIds ?? []);
   const issueScope = new Set(options.issueIds ?? []);
+  const runState = startAutoRunState(project.projectId, { workflowIds: [...workflowScope], issueIds: [...issueScope] });
   const steps: AutoRunStep[] = [];
 
-  for (let cycle = 0; cycle < 40; cycle += 1) {
-    await syncProjectWorkflows(project, workflowScope);
-    const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
-    const jobs = filterJobsForIssueScope(await listJobs(project.projectId), workflows, issueScope);
-    if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
-      return { completed: false, steps, message: "Auto Run paused because issue jobs are still running." };
+  try {
+    for (let cycle = 0; cycle < 40; cycle += 1) {
+      const controlResult = handleAutoRunControl(project.projectId, runState.runId, steps);
+      if (controlResult) return controlResult;
+
+      await syncProjectWorkflows(project, workflowScope);
+      const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
+      const jobs = filterJobsForIssueScope(await listJobs(project.projectId), workflows, issueScope);
+      if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
+        const message = "Auto Run paused because issue jobs are still running.";
+        updateAutoRunState(project.projectId, { runId: runState.runId, status: "paused", message });
+        return { completed: false, steps, message };
+      }
+
+      const sessions = await listAgentSessions(project.projectId);
+      const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs, issueScope);
+      if (!batch.jobIds.length) {
+        const message = "No runnable issue jobs remain.";
+        updateAutoRunState(project.projectId, { runId: runState.runId, status: "completed", message });
+        return { completed: true, steps, message };
+      }
+
+      steps.push(batch);
+      await runJobsById(batch.jobIds, project.projectId);
+      const postRunControlResult = handleAutoRunControl(project.projectId, runState.runId, steps);
+      if (postRunControlResult) return postRunControlResult;
     }
 
-    const sessions = await listAgentSessions(project.projectId);
-    const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs, issueScope);
-    if (!batch.jobIds.length) return { completed: true, steps, message: "No runnable issue jobs remain." };
-
-    steps.push(batch);
-    await runJobsById(batch.jobIds, project.projectId);
+    const message = "Auto Run stopped after reaching the safety cycle limit.";
+    updateAutoRunState(project.projectId, { runId: runState.runId, status: "failed", message });
+    return { completed: false, steps, message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Auto Run failed.";
+    updateAutoRunState(project.projectId, { runId: runState.runId, status: "failed", message });
+    throw error;
   }
+}
 
-  return { completed: false, steps, message: "Auto Run stopped after reaching the safety cycle limit." };
+function handleAutoRunControl(projectId: string, runId: string, steps: AutoRunStep[]): { completed: boolean; steps: AutoRunStep[]; message: string } | null {
+  if (shouldCancelAutoRun(projectId, runId)) {
+    const message = "Auto Run cancelled.";
+    updateAutoRunState(projectId, { runId, status: "cancelled", message });
+    return { completed: false, steps, message };
+  }
+  if (shouldPauseAutoRun(projectId, runId)) {
+    const message = "Auto Run paused.";
+    updateAutoRunState(projectId, { runId, status: "paused", message });
+    return { completed: false, steps, message };
+  }
+  return null;
 }
 
 async function syncProjectWorkflows(project: ProjectRecord, workflowScope = new Set<string>()): Promise<void> {
