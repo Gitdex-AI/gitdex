@@ -20,6 +20,7 @@ export function SelfUpdateDialog({ version }: { version: string }) {
   const [status, setStatus] = useState<SelfUpdateState | null>(null);
   const [error, setError] = useState("");
   const pollStartedAt = useRef(0);
+  const preRestartBootId = useRef<string | null>(null);
 
   const model = useMemo(() => deriveSelfUpdateDialogModel({ phase, status, error }), [phase, status, error]);
 
@@ -63,20 +64,22 @@ export function SelfUpdateDialog({ version }: { version: string }) {
         const decision = deriveSelfUpdatePollDecision({
           responseOk: true,
           status: nextStatus,
+          initialBootId: preRestartBootId.current,
           elapsedMs,
           timeoutMs: pollTimeoutMs
         });
-        setError(decision.phase === "timeout" ? decision.message : "");
+        setError(decision.phase === "timeout" || decision.phase === "failure" ? decision.message : "");
         setPhase(decision.phase);
       } catch {
         if (cancelled) return;
         const decision = deriveSelfUpdatePollDecision({
           responseOk: false,
           status: null,
+          initialBootId: preRestartBootId.current,
           elapsedMs,
           timeoutMs: pollTimeoutMs
         });
-        setError(decision.phase === "timeout" ? decision.message : "");
+        setError(decision.phase === "timeout" || decision.phase === "failure" ? decision.message : "");
         setPhase(decision.phase);
       }
     }
@@ -91,11 +94,17 @@ export function SelfUpdateDialog({ version }: { version: string }) {
     setError("");
     setPhase("updating");
     try {
-      const updateResult = await postJson<SelfUpdateRunResult>("/api/self-update/update");
+      const operatorIntentToken = status?.operatorIntentToken;
+      if (!operatorIntentToken) {
+        throw new Error("Operator self-update submission is not available for this UI session.");
+      }
+
+      const updateResult = await postJson<SelfUpdateRunResult>("/api/operator/self-update/update", { operatorIntentToken });
       setStatus((current) => current ? { ...current, lastRun: updateResult, restartAvailable: updateResult.restartAvailable } : current);
       if (!updateResult.ok) throw new Error(`Self-update failed at ${updateResult.failedCommand ?? "unknown command"}.`);
 
       setPhase("restarting");
+      preRestartBootId.current = status?.bootId ?? null;
       await postJson("/api/self-update/restart");
 
       pollStartedAt.current = Date.now();
@@ -138,7 +147,7 @@ export function SelfUpdateDialog({ version }: { version: string }) {
               Self-update API {status?.enabled ? "enabled" : "disabled"}; restart {status?.restartAvailable ? "available" : "not available"}.
             </Text>
             <Text size="sm" c="dimmed">
-              Trusted localhost validation {status?.trustedLocalhostCallerValidated ? "passed" : "not confirmed"}.
+              Operator submission {status?.operatorSubmissionAvailable ? "available" : "not available"}; boot marker {status?.bootId ?? "unknown"}.
             </Text>
           </Stack>
 
@@ -177,8 +186,12 @@ async function loadStatus() {
   return response.json() as Promise<SelfUpdateState>;
 }
 
-async function postJson<T = unknown>(url: string) {
-  const response = await fetch(url, { method: "POST" });
+async function postJson<T = unknown>(url: string, body?: unknown) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
   if (!response.ok) throw new Error(await readApiError(response));
   return response.json() as Promise<T>;
 }

@@ -14,6 +14,7 @@ export type SelfUpdateDialogModel = {
 export type SelfUpdatePollInput = {
   responseOk: boolean;
   status: SelfUpdateState | null;
+  initialBootId: string | null;
   elapsedMs: number;
   timeoutMs: number;
 };
@@ -25,7 +26,7 @@ export type SelfUpdatePollDecision =
       message: string;
     }
   | {
-      phase: "success" | "timeout";
+      phase: "success" | "failure" | "timeout";
       shouldContinue: false;
       message: string;
     };
@@ -39,12 +40,15 @@ export function deriveSelfUpdateDialogModel(input: {
 }): SelfUpdateDialogModel {
   const actionDisabled = runningPhases.has(input.phase);
   const enabled = input.status?.enabled ?? false;
-  const canSubmit = enabled && !actionDisabled;
-  const unavailableReason = enabled
-    ? ""
-    : "Self-update is disabled. Set TASKIX_ENABLE_SELF_UPDATE=true on the Taskix server to enable it.";
+  const operatorSubmissionAvailable = input.status?.operatorSubmissionAvailable ?? false;
+  const canSubmit = enabled && operatorSubmissionAvailable && !actionDisabled;
+  const unavailableReason = !enabled
+    ? "Self-update is disabled. Set TASKIX_ENABLE_SELF_UPDATE=true on the Taskix server to enable it."
+    : !operatorSubmissionAvailable
+      ? "Operator self-update submission is not available for this UI session."
+      : "";
 
-  const message = input.error || phaseMessage(input.phase, input.status) || unavailableReason;
+  const message = input.error || unavailableReason || phaseMessage(input.phase, input.status);
 
   return {
     phase: input.phase,
@@ -57,6 +61,14 @@ export function deriveSelfUpdateDialogModel(input: {
 }
 
 export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUpdatePollDecision {
+  if (input.responseOk && input.status?.restartStatus === "failed") {
+    return {
+      phase: "failure",
+      shouldContinue: false,
+      message: input.status.restartError || "Taskix service restart failed."
+    };
+  }
+
   if (input.elapsedMs >= input.timeoutMs) {
     return {
       phase: "timeout",
@@ -65,18 +77,20 @@ export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUp
     };
   }
 
-  if (input.responseOk && input.status) {
+  if (input.responseOk && input.status && input.initialBootId && input.status.bootId !== input.initialBootId) {
     return {
       phase: "success",
       shouldContinue: false,
-      message: "Taskix is responding after the restart request."
+      message: "Taskix reported a new boot marker after the restart request."
     };
   }
 
   return {
     phase: "polling",
     shouldContinue: true,
-    message: "Waiting for Taskix to respond after restart."
+    message: input.responseOk
+      ? "Waiting for Taskix to finish restarting."
+      : "Waiting for Taskix to respond after restart."
   };
 }
 
@@ -89,11 +103,11 @@ function phaseMessage(phase: SelfUpdateDialogPhase, status: SelfUpdateState | nu
     case "restarting":
       return "Requesting Taskix service restart.";
     case "polling":
-      return "Waiting for Taskix to respond after restart.";
+      return "Waiting for Taskix to finish restarting.";
     case "success":
-      return "Taskix is responding after the restart request.";
+      return "Taskix reported a new boot marker after the restart request.";
     case "failure":
-      return "Self-update failed.";
+      return status?.restartError || "Self-update failed.";
     case "timeout":
       return "Restart polling timed out before Taskix reported ready.";
     case "idle":

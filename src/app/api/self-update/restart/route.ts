@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consumeRestartAvailability, selfUpdateGuard } from "@/lib/self-update";
+import {
+  consumeRestartAvailability,
+  markSelfUpdateRestartFailed,
+  markSelfUpdateRestartRequested,
+  selfUpdateGuard
+} from "@/lib/self-update";
 import { requestTaskixServiceRestart } from "@/lib/taskix-service";
 
 export async function POST(request: NextRequest) {
@@ -9,6 +14,7 @@ export async function POST(request: NextRequest) {
     consumeRestartAvailability
   });
   if (!result.ok) {
+    markSelfUpdateRestartFailed(result.error ?? "Taskix service restart failed.");
     return NextResponse.json(
       {
         ok: false,
@@ -23,6 +29,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  markSelfUpdateRestartRequested();
   return NextResponse.json({
     ok: true,
     restartRequested: true,
