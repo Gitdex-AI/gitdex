@@ -313,8 +313,8 @@ function ThreePhaseWorkflowPanel(input: {
   if (input.selectedPhase === "github") {
     return (
       <section className="phase-panel">
-        <Group justify="space-between" align="flex-start" gap="sm">
-          <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
+        <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+          <Text size="xs" c="dimmed" style={{ minWidth: 0 }}>GitHub issues drive development, QA, architect review, and merge.</Text>
           <ProjectAutoRunIssuesButton
             projectId={input.projectId}
             workflowIds={input.workflows.map((workflow) => workflow.workflowId)}

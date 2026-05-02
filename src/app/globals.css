@@ -652,6 +652,14 @@ pre,
   box-shadow: none;
 }
 
+.auto-run-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
 .github-issue-row {
   padding: 10px;
   background: #f8fafc;

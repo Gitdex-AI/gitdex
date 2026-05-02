@@ -117,8 +117,8 @@ export function ProjectAutoRunIssuesButton({
   }
 
   return (
-    <>
-      <Group gap={4}>
+    <div className="auto-run-controls">
+      <Group gap={4} justify="flex-end" wrap="nowrap">
         <Button
           type="button"
           variant="filled"
@@ -144,6 +144,6 @@ export function ProjectAutoRunIssuesButton({
         ) : null}
       </Group>
       {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
-    </>
+    </div>
   );
 }
