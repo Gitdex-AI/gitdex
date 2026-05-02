@@ -327,7 +327,21 @@ pre,
     #f8fbff;
 }
 
+.chat-composer::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 28px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0), rgba(248, 251, 255, 0.92));
+  backdrop-filter: blur(6px);
+}
+
 .chat-composer-form {
+  position: relative;
+  z-index: 1;
   max-width: none;
   margin: 0 auto;
   padding: 12px;
