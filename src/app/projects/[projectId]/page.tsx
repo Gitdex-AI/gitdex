@@ -176,7 +176,7 @@ export default async function ProjectDetailPage({
                       isInspectingIssueSession={isInspectingIssueSession}
                       readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
                       pmSession={pmSession}
-                      workflows={visibleActiveWorkflows}
+                      workflows={workflowPanelWorkflows}
                       requirementWorkflows={sortedWorkflows}
                       doneWorkflows={doneWorkflows}
                       sessions={sessions}
@@ -686,9 +686,8 @@ function renderDeveloperIssueRows(projectId: string, workflows: WorkflowRecord[]
 
 function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[], jobs: JobRecord[], queuedJobId: string | null, autoRunState: AutoRunState | null): ReactNode {
   const rows = workflows
-    .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })))
-    .filter(({ issue }) => issue.githubState !== "CLOSED" && issue.prState !== "MERGED");
-  if (!rows.length) return <Text size="xs" c="dimmed">No unfinished GitHub issues are being tracked.</Text>;
+    .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })));
+  if (!rows.length) return <Text size="xs" c="dimmed">No GitHub issues are being tracked for this requirement.</Text>;
   return rows.map(({ workflow, issue }) => {
     const developerSession = sessions.find((session) => session.sessionKey === issue.developerSessionId);
     const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
