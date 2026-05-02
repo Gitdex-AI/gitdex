@@ -776,6 +776,7 @@ function renderIssueStageAction(input: {
 }): ReactNode {
   if (input.activeJob?.status === "pending") return <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob)} />;
+  if (input.activeJob?.status === "failed" && shouldFailedJobReturnToDeveloper(input.activeJob)) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
   if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
@@ -784,6 +785,10 @@ function renderIssueStageAction(input: {
   if (input.canRunDev) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (!input.issue.prUrl && input.completedDeveloperJob) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   return null;
+}
+
+function shouldFailedJobReturnToDeveloper(job: JobRecord): boolean {
+  return job.type === "architect_review_run" || job.type === "merge_run";
 }
 
 function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolean {
