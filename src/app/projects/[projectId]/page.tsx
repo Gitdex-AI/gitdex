@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/
 import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
+import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
 import { ProjectAutoSync } from "@/components/ProjectAutoSync";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
@@ -751,18 +752,22 @@ function renderIssueStageAction(input: {
   canRunDev: boolean;
   specBlockedSessionKey: string | null;
 }): ReactNode {
-  if (input.activeJob?.status === "pending") return <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
+  if (input.activeJob?.status === "pending") return wrapAutoRunAction(runningLabelForJob(input.activeJob), <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />);
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob)} />;
-  if (input.activeJob?.status === "failed" && shouldFailedJobReturnToDeveloper(input.activeJob)) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (input.activeJob?.status === "failed" && shouldFailedJobReturnToDeveloper(input.activeJob)) return wrapAutoRunAction("Dev running", <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
-  if (input.qaStatusId === "spec_blocked" && input.specBlockedSessionKey) return <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />;
-  if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
-  if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
-  if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;
-  if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />;
-  if (input.canRunDev) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
-  if (!input.issue.prUrl && input.completedDeveloperJob) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (input.qaStatusId === "spec_blocked" && input.specBlockedSessionKey) return wrapAutoRunAction("Architect running", <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />);
+  if (input.qaStatusId === "failed") return wrapAutoRunAction("Dev running", <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (input.canMerge) return wrapAutoRunAction("Merge running", <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />);
+  if (input.canArchitectReview) return wrapAutoRunAction("Review running", <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return wrapAutoRunAction("QA running", <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (input.canRunDev) return wrapAutoRunAction("Dev running", <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (!input.issue.prUrl && input.completedDeveloperJob) return wrapAutoRunAction("Dev running", <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   return null;
+}
+
+function wrapAutoRunAction(runningLabel: string, action: ReactNode): ReactNode {
+  return <ProjectAutoRunIssueAction runningLabel={runningLabel}>{action}</ProjectAutoRunIssueAction>;
 }
 
 function shouldFailedJobReturnToDeveloper(job: JobRecord): boolean {

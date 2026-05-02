@@ -4,6 +4,7 @@ import { Button, Text } from "@mantine/core";
 import { Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { announceIssueAutoRunStart } from "@/components/ProjectAutoRunIssueAction";
 
 export function ProjectAutoRunIssuesButton({ projectId }: { projectId: string }) {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function ProjectAutoRunIssuesButton({ projectId }: { projectId: string })
   function autoRun() {
     setPending(true);
     setError("");
+    announceIssueAutoRunStart();
     void fetch(`/api/projects/${projectId}/issues/auto-run`, { method: "POST" })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({})) as { error?: string };
