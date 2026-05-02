@@ -5,6 +5,8 @@ import { WorkflowsTable } from "@/components/Tables";
 import { getSettings } from "@/lib/settings";
 import { listProjects, listWorkflows } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [settings, projects, workflows] = await Promise.all([getSettings(), listProjects(), listWorkflows()]);
 
