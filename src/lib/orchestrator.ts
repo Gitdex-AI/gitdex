@@ -3,7 +3,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
-import { addLabelsWithGh, commentIssueWithGh, commentPullRequestWithGh, createIssueWithGh, createPullRequestWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { addLabelsWithGh, commentIssueWithGh, commentPullRequestWithGh, createIssueWithGh, createPullRequestWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh, updateIssueWithGh } from "@/lib/github-local";
+import { findDependencyIssue, isDependencySatisfied, normalizeIssueDependenciesToNumbers } from "@/lib/issue-dependencies";
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, cancelPendingJobs, createJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
@@ -96,6 +97,13 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
       parallelGroup: issue.parallelGroup ?? null,
       executionOrder: issue.executionOrder ?? index + 1
     });
+  }
+  const normalizedDependencies = normalizeIssueDependenciesToNumbers(workflow.issues);
+  if (project?.githubRepo && normalizedDependencies) {
+    await Promise.all(workflow.issues
+      .filter((issue) => issue.githubIssueNumber)
+      .map((issue) => updateIssueWithGh(project.githubRepo, issue.githubIssueNumber as number, issue)));
+    workflow.timeline.push(`Normalized issue dependencies to GitHub issue numbers for ${normalizedDependencies} issue(s).`);
   }
 
   workflow.status = "transferred_to_github";
@@ -325,6 +333,11 @@ export async function syncWorkflowFromGitHub(workflowId: string, project?: Proje
     workflow.timeline.push(`Synced GitHub issue/PR labels at ${new Date().toISOString()}.`);
   } else {
     workflow.timeline.push(`GitHub sync checked at ${new Date().toISOString()}; no label changes detected.`);
+  }
+
+  if (project?.projectId) {
+    const queued = await queueReadyDeveloperJobs(project.projectId, workflow);
+    if (queued) workflow.timeline.push(`Queued ${queued} dependent developer issue job(s) after GitHub sync.`);
   }
 
   await saveWorkflow(workflow);
@@ -571,15 +584,9 @@ function isDeveloperIssueReady(issue: IssueRecord, issues: IssueRecord[]): boole
   const dependencies = issue.dependsOn ?? [];
   if (!dependencies.length) return true;
   return dependencies.every((dependency) => {
-    const normalized = dependency.trim().toLowerCase();
-    const upstream = issues.find((candidate) => (
-      candidate.issueId.toLowerCase() === normalized
-      || candidate.title.toLowerCase() === normalized
-      || String(candidate.githubIssueNumber ?? "") === normalized.replace(/^#/, "")
-    ));
+    const upstream = findDependencyIssue(dependency, issues);
     if (!upstream) return false;
-    const upstreamLabels = [...(upstream.labels ?? []), ...(upstream.prLabels ?? [])].map((label) => label.toLowerCase());
-    return upstream.prState === "MERGED" || upstreamLabels.some((label) => label === "taskix:merged" || label === "taskix:deployed");
+    return isDependencySatisfied(upstream);
   });
 }
 

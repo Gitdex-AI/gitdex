@@ -249,7 +249,7 @@ Rules:
 - Each issue should have clear directory ownership and should not require edits outside ownedPaths unless explicitly stated in acceptance criteria.
 - Acceptance criteria should make expected test updates explicit when a requirement intentionally changes text, behavior, parsing, routing, labels, or workflow state already covered by tests.
 - Mark independent issues with the same parallelGroup when they can run at the same time.
-- Set dependsOn to the titles of issues that must complete first. Use [] for issues that can start immediately.
+- Set dependsOn to the titles of issues that must complete first. Use [] for issues that can start immediately. Taskix will convert these temporary planning references to GitHub issue numbers after issues are created.
 - Set executionOrder to the intended serial order, using the same number for issues that can run in parallel.`;
     const payload = await this.runJson<{ issues: IssueSpec[] }>(prompt, schema);
     return payload?.issues ?? mockIssues();

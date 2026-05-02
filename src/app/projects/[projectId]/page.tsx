@@ -21,6 +21,7 @@ import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
+import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
@@ -808,15 +809,9 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
   const dependencies = issue.dependsOn ?? [];
   if (!dependencies.length) return true;
   return dependencies.every((dependency) => {
-    const normalized = dependency.trim().toLowerCase();
-    const upstream = issues.find((candidate) => (
-      candidate.issueId.toLowerCase() === normalized
-      || candidate.title.toLowerCase() === normalized
-      || String(candidate.githubIssueNumber ?? "") === normalized.replace(/^#/, "")
-    ));
+    const upstream = findDependencyIssue(dependency, issues);
     if (!upstream) return false;
-    const upstreamLabels = [...(upstream.labels ?? []), ...(upstream.prLabels ?? [])].map((label) => label.toLowerCase());
-    return upstream.prState === "MERGED" || upstream.githubState === "CLOSED" || upstreamLabels.some((label) => label === "taskix:merged" || label === "taskix:deployed");
+    return isDependencySatisfied(upstream);
   });
 }
 
