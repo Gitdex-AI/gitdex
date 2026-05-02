@@ -55,6 +55,12 @@ export function ProjectChatArea({
     scroll.scrollTop = scroll.scrollHeight;
   }, [visibleSessions, optimisticMessage?.createdAt, pending, jobs]);
 
+  useEffect(() => {
+    if (!jobs.some((job) => job.status === "running")) return;
+    const timer = window.setInterval(() => router.refresh(), 3000);
+    return () => window.clearInterval(timer);
+  }, [jobs, router]);
+
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
