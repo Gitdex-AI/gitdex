@@ -15,6 +15,20 @@ export async function runJobById(jobId: string, projectId?: string): Promise<{ j
   return runClaimedJob(job);
 }
 
+export async function runJobsById(jobIds: string[], projectId?: string): Promise<{ results: { job: JobRecord | null; ran: boolean }[] }> {
+  const claimedJobs = [];
+  for (const jobId of jobIds) {
+    const job = await claimPendingJob(jobId, projectId);
+    claimedJobs.push(job);
+  }
+
+  const results = await Promise.all(claimedJobs.map(async (job, index) => {
+    if (!job) return { job: await getJob(jobIds[index]), ran: false };
+    return runClaimedJob(job);
+  }));
+  return { results };
+}
+
 async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; ran: boolean }> {
   let skipped = false;
 

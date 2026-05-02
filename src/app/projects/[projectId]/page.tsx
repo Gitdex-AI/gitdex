@@ -13,6 +13,7 @@ import { ProjectPhaseSwitcher } from "@/components/ProjectPhaseSwitcher";
 import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
 import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
+import { ProjectRunJobBatchButton } from "@/components/ProjectRunJobBatchButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -289,10 +290,12 @@ function ThreePhaseWorkflowPanel(input: {
   }
 
   if (input.selectedPhase === "github") {
+    const runnableBatch = getParallelIssueJobBatch(input.workflows, input.jobs);
     return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
+          {runnableBatch.jobIds.length > 1 ? <ProjectRunJobBatchButton projectId={input.projectId} jobIds={runnableBatch.jobIds} /> : null}
         </Group>
         <Stack gap="xs" mt="sm">
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions, input.jobs, input.queuedJobId)}
@@ -336,6 +339,27 @@ function filterSessionsForWorkflows(sessions: AgentSessionRecord[], workflows: W
     if (session.issueId && issueSessionIds.has(session.issueId)) return true;
     return issueSessionIds.has(session.sessionKey);
   });
+}
+
+function getParallelIssueJobBatch(workflows: WorkflowRecord[], jobs: JobRecord[]): { type: "issue_run" | "qa_run" | null; jobIds: string[] } {
+  const issues = new Map(workflows.flatMap((workflow) => workflow.issues.map((issue) => [issue.issueId, issue] as const)));
+  const pendingRows = jobs
+    .filter((job) => (job.type === "issue_run" || job.type === "qa_run") && job.status === "pending" && job.payload.issueId)
+    .map((job) => ({ job, issue: issues.get(job.payload.issueId ?? "") }))
+    .filter((row): row is { job: JobRecord & { type: "issue_run" | "qa_run" }; issue: IssueRecord } => Boolean(row.issue));
+  const stage = pendingRows.some((row) => row.job.type === "issue_run") ? "issue_run" : pendingRows.some((row) => row.job.type === "qa_run") ? "qa_run" : null;
+  if (!stage) return { type: null, jobIds: [] };
+
+  const stageRows = pendingRows.filter((row) => row.job.type === stage);
+  const minOrder = Math.min(...stageRows.map((row) => row.issue.executionOrder ?? Number.MAX_SAFE_INTEGER));
+  const sameOrderRows = stageRows.filter((row) => (row.issue.executionOrder ?? Number.MAX_SAFE_INTEGER) === minOrder);
+  const groupedRows = sameOrderRows.filter((row) => row.issue.parallelGroup);
+  if (groupedRows.length) {
+    const firstGroup = groupedRows[0]?.issue.parallelGroup;
+    return { type: stage, jobIds: groupedRows.filter((row) => row.issue.parallelGroup === firstGroup).map((row) => row.job.jobId) };
+  }
+  if (sameOrderRows.length > 1 && minOrder !== Number.MAX_SAFE_INTEGER) return { type: stage, jobIds: sameOrderRows.map((row) => row.job.jobId) };
+  return { type: stage, jobIds: sameOrderRows.slice(0, 1).map((row) => row.job.jobId) };
 }
 
 const highlightedCardStyle = {
