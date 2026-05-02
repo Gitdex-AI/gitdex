@@ -17,12 +17,13 @@ const qaStatuses: Record<QaStatusId, QaStatus> = {
 };
 
 export function getIssueQaStatus(issue: IssueRecord, qaSession?: AgentSessionRecord | null): QaStatus {
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? []), ...(qaSession?.labels ?? [])]);
+  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
 
-  if (labels.has("taskix:qa-failed") || qaSession?.status === "blocked") return qaStatuses.failed;
-  if (labels.has("taskix:qa-passed") || qaSession?.status === "done") return qaStatuses.passed;
-  if (labels.has("taskix:qa-running") || qaSession?.status === "active") return qaStatuses.running;
-  if (labels.has("taskix:need-qa") || qaSession?.role === "qa") return qaStatuses.needed;
+  if (labels.has("taskix:qa-failed") || labels.has("qa-failed")) return qaStatuses.failed;
+  if (labels.has("taskix:qa-passed") || labels.has("qa-passed")) return qaStatuses.passed;
+  if (labels.has("taskix:qa-running")) return qaStatuses.running;
+  if (labels.has("taskix:need-qa")) return qaStatuses.needed;
+  if (qaSession?.status === "active" && !qaSession.archivedAt && !qaSession.closedAt) return qaStatuses.running;
   return qaStatuses.not_requested;
 }
 
