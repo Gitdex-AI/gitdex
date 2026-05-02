@@ -703,8 +703,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const completedDeveloperJob = latestIssueJob(issue.issueId, jobs, "issue_run", "done");
     const canRunDev = canRunDeveloperIssue(issue, workflow.issues);
     const isHighlighted = activeJob?.jobId === queuedJobId;
-    const issueJobStatus = activeJob ? readableIssueJobStatus(activeJob) : null;
-    const showQaStatusBadge = !(activeJob?.type === "qa_run" && (activeJob.status === "pending" || activeJob.status === "running"));
+    const primaryStatusBadge = githubIssueStatusBadge(issue, qaStatus);
     const prNumber = extractPullRequestNumber(issue.prUrl);
     const issueMetaParts = [
       workflow.trackingCode,
@@ -721,9 +720,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
               <Text size="sm" fw={780} lineClamp={1}>{issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}</Text>
               {prNumber ? <Badge size="xs" color="gray" variant="light">PR #{prNumber}</Badge> : null}
               <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
-              {issueJobStatus ? <Badge size="xs" color={issueJobStatus.color} variant="light">{issueJobStatus.label}</Badge> : null}
-              {showQaStatusBadge ? <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge> : null}
-              {reviewed ? <Badge size="xs" color="green" variant="light">reviewed</Badge> : null}
+              <Badge size="xs" color={primaryStatusBadge.color} variant="light">{primaryStatusBadge.label}</Badge>
             </Group>
             <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{issue.title}</Text>
             <Text size="xs" c="dimmed" mt={4} lineClamp={2}>
@@ -843,20 +840,15 @@ function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["ty
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
 }
 
-function readableIssueJobStatus(job: JobRecord): { label: string; color: string } {
-  const owner = job.type === "qa_run" ? "QA" : job.type === "architect_blocker_run" ? "Architect" : job.type === "architect_review_run" ? "Review" : job.type === "merge_run" ? "Merge" : "Development";
-  switch (job.status) {
-    case "pending":
-      return { label: `${owner} queued`, color: "blue" };
-    case "running":
-      return { label: `${owner} running`, color: "blue" };
-    case "failed":
-      return { label: `${owner} failed`, color: "red" };
-    case "done":
-      return { label: `${owner} done`, color: "green" };
-    case "cancelled":
-      return { label: `${owner} cancelled`, color: "gray" };
-  }
+function githubIssueStatusBadge(issue: IssueRecord, qaStatus: ReturnType<typeof getIssueQaStatus>): { label: string; color: string } {
+  if (hasAnyLabel(issue, ["taskix:merged"])) return { label: "Merged", color: "green" };
+  if (hasAnyLabel(issue, ["taskix:ready-to-merge"])) return { label: "Ready to merge", color: "green" };
+  if (qaStatus.id !== "not_requested") return { label: qaStatus.label, color: qaStatus.color };
+  if (hasAnyLabel(issue, ["taskix:architect-review"])) return { label: "Review needed", color: "yellow" };
+  if (hasAnyLabel(issue, ["taskix:pr-opened"])) return { label: "PR opened", color: "violet" };
+  if (hasAnyLabel(issue, ["taskix:dev-running"])) return { label: "Dev running", color: "blue" };
+  if (hasAnyLabel(issue, ["taskix:planned"])) return { label: "Planned", color: "gray" };
+  return { label: "Tracked", color: "gray" };
 }
 
 function extractPullRequestNumber(prUrl?: string | null): number | null {
