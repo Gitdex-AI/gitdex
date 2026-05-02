@@ -21,11 +21,13 @@ import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
+import { getAutoRunState } from "@/lib/auto-run-control";
 import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
+import type { AutoRunState } from "@/lib/auto-run-control";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
 import {
   hasAnyLabel,
@@ -78,6 +80,7 @@ export default async function ProjectDetailPage({
   const workflowPanelWorkflows = hasUnqueuedPmHandoff ? [] : latestWorkflow ? [latestWorkflow] : [];
   const workflowPanelJobs = filterJobsForWorkflows(jobs, workflowPanelWorkflows);
   const workflowPanelSessions = filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
+  const autoRunState = getAutoRunState(project.projectId);
   const workflowPanelDynamicSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && !session.archivedAt);
   const workflowPanelArchivedSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && session.archivedAt);
   const workflowProgress = getWorkflowProgress({ workflows: workflowPanelWorkflows, jobs: workflowPanelJobs });
@@ -162,6 +165,7 @@ export default async function ProjectDetailPage({
                       sessions={sessions}
                       jobs={jobs}
                       queuedJobId={queuedJobId}
+                      autoRunState={autoRunState}
                     />
                   ),
                   github: (
@@ -177,6 +181,7 @@ export default async function ProjectDetailPage({
                       sessions={sessions}
                       jobs={jobs}
                       queuedJobId={queuedJobId}
+                      autoRunState={autoRunState}
                     />
                   ),
                   operations: (
@@ -192,6 +197,7 @@ export default async function ProjectDetailPage({
                       sessions={sessions}
                       jobs={jobs}
                       queuedJobId={queuedJobId}
+                      autoRunState={autoRunState}
                     />
                   )
                 }}
@@ -282,6 +288,7 @@ function ThreePhaseWorkflowPanel(input: {
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
   queuedJobId: string | null;
+  autoRunState: AutoRunState | null;
 }) {
   const devopsSessions = input.sessions.filter((session) => session.role === "devops");
 
@@ -311,6 +318,7 @@ function ThreePhaseWorkflowPanel(input: {
             projectId={input.projectId}
             workflowIds={input.workflows.map((workflow) => workflow.workflowId)}
             issueIds={input.workflows.flatMap((workflow) => workflow.issues.map((issue) => issue.issueId))}
+            initialState={input.autoRunState}
           />
         </Group>
         <Stack gap="xs" mt="sm">

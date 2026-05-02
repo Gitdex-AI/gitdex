@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAutoRunState, isActiveAutoRunState } from "@/lib/auto-run-control";
 import { runProjectIssueAutoRun } from "@/lib/project-auto-runner";
 import { getProject } from "@/lib/store";
 
@@ -11,6 +12,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const workflowIds = Array.isArray(body.workflowIds) ? body.workflowIds.filter((item): item is string => typeof item === "string") : [];
   const issueIds = Array.isArray(body.issueIds) ? body.issueIds.filter((item): item is string => typeof item === "string") : [];
   if (!issueIds.length) return NextResponse.json({ error: "Auto Run requires the current visible issue list." }, { status: 400 });
+  const currentState = getAutoRunState(project.projectId);
+  if (isActiveAutoRunState(currentState)) return NextResponse.json({ error: "Auto Run is already running.", state: currentState }, { status: 409 });
   const result = await runProjectIssueAutoRun(project, { workflowIds, issueIds });
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, ...result, state: getAutoRunState(project.projectId) });
 }

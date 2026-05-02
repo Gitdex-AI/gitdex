@@ -17,6 +17,7 @@ export type AutoRunState = {
 };
 
 const runnableJobTypes = new Set<JobRecord["type"]>(["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"]);
+const activeStatuses = new Set<AutoRunStatus>(["running", "pause_requested", "cancel_requested"]);
 
 export function autoRunStateKey(projectId: string): string {
   return `project:${projectId}:issue_auto_run`;
@@ -24,6 +25,10 @@ export function autoRunStateKey(projectId: string): string {
 
 export function getAutoRunState(projectId: string): AutoRunState | null {
   return getJsonValue<AutoRunState>(autoRunStateKey(projectId));
+}
+
+export function isActiveAutoRunState(state: AutoRunState | null): boolean {
+  return Boolean(state && activeStatuses.has(state.status));
 }
 
 export function startAutoRunState(projectId: string, input: { workflowIds: string[]; issueIds: string[] }): AutoRunState {
