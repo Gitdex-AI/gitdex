@@ -23,11 +23,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const existing = await getAgentSession(sessionKey);
   const codex = new CodexClient(settings);
   const currentSessionId = role === "product_manager" ? project.projectManagerSessionId : role === "architect" ? project.architectSessionId : project.devopsSessionId;
+  const codexStartedAt = Date.now();
   const result = role === "product_manager"
     ? await codex.projectManagerChat({ projectName: project.name, githubRepo: project.githubRepo, message, sessionId: currentSessionId ?? existing?.sessionId })
     : role === "architect"
       ? await codex.architectChat({ projectName: project.name, githubRepo: project.githubRepo, message, sessionId: currentSessionId ?? existing?.sessionId })
       : await codex.devopsChat({ projectName: project.name, githubRepo: project.githubRepo, message, sessionId: currentSessionId ?? existing?.sessionId });
+  const codexDurationMs = Math.max(0, Date.now() - codexStartedAt);
 
   if (role === "product_manager" && result.sessionId && result.sessionId !== project.projectManagerSessionId) {
     project.projectManagerSessionId = result.sessionId;
@@ -53,7 +55,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       title: `${chatRoleLabel(role)} Codex execution`,
       content: result.executionLog,
       createdAt: new Date().toISOString(),
-      status: "ok"
+      status: "ok",
+      durationMs: codexDurationMs
     }] : [],
     messages: [
       { role: "user", content: message, createdAt: now },

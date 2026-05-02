@@ -379,6 +379,7 @@ function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
               <Group gap={6}>
                 <Badge variant="light">{log.sourceLabel}</Badge>
                 <Badge size="xs" color={log.status === "failed" ? "red" : "green"} variant="light">execution log</Badge>
+                {executionLogDuration(log) ? <Badge size="xs" color="gray" variant="light">{executionLogDuration(log)}</Badge> : null}
               </Group>
               <Text component="time" dateTime={log.createdAt} size="xs" c="dimmed">
                 {formatMessageTime(log.createdAt)}
@@ -391,6 +392,11 @@ function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
       </div>
     </div>
   );
+}
+
+function executionLogDuration(log: TimelineExecutionLog): string | null {
+  const durationMs = log.durationMs ?? log.session.durationMs ?? null;
+  return durationMs == null ? null : formatDuration(durationMs);
 }
 
 function chatAvatarText(message: TimelineMessage | TimelineExecutionLog): string {

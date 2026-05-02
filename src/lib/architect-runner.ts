@@ -22,11 +22,13 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
 
   const settings = await getSettings();
   const codex = new CodexClient(settings);
+  const reviewStartedAt = Date.now();
   const review = await codex.architectConfirmManualReady({
     repo: project.githubRepo,
     issueNumber: issue.githubIssueNumber,
     prUrl: issue.prUrl
   });
+  const reviewDurationMs = Math.max(0, Date.now() - reviewStartedAt);
 
   const now = new Date().toISOString();
   const passed = review.decision === "ready_to_merge";
@@ -63,7 +65,8 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
       title: `Architect code review for ${issue.title}`,
       content: review.executionLog,
       createdAt: now,
-      status: passed ? "ok" : "failed"
+      status: passed ? "ok" : "failed",
+      durationMs: reviewDurationMs
     }] : [],
     messages: [
       { role: "assistant", content: `Decision: ${review.decision}\n${review.summary}`, createdAt: now }
@@ -114,12 +117,14 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
     getAgentSession(sessionKey)
   ]);
   const codex = new CodexClient(settings);
+  const mergeStartedAt = Date.now();
   const result = await codex.architectChat({
     projectName: project.name,
     githubRepo: project.githubRepo,
     message: content,
     sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null
   });
+  const mergeDurationMs = Math.max(0, Date.now() - mergeStartedAt);
 
   if (result.sessionId && result.sessionId !== project.architectSessionId) {
     project.architectSessionId = result.sessionId;
@@ -141,7 +146,8 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
       title: "Architect merge handling",
       content: result.executionLog,
       createdAt: new Date().toISOString(),
-      status: "ok"
+      status: "ok",
+      durationMs: mergeDurationMs
     }] : [],
     messages: [
       { role: "user", content, createdAt: now },

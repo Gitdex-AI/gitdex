@@ -214,7 +214,8 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
         title: `QA Codex execution for ${issue.title}`,
         content: qaResult.executionLog,
         createdAt: qaFinishedAt,
-        status: qaResult.passed ? "ok" : "failed"
+        status: qaResult.passed ? "ok" : "failed",
+        durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime())
       }] : [],
       messages: [
         { role: "assistant", content: `Passed: ${qaResult.passed}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${appliedLabels.join(", ")}`, createdAt: new Date().toISOString() }
@@ -449,7 +450,8 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
         title: `Developer Codex execution for ${issue.title}`,
         content: developerResult.executionLog,
         createdAt: finishedAt,
-        status: developerResult.prUrl ? "ok" : "failed"
+        status: developerResult.prUrl ? "ok" : "failed",
+        durationMs: Math.max(0, new Date(finishedAt).getTime() - new Date(developerStartedAt).getTime())
       }] : [],
       messages: [
         { role: "assistant", content: `Summary: ${developerResult.summary}\nBranch: ${developerResult.branch || "none"}\nPR: ${developerResult.prUrl || "none"}\nTests: ${developerResult.testsRun.join(", ") || "none"}`, createdAt: new Date().toISOString() }

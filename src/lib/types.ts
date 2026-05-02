@@ -178,6 +178,7 @@ export type AgentExecutionLog = {
   content: string;
   createdAt: string;
   status?: "ok" | "failed";
+  durationMs?: number | null;
 };
 
 export type AgentSessionRecord = {
