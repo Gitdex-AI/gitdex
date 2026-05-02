@@ -6,6 +6,8 @@ import { appendAgentMessages, createJob, getAgentSession, getWorkflow, listJobs,
 import type { DeveloperRoleId } from "@/lib/developer-roles";
 import type { ProjectRecord } from "@/lib/types";
 
+const resolvedBlockerLabels = ["taskix:blocked", "taskix:spec-blocked", "taskix:qa-failed", "qa-failed", "taskix:planned"];
+
 export async function runArchitectBlockerResolution(project: ProjectRecord, sessionKey: string): Promise<void> {
   const [session, settings] = await Promise.all([getAgentSession(sessionKey), getSettings()]);
   if (!session || session.projectId !== project.projectId) throw new Error("Blocked session not found.");
@@ -67,15 +69,17 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
     issue.developerRole = developerRole;
     issue.ownedPaths = result.resolution.ownedPaths.length ? result.resolution.ownedPaths : issue.ownedPaths;
     issue.acceptanceCriteria = result.resolution.acceptanceCriteria.length ? result.resolution.acceptanceCriteria : issue.acceptanceCriteria;
-    issue.labels = [...new Set((issue.labels ?? []).filter((label) => !["taskix:blocked", "taskix:spec-blocked", "taskix:qa-failed", "qa-failed", "taskix:planned"].includes(label.toLowerCase())))];
+    issue.labels = removeResolvedBlockerLabels(issue.labels ?? []);
+    issue.prLabels = removeResolvedBlockerLabels(issue.prLabels ?? []);
     workflow.status = "in_progress";
     workflow.timeline.push(`Architect resolved blocker for ${issue.issueId}; queued developer retry.`);
 
     if (issue.githubIssueNumber) {
       await updateIssueWithGh(project.githubRepo, issue.githubIssueNumber, issue);
       await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, result.resolution.comment || result.resolution.summary);
-      await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, ["taskix:blocked", "taskix:spec-blocked", "taskix:qa-failed", "qa-failed", "taskix:planned"]);
+      await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, resolvedBlockerLabels);
     }
+    if (issue.prUrl) await removeLabelsWithGh(project.githubRepo, issue.prUrl, resolvedBlockerLabels);
 
     await saveWorkflow(workflow);
     const existingJob = (await listJobs(project.projectId)).find((job) => (
@@ -144,6 +148,10 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
   session.durationMs = durationMs;
   session.updatedAt = finishedAt;
   await saveAgentSession(session);
+}
+
+function removeResolvedBlockerLabels(labels: string[]): string[] {
+  return [...new Set(labels.filter((label) => !resolvedBlockerLabels.includes(label.toLowerCase())))];
 }
 
 function formatResolutionText(resolution: {
