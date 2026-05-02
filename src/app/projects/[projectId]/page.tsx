@@ -708,6 +708,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const canArchitectReview = Boolean(issue.prUrl) && qaPassed && !reviewed && issue.prState !== "MERGED";
     const canMerge = Boolean(issue.prUrl) && reviewed && issue.prState !== "MERGED";
     const activeJob = latestIssueJob(issue.issueId, jobs);
+    const completedDeveloperJob = latestIssueJob(issue.issueId, jobs, "issue_run", "done");
     const isHighlighted = activeJob?.jobId === queuedJobId;
     const issueJobStatus = activeJob ? readableIssueJobStatus(activeJob) : null;
     const prNumber = extractPullRequestNumber(issue.prUrl);
@@ -743,6 +744,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
               projectId,
               issue,
               activeJob,
+              completedDeveloperJob,
               qaStatusId: qaStatus.id,
               canHandoffToQa,
               canArchitectReview,
@@ -759,6 +761,7 @@ function renderIssueStageAction(input: {
   projectId: string;
   issue: IssueRecord;
   activeJob: JobRecord | null;
+  completedDeveloperJob: JobRecord | null;
   qaStatusId: ReturnType<typeof getIssueQaStatus>["id"];
   canHandoffToQa: boolean;
   canArchitectReview: boolean;
@@ -771,6 +774,7 @@ function renderIssueStageAction(input: {
   if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
   if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (!input.issue.prUrl && input.completedDeveloperJob) return <ProjectRetryJobButton projectId={input.projectId} jobId={input.completedDeveloperJob.jobId} label="Run Dev" />;
   return null;
 }
 
@@ -778,9 +782,9 @@ function runLabelForJob(job: JobRecord): string {
   return job.type === "qa_run" ? "Run QA" : "Run Dev";
 }
 
-function latestIssueJob(issueId: string, jobs: JobRecord[]): JobRecord | null {
+function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["type"], status?: JobRecord["status"]): JobRecord | null {
   return jobs
-    .filter((job) => (job.type === "issue_run" || job.type === "qa_run") && job.payload.issueId === issueId)
+    .filter((job) => (type ? job.type === type : job.type === "issue_run" || job.type === "qa_run") && (!status || job.status === status) && job.payload.issueId === issueId)
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
 }
 
