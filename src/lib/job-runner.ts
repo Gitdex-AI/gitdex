@@ -1,4 +1,5 @@
 import { runWorkflowArchitectReview, runWorkflowMerge } from "@/lib/architect-runner";
+import { runArchitectBlockerResolution } from "@/lib/architect-blocker-runner";
 import { runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
 import { claimNextPendingJob, claimPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
@@ -35,7 +36,7 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
 
   try {
     await runWithJobRuntime(job.jobId, async () => {
-      if (!["workflow_run", "issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type)) return;
+      if (!["workflow_run", "issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) return;
       const project = job.projectId ? await getProject(job.projectId) : null;
       const workflow = await getWorkflow(job.payload.workflowId);
       if (workflow?.paused) {
@@ -46,7 +47,9 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
         skipped = true;
         return;
       }
-      if (job.type === "issue_run" && job.payload.issueId) {
+      if (job.type === "architect_blocker_run" && project && job.payload.sessionKey) {
+        await runArchitectBlockerResolution(project, job.payload.sessionKey);
+      } else if (job.type === "issue_run" && job.payload.issueId) {
         await runWorkflowIssue(job.payload.workflowId, job.payload.issueId, project);
       } else if (job.type === "qa_run" && job.payload.issueId) {
         await runWorkflowQa(job.payload.workflowId, job.payload.issueId, project, {

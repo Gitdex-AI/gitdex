@@ -32,6 +32,7 @@ export type ArchitectBlockerResolution = {
   ownedPaths: string[];
   acceptanceCriteria: string[];
   comment: string;
+  executionLog?: string;
 };
 
 const rolePrompts = {
@@ -142,9 +143,10 @@ Resolution rules:
 Blocked context:
 ${input.blockedContext}`;
 
-    const resolution = await this.runJson<ArchitectBlockerResolution>(prompt, schema);
+    const result = await this.runJsonResult<ArchitectBlockerResolution>(prompt, schema);
+    const resolution = result.value;
     return {
-      resolution: resolution ?? {
+      resolution: resolution ? { ...resolution, executionLog: result.executionLog } : {
         action: "request_user_input",
         summary: "Architect could not produce a structured blocker resolution.",
         issueTitle: "",
@@ -152,7 +154,8 @@ ${input.blockedContext}`;
         developerRole: "general_developer",
         ownedPaths: [],
         acceptanceCriteria: [],
-        comment: "Please clarify the implementation scope and valid owned paths before retrying the developer."
+        comment: "Please clarify the implementation scope and valid owned paths before retrying the developer.",
+        executionLog: result.executionLog
       },
       sessionId: input.sessionId
     };

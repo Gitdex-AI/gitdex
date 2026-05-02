@@ -822,6 +822,7 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
 
 function runLabelForJob(job: JobRecord): string {
   if (job.type === "qa_run") return "Run QA";
+  if (job.type === "architect_blocker_run") return "Run Architect";
   if (job.type === "architect_review_run") return "Run Review";
   if (job.type === "merge_run") return "Run Merge";
   return "Run Dev";
@@ -829,6 +830,7 @@ function runLabelForJob(job: JobRecord): string {
 
 function runningLabelForJob(job: JobRecord): string {
   if (job.type === "qa_run") return "QA running";
+  if (job.type === "architect_blocker_run") return "Architect running";
   if (job.type === "architect_review_run") return "Review running";
   if (job.type === "merge_run") return "Merge running";
   return "Dev running";
@@ -844,12 +846,12 @@ function RunningActionButton({ label }: { label: string }): ReactNode {
 
 function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["type"], status?: JobRecord["status"]): JobRecord | null {
   return jobs
-    .filter((job) => (type ? job.type === type : ["issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type)) && (!status || job.status === status) && job.payload.issueId === issueId)
+    .filter((job) => (type ? job.type === type : ["issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) && (!status || job.status === status) && job.payload.issueId === issueId)
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
 }
 
 function readableIssueJobStatus(job: JobRecord): { label: string; color: string } {
-  const owner = job.type === "qa_run" ? "QA" : job.type === "architect_review_run" ? "Review" : job.type === "merge_run" ? "Merge" : "Development";
+  const owner = job.type === "qa_run" ? "QA" : job.type === "architect_blocker_run" ? "Architect" : job.type === "architect_review_run" ? "Review" : job.type === "merge_run" ? "Merge" : "Development";
   switch (job.status) {
     case "pending":
       return { label: `${owner} queued`, color: "blue" };
