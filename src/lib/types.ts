@@ -7,10 +7,17 @@ export type Role =
   | "architect"
   | "devops";
 
-export type WorkflowStatus = "created" | "planned" | "in_progress" | "blocked" | "done";
+export type WorkflowStatus =
+  | "created"
+  | "ready_for_architect"
+  | "planned"
+  | "transferred_to_github"
+  | "in_progress"
+  | "blocked"
+  | "done";
 export type AgentSessionStatus = "active" | "blocked" | "done";
 export type AgentMessageRole = "user" | "assistant" | "system";
-export type JobStatus = "pending" | "running" | "done" | "failed";
+export type JobStatus = "pending" | "running" | "done" | "failed" | "cancelled";
 export type JobType = "workflow_run" | "issue_run" | "qa_run";
 
 export type Settings = {
@@ -37,6 +44,9 @@ export type IssueSpec = {
   developerRole?: DeveloperRoleId;
   ownedPaths: string[];
   acceptanceCriteria: string[];
+  dependsOn?: string[];
+  parallelGroup?: string | null;
+  executionOrder?: number | null;
 };
 
 export type IssueRecord = IssueSpec & {
@@ -216,6 +226,12 @@ export type JobRecord = {
   payload: {
     workflowId: string;
     issueId?: string | null;
+    prUrl?: string | null;
+    branch?: string | null;
+    headSha?: string | null;
+    qaAttempt?: number | null;
+    returnedFromQa?: boolean | null;
+    previousPrUrl?: string | null;
   };
 };
 

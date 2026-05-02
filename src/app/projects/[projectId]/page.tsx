@@ -134,6 +134,7 @@ export default async function ProjectDetailPage({
             </Group>
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
+              <ProjectPhaseSummary workflows={sortedWorkflows} jobs={jobs} />
               <WorkflowProgressList
                 steps={workflowProgress}
                 projectId={project.projectId}
@@ -184,6 +185,32 @@ function prioritizeById<T extends { workflowId?: string; jobId?: string }>(items
     if (leftSelected === rightSelected) return 0;
     return leftSelected ? -1 : 1;
   });
+}
+
+function ProjectPhaseSummary({ workflows, jobs }: { workflows: WorkflowRecord[]; jobs: JobRecord[] }) {
+  const requirementCount = workflows.filter((workflow) => !workflow.issues.length || workflow.status === "created" || workflow.status === "ready_for_architect").length;
+  const githubIssues = workflows.flatMap((workflow) => workflow.issues);
+  const activeGithubIssues = githubIssues.filter((issue) => issue.githubState !== "CLOSED" && issue.prState !== "MERGED").length;
+  const opsJobs = jobs.filter((job) => job.type !== "workflow_run" && job.type !== "issue_run" && job.type !== "qa_run").length;
+  const readyJobs = jobs.filter((job) => job.status === "pending").length;
+
+  return (
+    <div className="phase-summary">
+      <PhaseStat title="Requirements" value={requirementCount} detail="PM to architect handoff" />
+      <PhaseStat title="GitHub issues" value={activeGithubIssues} detail={`${readyJobs} ready job${readyJobs === 1 ? "" : "s"}`} />
+      <PhaseStat title="Operations" value={opsJobs} detail="DevOps events after merge" />
+    </div>
+  );
+}
+
+function PhaseStat({ title, value, detail }: { title: string; value: number; detail: string }) {
+  return (
+    <div className="phase-stat">
+      <Text size="xs" fw={780}>{title}</Text>
+      <Text size="lg" fw={820}>{value}</Text>
+      <Text size="xs" c="dimmed">{detail}</Text>
+    </div>
+  );
 }
 
 function filterJobsForWorkflows(jobs: JobRecord[], workflows: WorkflowRecord[]): JobRecord[] {

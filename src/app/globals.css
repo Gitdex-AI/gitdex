@@ -553,6 +553,20 @@ pre,
   border-radius: 16px;
 }
 
+.phase-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.phase-stat {
+  min-width: 0;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e0e7f0;
+  border-radius: 8px;
+}
+
 .workflow-step-action {
   padding: 10px 0;
   border-bottom: 1px solid #eef2f7;
@@ -925,6 +939,10 @@ pre,
   }
 
   .workflow-session-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-summary {
     grid-template-columns: 1fr;
   }
 }

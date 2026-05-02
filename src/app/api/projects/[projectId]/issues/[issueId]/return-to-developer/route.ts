@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/github-local";
-import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 
 const removeReadyLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running"];
 const addDeveloperLabels = ["taskix:dev-running"];
@@ -71,6 +71,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   workflow.timeline.push(`Returned ${issue.issueId} to developer for branch update/rebase before merge.`);
   await saveWorkflow(workflow);
 
+  await cancelPendingJobs({
+    projectId: project.projectId,
+    workflowId: workflow.workflowId,
+    issueId: issue.issueId,
+    type: "qa_run",
+    reason: `Superseded because ${issue.issueId} was returned to developer for PR rework.`
+  });
   const existingJob = (await listJobs(project.projectId)).find((job) => (
     job.type === "issue_run"
     && (job.status === "pending" || job.status === "running")
@@ -80,7 +87,14 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const job = existingJob ?? await createJob({
     projectId: project.projectId,
     type: "issue_run",
-    payload: { workflowId: workflow.workflowId, issueId: issue.issueId }
+    payload: {
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      prUrl: issue.prUrl,
+      branch: issue.branch ?? null,
+      returnedFromQa: true,
+      previousPrUrl: issue.prUrl
+    }
   });
 
   return NextResponse.json({ ok: true, jobId: job.jobId, redirectTo: `/projects/${project.projectId}/workflows/${workflow.workflowId}?autorun=1` });

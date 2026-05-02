@@ -12,7 +12,8 @@ export const taskixLabels = [
   { name: "taskix:ready-to-merge", color: "0e8a16", description: "Taskix PR is ready to merge" },
   { name: "taskix:merged", color: "5319e7", description: "Taskix PR merged" },
   { name: "taskix:deployed", color: "0052cc", description: "Taskix deployment completed" },
-  { name: "taskix:blocked", color: "b60205", description: "Taskix workflow blocked" }
+  { name: "taskix:blocked", color: "b60205", description: "Taskix workflow blocked" },
+  { name: "taskix:superseded", color: "6a737d", description: "Taskix PR was superseded by a newer active PR" }
 ] as const;
 
 export const flowLabelNames = taskixLabels.map((label) => label.name);

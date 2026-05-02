@@ -205,9 +205,12 @@ ${input.message}`;
               assigneeRole: { type: "string", enum: ["developer"] },
               developerRole: { type: "string", enum: developerRoleIds },
               ownedPaths: { type: "array", items: { type: "string" } },
-              acceptanceCriteria: { type: "array", items: { type: "string" } }
+              acceptanceCriteria: { type: "array", items: { type: "string" } },
+              dependsOn: { type: "array", items: { type: "string" } },
+              parallelGroup: { anyOf: [{ type: "string" }, { type: "null" }] },
+              executionOrder: { anyOf: [{ type: "number" }, { type: "null" }] }
             },
-            required: ["title", "description", "assigneeRole", "developerRole", "ownedPaths", "acceptanceCriteria"],
+            required: ["title", "description", "assigneeRole", "developerRole", "ownedPaths", "acceptanceCriteria", "dependsOn", "parallelGroup", "executionOrder"],
             additionalProperties: false
           }
         }
@@ -232,7 +235,10 @@ Rules:
 - Use general_developer only when no specific catalog role fits.
 - Set ownedPaths to the repository directories/files this developer owns, for example ["src/app", "src/components"].
 - Keep ownedPaths as non-overlapping as possible across issues to reduce code conflicts.
-- Each issue should have clear directory ownership and should not require edits outside ownedPaths unless explicitly stated in acceptance criteria.`;
+- Each issue should have clear directory ownership and should not require edits outside ownedPaths unless explicitly stated in acceptance criteria.
+- Mark independent issues with the same parallelGroup when they can run at the same time.
+- Set dependsOn to the titles of issues that must complete first. Use [] for issues that can start immediately.
+- Set executionOrder to the intended serial order, using the same number for issues that can run in parallel.`;
     const payload = await this.runJson<{ issues: IssueSpec[] }>(prompt, schema);
     return payload?.issues ?? mockIssues();
   }
@@ -277,6 +283,9 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
     issueNumber: number;
     issue: IssueSpec;
     workflowId: string;
+    activePrUrl?: string | null;
+    activeBranch?: string | null;
+    returnedFromQa?: boolean | null;
   }): Promise<DeveloperIssueResult> {
     const ownedPaths = input.issue.ownedPaths ?? [];
     const schema = objectSchema({
@@ -306,6 +315,9 @@ GitHub issue: #${input.issueNumber}
 Workflow: ${input.workflowId}
 Workspace: ${workspaceDir}
 Base branch: ${baseBranch ?? "repository default branch"}
+Current active PR: ${input.activePrUrl ?? "none"}
+Current active branch: ${input.activeBranch ?? "none"}
+Returned from QA: ${input.returnedFromQa ? "yes" : "no"}
 
 Developer role: ${input.issue.developerRole ?? "general_developer"}
 Role profile:
@@ -327,7 +339,9 @@ Execution rules:
 - Start from the checked-out base branch in the current working directory.
 - Run git fetch, checkout, commit, push, and gh pr create only in the current working directory.
 - Work only inside ownedPaths unless the issue explicitly requires an integration point.
-- Create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
+- If Current active PR is not "none", update that PR branch and return the same PR URL. Do not create a replacement PR unless the existing PR is closed or unusable.
+- If Returned from QA is "yes", address QA findings on the current active PR branch, push follow-up commits, and request QA recheck in the PR comments.
+- If there is no active PR, create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - If this work validates Taskix recovery/ready-to-merge behavior, document observable verification evidence in the PR body, including deterministic recovery, recovered base visibility, ready-to-merge expectations, and no generated PR merge.
 - Implement the issue, run relevant tests, commit, push, and open a PR.
 - If implementation is blocked, comment on the issue, add taskix:blocked, and still return JSON with prUrl as an empty string.
@@ -430,6 +444,7 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
     repo: string;
     issueNumber: number;
     prUrl: string;
+    headSha?: string | null;
   }): Promise<QaPrReviewResult> {
     const schema = objectSchema({
       passed: { type: "boolean" },
@@ -455,11 +470,13 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
 GitHub repo: ${input.repo}
 Issue: #${input.issueNumber}
 PR: ${input.prUrl}
+Expected PR head SHA: ${input.headSha ?? "not captured"}
 Workspace: ${workspaceDir}
 
 Required GitHub label behavior:
 - Add taskix:qa-running to the issue and PR when you start.
 - Read the issue acceptance criteria and PR diff using gh.
+- If Expected PR head SHA is captured, verify the PR head still matches it before testing. If it changed, report blocked/stale QA instead of testing a moving target.
 - Validate implementation, ownedPaths, and relevant tests.
 - When passing QA, comment concise verification evidence on the PR, including commands run and any observable labels/state required by acceptance criteria.
 - If passed, add taskix:qa-passed and remove taskix:qa-running.

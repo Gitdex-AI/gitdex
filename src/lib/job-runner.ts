@@ -24,7 +24,11 @@ export async function runNextJob(projectId?: string): Promise<{ job: JobRecord |
       if (job.type === "issue_run" && job.payload.issueId) {
         await runWorkflowIssue(job.payload.workflowId, job.payload.issueId, project);
       } else if (job.type === "qa_run" && job.payload.issueId) {
-        await runWorkflowQa(job.payload.workflowId, job.payload.issueId, project);
+        await runWorkflowQa(job.payload.workflowId, job.payload.issueId, project, {
+          prUrl: job.payload.prUrl ?? null,
+          headSha: job.payload.headSha ?? null,
+          qaAttempt: job.payload.qaAttempt ?? null
+        });
       } else {
         await runWorkflow(job.payload.workflowId, project);
       }

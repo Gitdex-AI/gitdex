@@ -164,6 +164,30 @@ export async function listJobs(projectId?: string): Promise<JobRecord[]> {
   return rows.map((row) => JSON.parse(row.payload) as JobRecord);
 }
 
+export async function cancelPendingJobs(input: {
+  projectId?: string | null;
+  workflowId: string;
+  issueId?: string | null;
+  type?: JobType;
+  reason: string;
+}): Promise<number> {
+  const jobs = await listJobs(input.projectId ?? undefined);
+  let count = 0;
+  for (const job of jobs) {
+    if (job.status !== "pending") continue;
+    if (input.type && job.type !== input.type) continue;
+    if (job.payload.workflowId !== input.workflowId) continue;
+    if (input.issueId && job.payload.issueId !== input.issueId) continue;
+    job.status = "cancelled";
+    job.error = input.reason;
+    job.updatedAt = new Date().toISOString();
+    job.runtime = { ...(job.runtime ?? {}), finishedAt: job.updatedAt };
+    await saveJob(job);
+    count += 1;
+  }
+  return count;
+}
+
 export async function claimNextPendingJob(projectId?: string): Promise<JobRecord | null> {
   await recoverStaleRunningJobs(projectId);
 

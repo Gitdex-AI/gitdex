@@ -125,16 +125,7 @@ export async function ensureTaskixLabels(repo: string): Promise<void> {
 
 export async function createIssueWithGh(repo: string, issue: IssueSpec): Promise<{ number: number | null; htmlUrl: string | null; mock: false }> {
   await ensureTaskixLabels(repo);
-  const criteria = issue.acceptanceCriteria.length
-    ? `\n\nAcceptance Criteria\n${issue.acceptanceCriteria.map((item) => `- ${item}`).join("\n")}`
-    : "";
-  const ownedPaths = issue.ownedPaths ?? [];
-  const ownership = [
-    `Developer role: ${issue.developerRole ?? issue.assigneeRole}`,
-    "Owned paths:",
-    ...ownedPaths.map((item) => `- ${item}`)
-  ].join("\n");
-  const body = `${issue.description}\n\n${ownership}${criteria}`;
+  const body = buildIssueBody(issue);
   const labels = ["taskix:planned", roleLabel(issue.developerRole)];
   const { stdout } = await execFileAsync("gh", ["issue", "create", "--repo", repo, "--title", issue.title, "--body", body, "--label", labels.join(",")]);
   const htmlUrl = stdout.trim() || null;
@@ -165,6 +156,12 @@ export async function findPullRequestByHeadWithGh(repo: string, branch: string):
   const { stdout } = await execFileAsync("gh", ["pr", "list", "--repo", repo, "--head", branch, "--state", "all", "--json", "url", "--limit", "1"]);
   const prs = JSON.parse(stdout) as Array<{ url: string }>;
   return prs[0]?.url ?? null;
+}
+
+export async function getPullRequestHeadShaWithGh(repo: string, pr: string): Promise<string | null> {
+  const { stdout } = await execFileAsync("gh", ["pr", "view", pr, "--repo", repo, "--json", "headRefOid"]);
+  const payload = JSON.parse(stdout) as { headRefOid?: string | null };
+  return payload.headRefOid?.trim() || null;
 }
 
 export async function createPullRequestWithGh(input: {
@@ -311,12 +308,19 @@ function buildIssueBody(issue: IssueSpec): string {
     ? `\n\nAcceptance Criteria\n${issue.acceptanceCriteria.map((item) => `- ${item}`).join("\n")}`
     : "";
   const ownedPaths = issue.ownedPaths ?? [];
+  const dependencies = issue.dependsOn?.length ? issue.dependsOn.join(", ") : "none";
+  const execution = [
+    "Execution Plan",
+    `Execution order: ${issue.executionOrder ?? "unspecified"}`,
+    `Parallel group: ${issue.parallelGroup ?? "none"}`,
+    `Depends on: ${dependencies}`
+  ].join("\n");
   const ownership = [
     `Developer role: ${issue.developerRole ?? issue.assigneeRole}`,
     "Owned paths:",
     ...ownedPaths.map((item) => `- ${item}`)
   ].join("\n");
-  return `${issue.description}\n\n${ownership}${criteria}`;
+  return `${issue.description}\n\n${execution}\n\n${ownership}${criteria}`;
 }
 
 async function ensureLabel(repo: string, label: { name: string; color: string; description: string }): Promise<void> {

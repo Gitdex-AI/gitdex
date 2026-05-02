@@ -3,10 +3,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
-import { createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh } from "@/lib/github-local";
+import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh } from "@/lib/github-local";
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
-import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
+import { appendAgentMessages, cancelPendingJobs, createJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
@@ -55,7 +55,7 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
 
   const issues = await codex.architectPlanIssues(workflow.userRequirement);
   workflow.issues = [];
-  workflow.status = "planned";
+  workflow.status = "transferred_to_github";
   workflow.timeline.push("PM confirmed scope and handed requirement to architect.");
   workflow.timeline.push("Architect generated implementation issue breakdown.");
   if (project?.projectId) {
@@ -91,21 +91,18 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
       githubIssueNumber: created.number,
       githubIssueUrl: created.htmlUrl,
       developerSessionId: `${workflow.workflowId}-${index + 1}:developer`,
-      qaSessionId: `${workflow.workflowId}-${index + 1}:qa`
+      qaSessionId: `${workflow.workflowId}-${index + 1}:qa`,
+      dependsOn: issue.dependsOn ?? [],
+      parallelGroup: issue.parallelGroup ?? null,
+      executionOrder: issue.executionOrder ?? index + 1
     });
   }
 
-  workflow.status = "planned";
+  workflow.status = "transferred_to_github";
   workflow.timeline.push(`Created ${workflow.issues.length} GitHub issue(s) with Taskix labels.`);
   if (project?.projectId) {
-    for (const issue of workflow.issues) {
-      await createJob({
-        projectId: project.projectId,
-        type: "issue_run",
-        payload: { workflowId: workflow.workflowId, issueId: issue.issueId }
-      });
-    }
-    workflow.timeline.push(`Queued ${workflow.issues.length} developer issue job(s). Use Run Jobs to start developer execution.`);
+    const queued = await queueReadyDeveloperJobs(project.projectId, workflow);
+    workflow.timeline.push(`Queued ${queued} ready developer issue job(s). Issues with dependencies wait for their prerequisites.`);
   } else {
     workflow.timeline.push("Developer issue jobs were not queued because this workflow is not bound to a project.");
   }
@@ -129,6 +126,10 @@ export async function runWorkflowIssue(workflowId: string, issueId: string, proj
 
   const result = await runIssue(issue, workflow, codex, createIssueCreator(project, settings), project);
   workflow.timeline.push(...result.timeline);
+  if (project?.projectId) {
+    const queued = await queueReadyDeveloperJobs(project.projectId, workflow);
+    if (queued) workflow.timeline.push(`Queued ${queued} dependent developer issue job(s) now that prerequisites are satisfied.`);
+  }
   workflow.status = deriveWorkflowStatus(workflow);
   if (result.blocked) workflow.status = "blocked";
   await saveWorkflow(workflow);
@@ -136,14 +137,16 @@ export async function runWorkflowIssue(workflowId: string, issueId: string, proj
   return workflow;
 }
 
-export async function runWorkflowQa(workflowId: string, issueId: string, project?: ProjectRecord | null): Promise<WorkflowRecord> {
+export async function runWorkflowQa(workflowId: string, issueId: string, project?: ProjectRecord | null, qaContext: { prUrl?: string | null; headSha?: string | null; qaAttempt?: number | null } = {}): Promise<WorkflowRecord> {
   const settings = await getSettings();
   const codex = new CodexClient(settings);
   const workflow = await getWorkflow(workflowId);
   if (!workflow) throw new Error(`Workflow ${workflowId} not found`);
   const issue = workflow.issues.find((item) => item.issueId === issueId);
   if (!issue) throw new Error(`Issue ${issueId} not found in workflow ${displayWorkflowCode(workflow)}`);
-  if (!project?.githubRepo || !issue.githubIssueNumber || !issue.prUrl) throw new Error(`Issue ${issueId} is missing GitHub PR context for QA`);
+  const qaPrUrl = qaContext.prUrl ?? issue.prUrl ?? null;
+  const qaHeadSha = qaContext.headSha ?? null;
+  if (!project?.githubRepo || !issue.githubIssueNumber || !qaPrUrl) throw new Error(`Issue ${issueId} is missing GitHub PR context for QA`);
 
   workflow.status = "in_progress";
   workflow.timeline.push(`QA started for issue ${issue.issueId}.`);
@@ -165,10 +168,10 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
       startedAt: qaStartedAt,
       githubIssueNumber: issue.githubIssueNumber,
       githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: issue.prUrl,
+      prUrl: qaPrUrl,
       labels: ["taskix:need-qa", "taskix:qa-running"],
       messages: [
-        { role: "user", content: `Validate PR ${issue.prUrl} for issue #${issue.githubIssueNumber}: ${issue.title}`, createdAt: qaStartedAt }
+        { role: "user", content: `Validate PR ${qaPrUrl} for issue #${issue.githubIssueNumber}: ${issue.title}${qaHeadSha ? `\nExpected head SHA: ${qaHeadSha}` : ""}`, createdAt: qaStartedAt }
       ]
     });
   }
@@ -176,7 +179,8 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
   const qaResult = await codex.qaReviewPr({
     repo: project.githubRepo,
     issueNumber: issue.githubIssueNumber,
-    prUrl: issue.prUrl
+    prUrl: qaPrUrl,
+    headSha: qaHeadSha
   });
   const qaFinishedAt = new Date().toISOString();
   const qaCloseAt = qaResult.passed ? qaFinishedAt : null;
@@ -201,7 +205,7 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
       durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime()),
       githubIssueNumber: issue.githubIssueNumber,
       githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: issue.prUrl,
+      prUrl: qaPrUrl,
       labels: appliedLabels,
       closedAt: qaCloseAt,
       archivedAt: qaCloseAt,
@@ -245,7 +249,7 @@ export async function syncWorkflowFromGitHub(workflowId: string, project?: Proje
   for (const issue of workflow.issues) {
     if (!issue.githubIssueNumber) continue;
     const snapshot = await getIssueSnapshotWithGh(project.githubRepo, issue.githubIssueNumber);
-    const primaryPr = choosePrimaryPr(snapshot.linkedPrs);
+    const primaryPr = choosePrimaryPr(snapshot.linkedPrs, issue.prUrl ?? null);
     issue.githubIssueUrl = snapshot.url;
     issue.githubState = snapshot.state;
     issue.labels = snapshot.labels;
@@ -375,7 +379,10 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     repo: project.githubRepo,
     issueNumber: issue.githubIssueNumber,
     issue,
-    workflowId: displayWorkflowCode(workflow)
+    workflowId: displayWorkflowCode(workflow),
+    activePrUrl: issue.prUrl ?? null,
+    activeBranch: issue.branch ?? null,
+    returnedFromQa: includesAny([...(issue.labels ?? []), ...(issue.prLabels ?? [])], ["taskix:qa-failed", "qa-failed", "taskix:dev-running"])
   });
   if (!developerResult.prUrl) {
     const recovery = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
@@ -384,6 +391,15 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       developerResult.branch = recovery.branch;
       developerResult.summary = `${developerResult.summary}\n\nTaskix recovered existing PR context after developer publishing returned empty.\nRecovery source: ${recovery.source}.\nRecovered base: ${recovery.base ?? "repository default branch"}.`;
       timeline.push(`Recovered existing PR context for issue ${issue.issueId} via ${recovery.source}; base ${recovery.base ?? "repository default branch"}.`);
+    }
+  }
+  const previousPrUrl = issue.prUrl ?? null;
+  if (previousPrUrl && developerResult.prUrl && previousPrUrl !== developerResult.prUrl && project?.githubRepo) {
+    try {
+      await addLabelsWithGh(project.githubRepo, previousPrUrl, ["taskix:superseded"]);
+      timeline.push(`Marked previous PR ${previousPrUrl} superseded because developer returned ${developerResult.prUrl}.`);
+    } catch {
+      timeline.push(`Developer returned a replacement PR ${developerResult.prUrl}; previous PR ${previousPrUrl} could not be marked superseded.`);
     }
   }
   issue.prUrl = developerResult.prUrl || null;
@@ -471,9 +487,53 @@ function createIssueCreator(project: ProjectRecord | null | undefined, settings:
   return (issue: IssueSpec) => github.createIssue(issue);
 }
 
-function choosePrimaryPr(prs: Array<{ url: string; state: string; labels: string[] }>): { url: string; state: string; labels: string[] } | null {
+function choosePrimaryPr(prs: Array<{ url: string; state: string; labels: string[] }>, preferredPrUrl?: string | null): { url: string; state: string; labels: string[] } | null {
   if (!prs.length) return null;
-  return prs.find((pr) => pr.state === "OPEN") ?? prs[0];
+  const preferred = preferredPrUrl ? prs.find((pr) => pr.url === preferredPrUrl) : null;
+  if (preferred && !preferred.labels.map((label) => label.toLowerCase()).includes("taskix:superseded")) return preferred;
+  const active = prs.filter((pr) => !pr.labels.map((label) => label.toLowerCase()).includes("taskix:superseded"));
+  return active.find((pr) => pr.state === "OPEN") ?? active[0] ?? prs.find((pr) => pr.state === "OPEN") ?? prs[0];
+}
+
+async function queueReadyDeveloperJobs(projectId: string, workflow: WorkflowRecord): Promise<number> {
+  const jobs = await listJobs(projectId);
+  let queued = 0;
+  for (const issue of workflow.issues) {
+    if (!isDeveloperIssueReady(issue, workflow.issues)) continue;
+    const existing = jobs.some((job) => (
+      job.type === "issue_run"
+      && job.status !== "cancelled"
+      && job.payload.workflowId === workflow.workflowId
+      && job.payload.issueId === issue.issueId
+    ));
+    if (existing) continue;
+    await createJob({
+      projectId,
+      type: "issue_run",
+      payload: { workflowId: workflow.workflowId, issueId: issue.issueId }
+    });
+    queued += 1;
+  }
+  return queued;
+}
+
+function isDeveloperIssueReady(issue: IssueRecord, issues: IssueRecord[]): boolean {
+  const labels = [...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase());
+  if (issue.prUrl || issue.prState === "MERGED") return false;
+  if (labels.some((label) => ["taskix:dev-running", "taskix:pr-opened", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "taskix:ready-to-merge", "taskix:merged"].includes(label))) return false;
+  const dependencies = issue.dependsOn ?? [];
+  if (!dependencies.length) return true;
+  return dependencies.every((dependency) => {
+    const normalized = dependency.trim().toLowerCase();
+    const upstream = issues.find((candidate) => (
+      candidate.issueId.toLowerCase() === normalized
+      || candidate.title.toLowerCase() === normalized
+      || String(candidate.githubIssueNumber ?? "") === normalized.replace(/^#/, "")
+    ));
+    if (!upstream) return false;
+    const upstreamLabels = [...(upstream.labels ?? []), ...(upstream.prLabels ?? [])].map((label) => label.toLowerCase());
+    return upstream.prState === "MERGED" || upstreamLabels.some((label) => label === "taskix:merged" || label === "taskix:deployed");
+  });
 }
 
 function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" | null {
@@ -512,7 +572,7 @@ async function recoverDeveloperPullRequest(
 
     if (!issue.githubIssueNumber) return null;
     const snapshot = await getIssueSnapshotWithGh(repo, issue.githubIssueNumber);
-    const linkedPr = choosePrimaryPr(snapshot.linkedPrs);
+    const linkedPr = choosePrimaryPr(snapshot.linkedPrs, issue.prUrl ?? null);
     if (!linkedPr) return null;
     const details = await readPullRequestRefs(repo, linkedPr.url);
     if (!isRecoverablePrBase(details.base, expectedDeveloperBaseBranch())) return null;
