@@ -11,7 +11,7 @@ export type WorkflowStatus = "created" | "planned" | "in_progress" | "blocked" |
 export type AgentSessionStatus = "active" | "blocked" | "done";
 export type AgentMessageRole = "user" | "assistant" | "system";
 export type JobStatus = "pending" | "running" | "done" | "failed";
-export type JobType = "workflow_run" | "issue_run";
+export type JobType = "workflow_run" | "issue_run" | "qa_run";
 
 export type Settings = {
   appBaseUrl: string;

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { closeIssueWithGh, mergePullRequestWithGh } from "@/lib/github-local";
-import { getProject, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { CodexClient } from "@/lib/codex";
+import { getSettings } from "@/lib/settings";
+import { appendAgentMessages, getAgentSession, getProject, listProjectWorkflows, saveProject, saveWorkflow } from "@/lib/store";
+import type { IssueRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const { projectId, issueId } = await params;
@@ -18,39 +20,76 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const isReady = labels.has("qa-passed") || labels.has("taskix:qa-passed") || labels.has("taskix:ready-to-merge");
   if (!isReady) return NextResponse.json({ error: "Issue is not QA-passed or ready to merge." }, { status: 409 });
 
-  const mergedLabels = ["taskix:merged"];
-  let closeIssueWarning: string | null = null;
+  const architectResult = await runArchitectMergeRequest(project, workflow, issue);
 
-  try {
-    await mergePullRequestWithGh(project.githubRepo, issue.prUrl);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "PR merge failed.";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  return NextResponse.json({
+    ok: true,
+    delegated: true,
+    issueId,
+    prUrl: issue.prUrl,
+    architectUrl: `/projects/${project.projectId}?session=${encodeURIComponent(`${project.projectId}:architect`)}`,
+    architectReply: architectResult.text
+  });
+}
 
-  issue.prState = "MERGED";
-  issue.labels = [...new Set([...(issue.labels ?? []), ...mergedLabels])];
-  issue.prLabels = [...new Set([...(issue.prLabels ?? []), ...mergedLabels])];
-  workflow.timeline.push(`Merged PR ${issue.prUrl} for issue ${issue.issueId}.`);
+async function runArchitectMergeRequest(project: ProjectRecord, workflow: WorkflowRecord, issue: IssueRecord): Promise<{ text: string }> {
+  const now = new Date().toISOString();
+  const content = [
+    `Merge requested for ${issue.issueId}: ${issue.title}`,
+    "",
+    `Workflow: ${workflow.trackingCode ?? workflow.workflowId}`,
+    `GitHub issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : "none"}`,
+    `PR: ${issue.prUrl ?? "none"}`,
+    `Issue labels: ${(issue.labels ?? []).join(", ") || "none"}`,
+    `PR labels: ${(issue.prLabels ?? []).join(", ") || "none"}`,
+    `Recorded PR state: ${issue.prState ?? "unknown"}`,
+    "",
+    "Handle this as architect now. Inspect the PR and current branch state. If it can be merged under the repository workflow, merge it and report the result. If it has conflicts or needs rework, explain the blocker and next action for developer or user follow-up."
+  ].join("\n");
 
-  if (issue.githubIssueNumber) {
-    try {
-      await closeIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Closed after PR ${issue.prUrl} was merged by Taskix.`);
-      issue.githubState = "CLOSED";
-      workflow.timeline.push(`Closed GitHub issue #${issue.githubIssueNumber} after merge.`);
-    } catch (error) {
-      closeIssueWarning = error instanceof Error ? error.message : "GitHub issue close failed.";
-      workflow.timeline.push(`GitHub issue #${issue.githubIssueNumber} close failed after merge: ${closeIssueWarning}`);
-    }
-  } else {
-    issue.githubState = "CLOSED";
-  }
-
-  if (workflow.issues.every((item) => item.prState === "MERGED" || item.githubState === "CLOSED")) {
-    workflow.status = "done";
-    workflow.timeline.push("Workflow completed after all issue PRs merged.");
-  }
+  workflow.timeline.push(`Requested architect merge handling for ${issue.issueId}.`);
   await saveWorkflow(workflow);
 
-  return NextResponse.json({ ok: true, merged: true, issueClosed: !closeIssueWarning, warning: closeIssueWarning, issueId, prUrl: issue.prUrl });
+  const sessionKey = `${project.projectId}:architect`;
+  const [settings, existingArchitectSession] = await Promise.all([
+    getSettings(),
+    getAgentSession(sessionKey)
+  ]);
+  const codex = new CodexClient(settings);
+  const result = await codex.architectChat({
+    projectName: project.name,
+    githubRepo: project.githubRepo,
+    message: content,
+    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null
+  });
+
+  if (result.sessionId && result.sessionId !== project.architectSessionId) {
+    project.architectSessionId = result.sessionId;
+    await saveProject(project);
+  }
+
+  await appendAgentMessages({
+    sessionKey,
+    projectId: project.projectId,
+    role: "architect",
+    title: "Architect",
+    sessionId: result.sessionId ?? project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+    workflowId: workflow.workflowId,
+    issueId: issue.issueId,
+    prUrl: issue.prUrl ?? null,
+    labels: issue.labels ?? [],
+    currentStep: "merge requested",
+    executionLogs: result.executionLog ? [{
+      title: "Architect merge handling",
+      content: result.executionLog,
+      createdAt: new Date().toISOString(),
+      status: "ok"
+    }] : [],
+    messages: [
+      { role: "user", content, createdAt: now },
+      { role: "assistant", content: result.text, createdAt: new Date().toISOString() }
+    ]
+  });
+
+  return { text: result.text };
 }

@@ -47,6 +47,14 @@ describe("getWorkflowNextAction", () => {
     assert.equal(action.icon, "git-branch");
   });
 
+  it("shows the QA action for pending QA runs", () => {
+    const action = getWorkflowNextAction([job("qa_run", "pending")]);
+
+    assert.equal(action.title, "Start next QA validation");
+    assert.equal(action.buttonLabel, "Start Next QA Validation");
+    assert.equal(action.phase, "QA validation");
+  });
+
   it("marks failed jobs as blocked", () => {
     const action = getWorkflowNextAction([job("issue_run", "failed")]);
 

@@ -168,8 +168,8 @@ export async function claimNextPendingJob(projectId?: string): Promise<JobRecord
   await recoverStaleRunningJobs(projectId);
 
   const row = projectId
-    ? getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' AND project_id = ? ORDER BY CASE type WHEN 'issue_run' THEN 0 ELSE 1 END, created_at ASC LIMIT 1").get(projectId) as { payload: string } | undefined
-    : getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' ORDER BY CASE type WHEN 'issue_run' THEN 0 ELSE 1 END, created_at ASC LIMIT 1").get() as { payload: string } | undefined;
+    ? getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' AND project_id = ? ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get(projectId) as { payload: string } | undefined
+    : getDb().prepare("SELECT payload FROM jobs WHERE status = 'pending' ORDER BY CASE type WHEN 'issue_run' THEN 0 WHEN 'qa_run' THEN 1 ELSE 2 END, created_at ASC LIMIT 1").get() as { payload: string } | undefined;
   if (!row) return null;
 
   const job = JSON.parse(row.payload) as JobRecord;

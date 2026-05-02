@@ -13,6 +13,7 @@ export type WorkflowNextAction = {
   icon: WorkflowNextActionIcon;
   planningPending: number;
   developerPending: number;
+  qaPending: number;
   runningCount: number;
   failedCount: number;
 };
@@ -20,6 +21,7 @@ export type WorkflowNextAction = {
 export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]): WorkflowNextAction {
   const planningPending = jobs.filter((job) => job.status === "pending" && job.type === "workflow_run").length;
   const developerPending = jobs.filter((job) => job.status === "pending" && job.type === "issue_run").length;
+  const qaPending = jobs.filter((job) => job.status === "pending" && job.type === "qa_run").length;
   const runningCount = jobs.filter((job) => job.status === "running").length;
   const failedCount = jobs.filter((job) => job.status === "failed").length;
 
@@ -34,6 +36,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
       icon: "clock",
       planningPending,
       developerPending,
+      qaPending,
       runningCount,
       failedCount
     };
@@ -50,6 +53,24 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
       icon: "play",
       planningPending,
       developerPending,
+      qaPending,
+      runningCount,
+      failedCount
+    };
+  }
+
+  if (qaPending) {
+    return {
+      title: "Start next QA validation",
+      phase: "QA validation",
+      description: "Runs one QA validation job for a developer PR and records pass/fail before architect merge handling.",
+      buttonLabel: "Start Next QA Validation",
+      disabledLabel: "Start Next QA Validation",
+      tone: "ready",
+      icon: "play",
+      planningPending,
+      developerPending,
+      qaPending,
       runningCount,
       failedCount
     };
@@ -66,6 +87,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
       icon: "git-branch",
       planningPending,
       developerPending,
+      qaPending,
       runningCount,
       failedCount
     };
@@ -82,6 +104,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
       icon: "alert",
       planningPending,
       developerPending,
+      qaPending,
       runningCount,
       failedCount
     };
@@ -97,6 +120,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
     icon: "check",
     planningPending,
     developerPending,
+    qaPending,
     runningCount,
     failedCount
   };

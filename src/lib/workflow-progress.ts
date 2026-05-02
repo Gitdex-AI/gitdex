@@ -41,11 +41,11 @@ const stepCopy: Record<WorkflowProgressStepId, { label: string; detail: string }
 
 export function getWorkflowProgress(input: {
   workflows: Pick<WorkflowRecord, "status" | "issues">[];
-  jobs: Pick<JobRecord, "status" | "type">[];
+  jobs: WorkflowProgressJob[];
 }): WorkflowProgressStep[] {
   const workflows = input.workflows;
-  const jobs = input.jobs;
   const issues = workflows.flatMap((workflow) => workflow.issues);
+  const jobs = input.jobs.filter((job) => isJobStillRelevant(job, issues));
   const hasAnyWorkflow = workflows.length > 0;
   const hasActiveWorkflow = workflows.some((workflow) => workflow.status !== "done");
   const hasDoneWorkflow = workflows.some((workflow) => workflow.status === "done");
@@ -81,21 +81,23 @@ function getStepStatus(input: {
 
 function getBlockedStep(
   workflows: Pick<WorkflowRecord, "status">[],
-  jobs: Pick<JobRecord, "status" | "type">[],
+  jobs: WorkflowProgressJob[],
   issues: Pick<IssueRecord, "labels" | "prLabels" | "prUrl" | "prState">[]
 ): WorkflowProgressStepId | null {
   if (jobs.some((job) => job.status === "failed" && job.type === "workflow_run")) return "planning";
   if (jobs.some((job) => job.status === "failed" && job.type === "issue_run")) return "developer";
-  if (workflows.some((workflow) => workflow.status === "blocked")) return "developer";
   if (issues.some((issue) => hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"]))) return "qa";
+  if (jobs.some((job) => job.status === "failed" && job.type === "qa_run")) return "qa";
   const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["taskix:blocked"]));
   if (blockedIssue) return blockedIssue.prUrl || blockedIssue.prState ? "qa" : "developer";
+  if (workflows.some((workflow) => workflow.status === "blocked")) return "developer";
   return null;
 }
 
-function getRunningStep(jobs: Pick<JobRecord, "status" | "type">[]): WorkflowProgressStepId | null {
+function getRunningStep(jobs: WorkflowProgressJob[]): WorkflowProgressStepId | null {
   if (jobs.some((job) => job.status === "running" && job.type === "workflow_run")) return "planning";
   if (jobs.some((job) => job.status === "running" && job.type === "issue_run")) return "developer";
+  if (jobs.some((job) => job.status === "running" && job.type === "qa_run")) return "qa";
   return null;
 }
 
@@ -110,6 +112,7 @@ function getCurrentStep(input: {
   if (!input.hasActiveWorkflow && input.hasDoneWorkflow) return "done";
   if (input.jobs.some((job) => job.status !== "done" && job.type === "workflow_run")) return "planning";
   if (input.jobs.some((job) => job.status !== "done" && job.type === "issue_run")) return "developer";
+  if (input.jobs.some((job) => job.status !== "done" && job.type === "qa_run")) return "qa";
   if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["taskix:ready-to-merge"]))) return "merge";
   if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["qa-passed", "taskix:qa-passed"]))) return "merge";
   if (input.issues.some((issue) => issue.prUrl || issue.prState)) return "qa";
@@ -120,6 +123,28 @@ function getCurrentStep(input: {
 
 function isDoneComplete(id: WorkflowProgressStepId, hasDoneWorkflow: boolean, hasActiveWorkflow: boolean): boolean {
   return id === "done" && hasDoneWorkflow && !hasActiveWorkflow;
+}
+
+type WorkflowProgressJob = Pick<JobRecord, "status" | "type"> & {
+  payload?: Pick<JobRecord["payload"], "issueId">;
+};
+
+function isJobStillRelevant(
+  job: WorkflowProgressJob,
+  issues: Pick<IssueRecord, "issueId" | "labels" | "prLabels" | "prUrl" | "prState">[]
+): boolean {
+  if (job.type !== "issue_run" || job.status !== "failed" || !job.payload?.issueId) return true;
+  const issue = issues.find((item) => item.issueId === job.payload?.issueId);
+  if (!issue) return true;
+  return !isIssuePastDeveloperStep(issue);
+}
+
+function isIssuePastDeveloperStep(issue: Pick<IssueRecord, "labels" | "prLabels" | "prUrl" | "prState">): boolean {
+  return Boolean(
+    issue.prUrl ||
+    issue.prState ||
+    hasAnyIssueLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"])
+  );
 }
 
 function hasAnyIssueLabel(issue: Pick<IssueRecord, "labels" | "prLabels">, expected: string[]): boolean {

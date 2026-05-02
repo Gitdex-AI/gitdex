@@ -1,4 +1,4 @@
-import { runWorkflow, runWorkflowIssue, syncWorkflowFromGitHub } from "@/lib/orchestrator";
+import { runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
 import { claimNextPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
 import type { JobRecord } from "@/lib/types";
@@ -10,7 +10,7 @@ export async function runNextJob(projectId?: string): Promise<{ job: JobRecord |
 
   try {
     await runWithJobRuntime(job.jobId, async () => {
-      if (job.type !== "workflow_run" && job.type !== "issue_run") return;
+      if (job.type !== "workflow_run" && job.type !== "issue_run" && job.type !== "qa_run") return;
       const project = job.projectId ? await getProject(job.projectId) : null;
       const workflow = await getWorkflow(job.payload.workflowId);
       if (workflow?.paused) {
@@ -23,6 +23,8 @@ export async function runNextJob(projectId?: string): Promise<{ job: JobRecord |
       }
       if (job.type === "issue_run" && job.payload.issueId) {
         await runWorkflowIssue(job.payload.workflowId, job.payload.issueId, project);
+      } else if (job.type === "qa_run" && job.payload.issueId) {
+        await runWorkflowQa(job.payload.workflowId, job.payload.issueId, project);
       } else {
         await runWorkflow(job.payload.workflowId, project);
       }

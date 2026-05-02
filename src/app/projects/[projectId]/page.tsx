@@ -6,8 +6,10 @@ import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
+import { ProjectHandoffToQaButton } from "@/components/ProjectHandoffToQaButton";
 import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
 import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
+import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -227,6 +229,7 @@ function buildWorkflowStepDetails(input: {
   const qaSessions = input.dynamicSessions.filter((session) => session.role === "qa");
   const planningJobs = input.jobs.filter((job) => job.type === "workflow_run");
   const developerJobs = input.jobs.filter((job) => job.type === "issue_run");
+  const qaJobs = input.jobs.filter((job) => job.type === "qa_run");
 
   return {
     requirement: (
@@ -272,7 +275,7 @@ function buildWorkflowStepDetails(input: {
         })}
         {renderStepRunAction(input.projectId, input.jobs, "issue_run", "Run Developer Jobs")}
         {renderJobRows(input.projectId, developerJobs, input.queuedJobId)}
-        {renderDeveloperIssueRows(input.visibleActiveWorkflows, input.sessions)}
+        {renderDeveloperIssueRows(input.projectId, input.visibleActiveWorkflows, input.sessions)}
         {renderSessionRows(developerSessions)}
       </Stack>
     ),
@@ -286,7 +289,9 @@ function buildWorkflowStepDetails(input: {
           sessions: qaSessions,
           syncLabel: "Sync QA labels"
         })}
-        {renderQaIssueRows(input.activeWorkflows, input.sessions)}
+        {renderStepRunAction(input.projectId, input.jobs, "qa_run", "Run QA Jobs")}
+        {renderJobRows(input.projectId, qaJobs, input.queuedJobId)}
+        {renderQaIssueRows(input.projectId, input.activeWorkflows, input.sessions)}
         {renderSessionRows(qaSessions)}
       </Stack>
     ),
@@ -367,7 +372,7 @@ function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobR
         <div>
           <Text size="sm" fw={760}>{label}</Text>
           <Text size="xs" c="dimmed">
-            {pendingCount} pending {jobType === "workflow_run" ? "planning" : "developer"} job{pendingCount === 1 ? "" : "s"} for this step.
+            {pendingCount} pending {jobType === "workflow_run" ? "planning" : jobType === "qa_run" ? "QA" : "developer"} job{pendingCount === 1 ? "" : "s"} for this step.
           </Text>
         </div>
         <ProjectRunJobsForm projectId={projectId} label={label} />
@@ -440,22 +445,31 @@ function renderJobRows(projectId: string, jobs: JobRecord[], queuedJobId: string
   ));
 }
 
-function renderDeveloperIssueRows(workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
+function renderDeveloperIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
   const issues = workflows.flatMap((workflow) => workflow.issues);
   if (!issues.length) return <Text size="xs" c="dimmed">No developer issues planned yet.</Text>;
   return issues.map((issue) => {
     const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
     const qaStatus = getIssueQaStatus(issue, qaSession);
-    return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={qaStatus} />;
+    const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
+    return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={qaStatus} action={canHandoffToQa ? <ProjectHandoffToQaButton projectId={projectId} issueId={issue.issueId} /> : null} />;
   });
 }
 
-function renderQaIssueRows(workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
+function renderQaIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
   const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => issue.prUrl || issue.prState || issue.qaSessionId);
   if (!issues.length) return <Text size="xs" c="dimmed">No QA-ready issues yet.</Text>;
   return issues.map((issue) => {
     const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
-    return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={getIssueQaStatus(issue, qaSession)} />;
+    const qaStatus = getIssueQaStatus(issue, qaSession);
+    return (
+      <IssueStatusRow
+        key={issue.issueId}
+        issue={issue}
+        qaStatus={qaStatus}
+        action={qaStatus.id === "failed" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
+      />
+    );
   });
 }
 
@@ -474,7 +488,8 @@ function renderMergeIssueRows(projectId: string, workflows: WorkflowRecord[]): R
         </div>
         <Group gap={6} wrap="nowrap">
           <Badge size="xs" color="green" variant="light">ready</Badge>
-          {issue.prUrl && issue.prState !== "MERGED" ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} /> : null}
+          {issue.prUrl && issue.prState !== "MERGED" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
+          {issue.prUrl && issue.prState !== "MERGED" ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
         </Group>
       </Group>
     </div>
@@ -499,7 +514,7 @@ function renderSessionRows(sessions: AgentSessionRecord[], archived = false): Re
   return sessions.map((session) => <SessionLink key={session.sessionKey} session={session} archived={archived || Boolean(session.archivedAt)} />);
 }
 
-function IssueStatusRow({ issue, qaStatus }: { issue: IssueRecord; qaStatus: ReturnType<typeof getIssueQaStatus> }) {
+function IssueStatusRow({ issue, qaStatus, action = null }: { issue: IssueRecord; qaStatus: ReturnType<typeof getIssueQaStatus>; action?: ReactNode }) {
   return (
     <Group gap={6} wrap="nowrap">
       <Text size="xs" c="dimmed" lineClamp={1}>
@@ -507,6 +522,7 @@ function IssueStatusRow({ issue, qaStatus }: { issue: IssueRecord; qaStatus: Ret
         {issue.prState ? ` · PR ${issue.prState}` : ""}
       </Text>
       <Badge color={qaStatus.color} size="xs" variant="light">{qaStatus.label}</Badge>
+      {action}
     </Group>
   );
 }

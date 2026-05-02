@@ -3,8 +3,9 @@ import { describe, it } from "node:test";
 import { getWorkflowProgress } from "../src/lib/workflow-progress.ts";
 
 const workflow = (status, issues = []) => ({ status, issues });
-const job = (type, status) => ({ type, status });
+const job = (type, status, issueId = null) => ({ type, status, payload: { issueId } });
 const issue = (overrides = {}) => ({
+  issueId: "issue-1",
   labels: [],
   prLabels: [],
   prUrl: null,
@@ -72,6 +73,15 @@ describe("getWorkflowProgress", () => {
     assert.equal(currentStep(steps).id, "qa");
   });
 
+  it("marks pending QA jobs on the QA step", () => {
+    const steps = getWorkflowProgress({
+      workflows: [workflow("in_progress", [issue({ prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
+      jobs: [job("qa_run", "pending", "issue-1")]
+    });
+
+    assert.equal(currentStep(steps).id, "qa");
+  });
+
   it("moves QA-passed issues to ready to merge", () => {
     const steps = getWorkflowProgress({
       workflows: [workflow("in_progress", [issue({ labels: ["qa-passed"], prState: "OPEN" })])],
@@ -95,10 +105,24 @@ describe("getWorkflowProgress", () => {
   it("shows failed developer jobs as blocked", () => {
     const steps = getWorkflowProgress({
       workflows: [workflow("in_progress", [issue()])],
-      jobs: [job("issue_run", "failed")]
+      jobs: [job("issue_run", "failed", "issue-1")]
     });
 
     assert.equal(currentStep(steps).id, "developer");
     assert.equal(currentStep(steps).status, "blocked");
+  });
+
+  it("ignores stale failed developer jobs after a retry reaches merge readiness", () => {
+    const steps = getWorkflowProgress({
+      workflows: [workflow("in_progress", [issue({ labels: ["taskix:qa-passed"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
+      jobs: [
+        job("issue_run", "failed", "issue-1"),
+        job("issue_run", "done", "issue-1")
+      ]
+    });
+
+    assert.equal(currentStep(steps).id, "merge");
+    assert.equal(currentStep(steps).status, "current");
+    assert.equal(step(steps, "developer").status, "complete");
   });
 });

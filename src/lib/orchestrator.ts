@@ -3,8 +3,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { CodexClient } from "@/lib/codex";
 import { GitHubClient } from "@/lib/github";
-import { addLabelsWithGh, createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
-import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, manualDeployArchitectPolicyDecision, manualDeployFinalLabelPlan, prRecoveryBranches } from "@/lib/issue-run-policy";
+import { createIssueWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh } from "@/lib/github-local";
+import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { IssueRecord, IssueSpec, ProjectRecord, WorkflowRecord } from "@/lib/types";
@@ -131,6 +131,95 @@ export async function runWorkflowIssue(workflowId: string, issueId: string, proj
   workflow.timeline.push(...result.timeline);
   workflow.status = deriveWorkflowStatus(workflow);
   if (result.blocked) workflow.status = "blocked";
+  await saveWorkflow(workflow);
+  if (project) await saveProject(project);
+  return workflow;
+}
+
+export async function runWorkflowQa(workflowId: string, issueId: string, project?: ProjectRecord | null): Promise<WorkflowRecord> {
+  const settings = await getSettings();
+  const codex = new CodexClient(settings);
+  const workflow = await getWorkflow(workflowId);
+  if (!workflow) throw new Error(`Workflow ${workflowId} not found`);
+  const issue = workflow.issues.find((item) => item.issueId === issueId);
+  if (!issue) throw new Error(`Issue ${issueId} not found in workflow ${displayWorkflowCode(workflow)}`);
+  if (!project?.githubRepo || !issue.githubIssueNumber || !issue.prUrl) throw new Error(`Issue ${issueId} is missing GitHub PR context for QA`);
+
+  workflow.status = "in_progress";
+  workflow.timeline.push(`QA started for issue ${issue.issueId}.`);
+  await saveWorkflow(workflow);
+
+  const issueOwnedPaths = issue.ownedPaths ?? [];
+  const qaStartedAt = new Date().toISOString();
+  if (workflow.projectId) {
+    await appendAgentMessages({
+      sessionKey: issue.qaSessionId ?? `${issue.issueId}:qa`,
+      projectId: workflow.projectId,
+      role: "qa",
+      title: `QA: ${issue.title}`,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      ownedPaths: issueOwnedPaths,
+      status: "active",
+      currentStep: "QA validating PR",
+      startedAt: qaStartedAt,
+      githubIssueNumber: issue.githubIssueNumber,
+      githubIssueUrl: issue.githubIssueUrl ?? null,
+      prUrl: issue.prUrl,
+      labels: ["taskix:need-qa", "taskix:qa-running"],
+      messages: [
+        { role: "user", content: `Validate PR ${issue.prUrl} for issue #${issue.githubIssueNumber}: ${issue.title}`, createdAt: qaStartedAt }
+      ]
+    });
+  }
+
+  const qaResult = await codex.qaReviewPr({
+    repo: project.githubRepo,
+    issueNumber: issue.githubIssueNumber,
+    prUrl: issue.prUrl
+  });
+  const qaFinishedAt = new Date().toISOString();
+  const qaCloseAt = qaResult.passed ? qaFinishedAt : null;
+  const appliedLabels = qaResult.passed ? ["taskix:qa-passed"] : ["taskix:qa-failed"];
+  const qaStateLabels = ["qa-passed", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"];
+  issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !qaStateLabels.includes(label.toLowerCase())), ...appliedLabels])];
+  issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !qaStateLabels.includes(label.toLowerCase())), ...appliedLabels])];
+
+  if (workflow.projectId) {
+    await appendAgentMessages({
+      sessionKey: issue.qaSessionId ?? `${issue.issueId}:qa`,
+      projectId: workflow.projectId,
+      role: "qa",
+      title: `QA: ${issue.title}`,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      ownedPaths: issueOwnedPaths,
+      status: qaResult.passed ? "done" : "blocked",
+      currentStep: qaResult.passed ? "QA passed" : "QA failed",
+      startedAt: qaStartedAt,
+      finishedAt: qaFinishedAt,
+      durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime()),
+      githubIssueNumber: issue.githubIssueNumber,
+      githubIssueUrl: issue.githubIssueUrl ?? null,
+      prUrl: issue.prUrl,
+      labels: appliedLabels,
+      closedAt: qaCloseAt,
+      archivedAt: qaCloseAt,
+      executionLogs: qaResult.executionLog ? [{
+        title: `QA Codex execution for ${issue.title}`,
+        content: qaResult.executionLog,
+        createdAt: qaFinishedAt,
+        status: qaResult.passed ? "ok" : "failed"
+      }] : [],
+      messages: [
+        { role: "assistant", content: `Passed: ${qaResult.passed}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${appliedLabels.join(", ")}`, createdAt: new Date().toISOString() }
+      ]
+    });
+  }
+
+  workflow.timeline.push(qaResult.passed ? `QA passed PR for issue ${issue.issueId}. Awaiting architect merge handoff.` : `QA failed PR for issue ${issue.issueId}: ${qaResult.summary}`);
+  workflow.status = deriveWorkflowStatus(workflow);
+  if (!qaResult.passed) workflow.status = "blocked";
   await saveWorkflow(workflow);
   if (project) await saveProject(project);
   return workflow;
@@ -319,7 +408,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       githubIssueNumber: issue.githubIssueNumber,
       githubIssueUrl: issue.githubIssueUrl ?? null,
       prUrl: developerResult.prUrl || null,
-      labels: developerResult.prUrl ? ["taskix:pr-opened", "taskix:architect-review"] : ["taskix:blocked"],
+      labels: developerResult.prUrl ? ["taskix:pr-opened"] : ["taskix:blocked"],
       closedAt: closeAt,
       archivedAt: closeAt,
       executionLogs: developerResult.executionLog ? [{
@@ -351,125 +440,10 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     };
   }
 
-  let architectReview = await requestInitialPrReview(project, issue, developerResult.prUrl, codex);
-  if (workflow.projectId) {
-    await appendAgentMessages({
-      sessionKey: `${workflow.projectId}:architect`,
-      projectId: workflow.projectId,
-      role: "architect",
-      title: "Architect",
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      executionLogs: architectReview.executionLog ? [{
-        title: `Architect Codex review for ${issue.title}`,
-        content: architectReview.executionLog,
-        createdAt: new Date().toISOString(),
-        status: architectReview.decision === "blocked" || architectReview.decision === "changes_requested" ? "failed" : "ok"
-      }] : [],
-      messages: [
-        { role: "user", content: `Review PR for issue ${issue.issueId}: ${developerResult.prUrl}`, createdAt: new Date().toISOString() },
-        { role: "assistant", content: `Decision: ${architectReview.decision}\n${architectReview.summary}\nLabels: ${architectReview.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }
-      ]
-    });
-  }
-  timeline.push(`Architect reviewed PR for issue ${issue.issueId}: ${architectReview.decision}.`);
-
-  let qaPassed = false;
-  let qaSummary = "QA not requested.";
-  if (architectReview.decision === "need_qa") {
-    const qaStartedAt = new Date().toISOString();
-    if (workflow.projectId) {
-      await appendAgentMessages({
-        sessionKey: issue.qaSessionId ?? `${issue.issueId}:qa`,
-        projectId: workflow.projectId,
-        role: "qa",
-        title: `QA: ${issue.title}`,
-        workflowId: workflow.workflowId,
-        issueId: issue.issueId,
-        ownedPaths: issueOwnedPaths,
-        status: "active",
-        currentStep: "QA validating PR",
-        startedAt: qaStartedAt,
-        githubIssueNumber: issue.githubIssueNumber,
-        githubIssueUrl: issue.githubIssueUrl ?? null,
-        prUrl: developerResult.prUrl,
-        labels: ["taskix:need-qa", "taskix:qa-running"],
-        messages: [
-          { role: "user", content: `Validate PR ${developerResult.prUrl} for issue #${issue.githubIssueNumber}: ${issue.title}`, createdAt: qaStartedAt }
-        ]
-      });
-    }
-    const qaResult = await codex.qaReviewPr({
-      repo: project.githubRepo,
-      issueNumber: issue.githubIssueNumber,
-      prUrl: developerResult.prUrl
-    });
-    qaPassed = qaResult.passed;
-    qaSummary = qaResult.summary;
-    const qaFinishedAt = new Date().toISOString();
-    const qaCloseAt = qaResult.passed ? qaFinishedAt : null;
-  if (workflow.projectId) {
-    await appendAgentMessages({
-      sessionKey: issue.qaSessionId ?? `${issue.issueId}:qa`,
-      projectId: workflow.projectId,
-      role: "qa",
-      title: `QA: ${issue.title}`,
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      ownedPaths: issueOwnedPaths,
-      status: qaResult.passed ? "done" : "blocked",
-      currentStep: qaResult.passed ? "QA passed" : "QA failed",
-      startedAt: qaStartedAt,
-      finishedAt: qaFinishedAt,
-      durationMs: Math.max(0, new Date(qaFinishedAt).getTime() - new Date(qaStartedAt).getTime()),
-      githubIssueNumber: issue.githubIssueNumber,
-      githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: developerResult.prUrl,
-      labels: qaResult.labelsApplied,
-      closedAt: qaCloseAt,
-      archivedAt: qaCloseAt,
-      executionLogs: qaResult.executionLog ? [{
-        title: `QA Codex execution for ${issue.title}`,
-        content: qaResult.executionLog,
-        createdAt: qaFinishedAt,
-        status: qaResult.passed ? "ok" : "failed"
-      }] : [],
-      messages: [
-          { role: "assistant", content: `Passed: ${qaResult.passed}\n${qaResult.summary}\nFindings:\n${qaResult.findings.map((finding) => `- ${finding}`).join("\n") || "- none"}\nLabels: ${qaResult.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }
-      ]
-    });
-  }
-    if (qaResult.passed) {
-      timeline.push(`QA passed PR for issue ${issue.issueId}.`);
-      architectReview = await requestFinalPrReview(project, issue, developerResult.prUrl, codex);
-      if (workflow.projectId) {
-        await appendAgentMessages({
-          sessionKey: `${workflow.projectId}:architect`,
-          projectId: workflow.projectId,
-          role: "architect",
-          title: "Architect",
-          workflowId: workflow.workflowId,
-          issueId: issue.issueId,
-          executionLogs: architectReview.executionLog ? [{
-            title: `Architect final Codex review for ${issue.title}`,
-            content: architectReview.executionLog,
-            createdAt: new Date().toISOString(),
-            status: architectReview.decision === "blocked" || architectReview.decision === "changes_requested" ? "failed" : "ok"
-          }] : [],
-          messages: [
-            { role: "user", content: `QA passed PR ${developerResult.prUrl}. Perform final review/merge for issue ${issue.issueId}.`, createdAt: new Date().toISOString() },
-            { role: "assistant", content: `Decision: ${architectReview.decision}\n${architectReview.summary}\nLabels: ${architectReview.labelsApplied.join(", ") || "none"}`, createdAt: new Date().toISOString() }
-          ]
-        });
-      }
-      timeline.push(`Architect final review after QA for issue ${issue.issueId}: ${architectReview.decision}.`);
-    } else {
-      timeline.push(`QA failed PR for issue ${issue.issueId}: ${qaResult.summary}`);
-    }
-  }
-
-  const blocked = architectReview.decision === "blocked" || architectReview.decision === "changes_requested" || (architectReview.decision === "need_qa" && !qaPassed);
-
+  const developerCompletionCleanupLabels = ["taskix:dev-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"];
+  issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !developerCompletionCleanupLabels.includes(label.toLowerCase())), "taskix:pr-opened"])];
+  issue.prLabels = [...new Set([...(issue.prLabels ?? []).filter((label) => !developerCompletionCleanupLabels.includes(label.toLowerCase())), "taskix:pr-opened"])];
+  timeline.push(`Developer completed PR for issue ${issue.issueId}. Awaiting QA handoff.`);
   return {
     timeline,
     releaseNote: {
@@ -479,13 +453,14 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       ownedPaths,
       developerSummary: developerResult.summary,
       prUrl: developerResult.prUrl,
-      qaPassed,
-      qaSummary,
-      architectDecision: architectReview.decision,
-      architectSummary: architectReview.summary
+      qaPassed: false,
+      qaSummary: "QA handoff pending.",
+      architectDecision: "need_qa",
+      architectSummary: "Developer completed PR; waiting for explicit QA handoff."
     },
-    blocked
+    blocked: false
   };
+
 }
 
 function createIssueCreator(project: ProjectRecord | null | undefined, settings: Awaited<ReturnType<typeof getSettings>>) {
@@ -502,9 +477,10 @@ function choosePrimaryPr(prs: Array<{ url: string; state: string; labels: string
 }
 
 function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" | null {
-  if (labels.includes("taskix:qa-passed")) return "done";
-  if (labels.includes("taskix:qa-failed")) return "blocked";
-  if (labels.includes("taskix:need-qa") || labels.includes("taskix:qa-running")) return "active";
+  const normalizedLabels = labels.map((label) => label.toLowerCase());
+  if (normalizedLabels.includes("taskix:qa-passed")) return "done";
+  if (normalizedLabels.includes("taskix:qa-failed")) return "blocked";
+  if (normalizedLabels.includes("taskix:need-qa") || normalizedLabels.includes("taskix:qa-running")) return "active";
   return null;
 }
 
@@ -564,92 +540,6 @@ async function readPullRequestRefs(repo: string, pr: string): Promise<{ head: st
   } catch {
     return { head: null, base: null, state: null, merged: false };
   }
-}
-
-async function requestInitialPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
-  if (!project.autoDeploy && issue.githubIssueNumber) {
-    const labels = ["taskix:need-qa"];
-    await Promise.all([
-      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labels),
-      addLabelsWithGh(project.githubRepo, prUrl, labels)
-    ]);
-    return {
-      decision: "need_qa" as const,
-      summary: `Manual-deploy project: Taskix requested QA for ${prUrl} and stopped before merge review.`,
-      labelsApplied: labels,
-      comments: []
-    };
-  }
-
-  const review = await codex.architectReviewPr({
-    repo: project.githubRepo,
-    issueNumber: issue.githubIssueNumber ?? 0,
-    prUrl,
-    autoDeploy: project.autoDeploy
-  });
-  if (review.decision === "blocked" && !review.labelsApplied.length && review.summary.includes("Architect runner did not complete PR review") && issue.githubIssueNumber) {
-    const labels = ["taskix:need-qa"];
-    await Promise.all([
-      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labels),
-      addLabelsWithGh(project.githubRepo, prUrl, labels)
-    ]);
-    return {
-      decision: "need_qa" as const,
-      summary: `Architect runner did not complete structured PR review. Taskix conservatively requested QA for ${prUrl}.`,
-      labelsApplied: labels,
-      comments: []
-    };
-  }
-  return review;
-}
-
-async function requestFinalPrReview(project: ProjectRecord, issue: IssueRecord, prUrl: string, codex: CodexClient) {
-  if (!project.autoDeploy && issue.githubIssueNumber) {
-    const prRefs = await readPullRequestRefs(project.githubRepo, prUrl);
-    const architectDecision = manualDeployArchitectPolicyDecision({
-      prUrl,
-      qaPassed: true,
-      prState: prRefs.state,
-      prMerged: prRefs.merged
-    });
-    const labelPlan = manualDeployFinalLabelPlan({ prUrl, architectDecision });
-    if (labelPlan.decision !== "ready_to_merge") {
-      await Promise.all([
-        addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
-        addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
-        removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
-        removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
-      ]);
-      return {
-        ...architectDecision,
-        decision: labelPlan.decision,
-        summary: labelPlan.summary,
-        labelsApplied: labelPlan.labelsApplied,
-        comments: labelPlan.comments
-      };
-    }
-
-    await Promise.all([
-      addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsApplied),
-      addLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsApplied),
-      removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, labelPlan.labelsRemoved),
-      removeLabelsWithGh(project.githubRepo, prUrl, labelPlan.labelsRemoved)
-    ]);
-    return {
-      decision: "ready_to_merge" as const,
-      summary: labelPlan.summary,
-      labelsApplied: labelPlan.labelsApplied,
-      comments: labelPlan.comments
-    };
-  }
-
-  return codex.architectReviewPr({
-    repo: project.githubRepo,
-    issueNumber: issue.githubIssueNumber ?? 0,
-    prUrl,
-    autoDeploy: project.autoDeploy,
-    qaPassed: true
-  });
 }
 
 function deriveWorkflowStatus(workflow: WorkflowRecord): WorkflowRecord["status"] {
