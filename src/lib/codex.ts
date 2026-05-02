@@ -346,6 +346,10 @@ Hard rules:
 - Do not revert a directly related test update merely because an older QA comment called it outside ownedPaths; current Taskix policy allows that narrow test-scope exception.
 - If Current active PR is not "none", update that PR branch and return the same PR URL. Do not create a replacement PR unless the existing PR is closed or unusable.
 - If Returned from QA is "yes", address QA findings on the current active PR branch and push follow-up commits.
+- When retrying after QA failure, do not patch only the exact reported symptom. Identify the underlying contract behind the QA finding.
+- If the QA finding involves a trust boundary, API contract, state machine, permissions model, lifecycle rule, dependency ordering, ownedPaths boundary, data consistency rule, or cross-component interaction, audit analogous paths and update the complete affected workflow.
+- Keep this audit scoped to the issue and ownedPaths. "Analogous paths" means paths necessary to satisfy the same contract for this issue, not unrelated broad refactors.
+- If the complete contract is not specified well enough to choose a safe fix, stop and return blockedType "spec" with the missing architect decision.
 - If there is no active PR, create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - Implement the issue, run relevant tests, commit, and push the branch. Do not run gh pr create.
 - Do not add/remove GitHub labels or comments. Taskix server will create/update the PR and labels after you return JSON.
