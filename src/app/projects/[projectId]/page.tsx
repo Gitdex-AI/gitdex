@@ -273,7 +273,6 @@ function ThreePhaseWorkflowPanel(input: {
   jobs: JobRecord[];
   queuedJobId: string | null;
 }) {
-  const planningJobs = input.jobs.filter((job) => job.type === "workflow_run");
   const githubJobs = input.jobs.filter((job) => job.type === "issue_run" || job.type === "qa_run");
   const devopsSessions = input.sessions.filter((session) => session.role === "devops");
 
@@ -285,14 +284,11 @@ function ThreePhaseWorkflowPanel(input: {
             <Text size="sm" fw={820}>1. Requirements</Text>
             <Text size="xs" c="dimmed">PM confirms scope, then architect creates GitHub issues.</Text>
           </div>
-          <Badge size="xs" variant="light">{planningJobs.filter((job) => job.status === "pending").length} queued</Badge>
         </Group>
         <Stack gap="xs" mt="sm">
           {input.pmSession ? <SessionLink session={input.pmSession} /> : <Text size="xs" c="dimmed">No PM session has been recorded yet.</Text>}
           {!input.isInspectingIssueSession && input.readyForArchitectPayload ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
-          {renderRequirementRows(input.projectId, input.requirementWorkflows)}
-          {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
-          {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
+          {renderRequirementRows(input.projectId, input.requirementWorkflows, input.jobs)}
         </Stack>
       </section>
     );
@@ -534,50 +530,49 @@ function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobR
   );
 }
 
-function renderRequirementRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
+function renderRequirementRows(projectId: string, workflows: WorkflowRecord[], jobs: JobRecord[]): ReactNode {
   if (!workflows.length) return <Text size="xs" c="dimmed">No numbered requirements yet. Once PM confirms a requirement, the confirm action appears here.</Text>;
-  return workflows.slice(0, 6).map((workflow) => (
-    <a key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row">
-      <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
-        <div style={{ minWidth: 0 }}>
-          <Text size="sm" fw={780} lineClamp={1}>Requirement ID: {workflow.trackingCode ?? workflow.workflowId}</Text>
-          <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
-        </div>
-        <Badge size="xs" variant="light" color={requirementStatusColor(workflow.status)}>{requirementStatusLabel(workflow.status)}</Badge>
-      </Group>
-    </a>
-  ));
+  return workflows.slice(0, 6).map((workflow) => {
+    const planningJob = latestWorkflowJob(workflow.workflowId, jobs, "workflow_run");
+    const status = requirementStatus(workflow, planningJob);
+    return (
+      <a key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row">
+        <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+          <div style={{ minWidth: 0 }}>
+            <Text size="sm" fw={780} lineClamp={1}>Requirement ID: {workflow.trackingCode ?? workflow.workflowId}</Text>
+            <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
+          </div>
+          <Badge size="xs" variant="light" color={status.color}>{status.label}</Badge>
+        </Group>
+      </a>
+    );
+  });
 }
 
-function requirementStatusLabel(status: WorkflowRecord["status"]): string {
-  switch (status) {
+function latestWorkflowJob(workflowId: string, jobs: JobRecord[], type: JobRecord["type"]): JobRecord | null {
+  return jobs
+    .filter((job) => job.type === type && job.payload.workflowId === workflowId)
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
+}
+
+function requirementStatus(workflow: WorkflowRecord, planningJob: JobRecord | null): { label: string; color: string } {
+  if (planningJob?.status === "running") return { label: "Planning running", color: "blue" };
+  if (planningJob?.status === "pending") return { label: "Planning queued", color: "blue" };
+  if (planningJob?.status === "failed") return { label: "Planning failed", color: "red" };
+  switch (workflow.status) {
     case "created":
     case "ready_for_architect":
-      return "Awaiting confirmation";
+      return { label: "Awaiting confirmation", color: "blue" };
     case "planned":
-      return "Awaiting GitHub intake";
+      return { label: "Awaiting GitHub intake", color: "gray" };
     case "transferred_to_github":
-      return "Tracked in GitHub";
+      return { label: "Tracked in GitHub", color: "gray" };
     case "in_progress":
-      return "In progress";
+      return { label: "In progress", color: "gray" };
     case "blocked":
-      return "Blocked";
+      return { label: "Blocked", color: "red" };
     case "done":
-      return "Done";
-  }
-}
-
-function requirementStatusColor(status: WorkflowRecord["status"]): string {
-  switch (status) {
-    case "blocked":
-      return "red";
-    case "done":
-      return "green";
-    case "created":
-    case "ready_for_architect":
-      return "blue";
-    default:
-      return "gray";
+      return { label: "Done", color: "green" };
   }
 }
 
