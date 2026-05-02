@@ -654,9 +654,10 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const activeJob = latestIssueJob(issue.issueId, jobs);
     const isHighlighted = activeJob?.jobId === queuedJobId;
     const issueJobStatus = activeJob ? readableIssueJobStatus(activeJob) : null;
+    const prNumber = extractPullRequestNumber(issue.prUrl);
     const issueMetaParts = [
       workflow.trackingCode,
-      issue.prState ? `PR ${issue.prState}` : issue.prUrl ? "PR open" : "no PR",
+      prNumber ? `PR #${prNumber}${issue.prState ? ` ${issue.prState}` : ""}` : issue.prState ? `PR ${issue.prState}` : issue.prUrl ? "PR open" : "no PR",
       issue.executionOrder ? `order ${issue.executionOrder}` : null,
       issue.parallelGroup ? `parallel ${issue.parallelGroup}` : null
     ].filter(Boolean);
@@ -667,6 +668,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
           <div style={{ minWidth: 0 }}>
             <Group gap={6} wrap="wrap">
               <Text size="sm" fw={780} lineClamp={1}>{issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}</Text>
+              {prNumber ? <Badge size="xs" color="gray" variant="light">PR #{prNumber}</Badge> : null}
               <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
               {issueJobStatus ? <Badge size="xs" color={issueJobStatus.color} variant="light">{issueJobStatus.label}</Badge> : null}
               <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge>
@@ -714,6 +716,11 @@ function readableIssueJobStatus(job: JobRecord): { label: string; color: string 
     case "cancelled":
       return { label: `${owner} cancelled`, color: "gray" };
   }
+}
+
+function extractPullRequestNumber(prUrl?: string | null): number | null {
+  const match = prUrl?.match(/\/pull\/(\d+)(?:\D|$)/);
+  return match ? Number(match[1]) : null;
 }
 
 function renderQaIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
