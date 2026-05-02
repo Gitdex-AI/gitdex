@@ -6,6 +6,49 @@ import type { AgentSessionRecord, JobRecord, JobType, ProjectRecord, Role, Workf
 
 const RUNNING_JOB_TIMEOUT_MS = 15 * 60 * 1000;
 
+export type AdminAccountRecord = {
+  username: "admin";
+  passwordHash: string;
+  initializedAt: string;
+};
+
+export type AdminSessionRecord = {
+  username: "admin";
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+const adminAccountKey = "admin_account";
+const adminSessionKey = "admin_session";
+
+export async function getAdminAccount(): Promise<AdminAccountRecord | null> {
+  const row = getDb().prepare("SELECT value FROM kv WHERE key = ?").get(adminAccountKey) as { value: string } | undefined;
+  return row ? (JSON.parse(row.value) as AdminAccountRecord) : null;
+}
+
+export async function saveInitialAdminAccount(account: AdminAccountRecord): Promise<boolean> {
+  const result = getDb()
+    .prepare("INSERT OR IGNORE INTO kv (key, value) VALUES (?, ?)")
+    .run(adminAccountKey, JSON.stringify(account)) as { changes: number };
+  return result.changes === 1;
+}
+
+export async function getAdminSession(): Promise<AdminSessionRecord | null> {
+  const row = getDb().prepare("SELECT value FROM kv WHERE key = ?").get(adminSessionKey) as { value: string } | undefined;
+  return row ? (JSON.parse(row.value) as AdminSessionRecord) : null;
+}
+
+export async function saveAdminSession(session: AdminSessionRecord): Promise<void> {
+  getDb()
+    .prepare("INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(adminSessionKey, JSON.stringify(session));
+}
+
+export async function deleteAdminSession(): Promise<void> {
+  getDb().prepare("DELETE FROM kv WHERE key = ?").run(adminSessionKey);
+}
+
 export async function listProjects(): Promise<ProjectRecord[]> {
   const rows = getDb().prepare("SELECT payload FROM projects ORDER BY created_at ASC").all() as { payload: string }[];
   return rows.map((row) => normalizeProject(JSON.parse(row.payload) as ProjectRecord));
