@@ -136,13 +136,17 @@ export default async function ProjectDetailPage({
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
               <ProjectPhaseSummary workflows={sortedWorkflows} jobs={jobs} />
-              <WorkflowProgressList
-                steps={workflowProgress}
+              <ThreePhaseWorkflowPanel
                 projectId={project.projectId}
-                workflows={workflowPanelWorkflows}
-                stepDetails={workflowStepDetails}
+                isInspectingIssueSession={isInspectingIssueSession}
+                readyForArchitectPayload={readyForArchitectPayload}
+                pmSession={pmSession}
+                workflows={visibleActiveWorkflows}
+                doneWorkflows={doneWorkflows}
+                sessions={sessions}
+                jobs={jobs}
+                queuedJobId={queuedJobId}
               />
-              <CompletedWorkflowHistory projectId={project.projectId} workflows={doneWorkflows} />
             </Stack>
           </Paper>
 
@@ -211,6 +215,72 @@ function PhaseStat({ title, value, detail }: { title: string; value: number; det
       <Text size="lg" fw={820}>{value}</Text>
       <Text size="xs" c="dimmed">{detail}</Text>
     </div>
+  );
+}
+
+function ThreePhaseWorkflowPanel(input: {
+  projectId: string;
+  isInspectingIssueSession: boolean;
+  readyForArchitectPayload: ProjectHandoffPayload;
+  pmSession: AgentSessionRecord | undefined;
+  workflows: WorkflowRecord[];
+  doneWorkflows: WorkflowRecord[];
+  sessions: AgentSessionRecord[];
+  jobs: JobRecord[];
+  queuedJobId: string | null;
+}) {
+  const planningJobs = input.jobs.filter((job) => job.type === "workflow_run");
+  const githubJobs = input.jobs.filter((job) => job.type === "issue_run" || job.type === "qa_run");
+  const devopsSessions = input.sessions.filter((session) => session.role === "devops");
+
+  return (
+    <Stack gap="md">
+      <section className="phase-panel">
+        <Group justify="space-between" align="flex-start" gap="sm">
+          <div>
+            <Text size="sm" fw={820}>1. Requirements</Text>
+            <Text size="xs" c="dimmed">PM confirms scope, then architect creates GitHub issues.</Text>
+          </div>
+          <Badge size="xs" variant="light">{planningJobs.filter((job) => job.status === "pending").length} queued</Badge>
+        </Group>
+        <Stack gap="xs" mt="sm">
+          {input.pmSession ? <SessionLink session={input.pmSession} /> : <Text size="xs" c="dimmed">No PM session has been recorded yet.</Text>}
+          {!input.isInspectingIssueSession ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
+          {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
+          {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
+        </Stack>
+      </section>
+
+      <section className="phase-panel">
+        <Group justify="space-between" align="flex-start" gap="sm">
+          <div>
+            <Text size="sm" fw={820}>2. GitHub Tracking</Text>
+            <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
+          </div>
+          <ProjectRunJobsForm projectId={input.projectId} label="Run Ready Jobs" />
+        </Group>
+        <Stack gap="xs" mt="sm">
+          {renderJobRows(input.projectId, githubJobs, input.queuedJobId)}
+          {renderGithubIssueRows(input.projectId, input.workflows, input.sessions)}
+        </Stack>
+      </section>
+
+      <section className="phase-panel">
+        <Group justify="space-between" align="flex-start" gap="sm">
+          <div>
+            <Text size="sm" fw={820}>3. Operations</Text>
+            <Text size="xs" c="dimmed">DevOps handles deployment, incidents, and follow-up issue intake.</Text>
+          </div>
+          <Button component="a" href={`/projects/${input.projectId}?role=devops`} variant="light" size="compact-xs" radius="xl">
+            Open DevOps
+          </Button>
+        </Group>
+        <Stack gap="xs" mt="sm">
+          {devopsSessions.length ? renderSessionRows(devopsSessions) : <Text size="xs" c="dimmed">No DevOps session has been recorded yet.</Text>}
+          <CompletedWorkflowHistory projectId={input.projectId} workflows={input.doneWorkflows} />
+        </Stack>
+      </section>
+    </Stack>
   );
 }
 
@@ -486,6 +556,51 @@ function renderDeveloperIssueRows(projectId: string, workflows: WorkflowRecord[]
     const qaStatus = getIssueQaStatus(issue, qaSession);
     const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
     return <IssueStatusRow key={issue.issueId} issue={issue} qaStatus={qaStatus} action={canHandoffToQa ? <ProjectHandoffToQaButton projectId={projectId} issueId={issue.issueId} /> : null} />;
+  });
+}
+
+function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
+  const rows = workflows.flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })));
+  if (!rows.length) return <Text size="xs" c="dimmed">No GitHub issues are being tracked yet.</Text>;
+  return rows.map(({ workflow, issue }) => {
+    const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
+    const qaStatus = getIssueQaStatus(issue, qaSession);
+    const reviewed = hasAnyLabel(issue, ["taskix:ready-to-merge"]);
+    const qaPassed = hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed"]);
+    const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
+    const canArchitectReview = Boolean(issue.prUrl) && qaPassed && !reviewed && issue.prState !== "MERGED";
+    const canMerge = Boolean(issue.prUrl) && reviewed && issue.prState !== "MERGED";
+
+    return (
+      <div key={issue.issueId} className="github-issue-row">
+        <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+          <div style={{ minWidth: 0 }}>
+            <Group gap={6} wrap="wrap">
+              <Text size="sm" fw={780} lineClamp={1}>{issue.title}</Text>
+              <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
+              <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge>
+              {reviewed ? <Badge size="xs" color="green" variant="light">reviewed</Badge> : null}
+            </Group>
+            <Text size="xs" c="dimmed" mt={4} lineClamp={2}>
+              {issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}
+              {workflow.trackingCode ? ` · ${workflow.trackingCode}` : ""}
+              {issue.prState ? ` · PR ${issue.prState}` : issue.prUrl ? " · PR open" : " · no PR"}
+              {issue.executionOrder ? ` · order ${issue.executionOrder}` : ""}
+              {issue.parallelGroup ? ` · parallel ${issue.parallelGroup}` : ""}
+            </Text>
+            {issue.dependsOn?.length ? (
+              <Text size="xs" c="dimmed" mt={2} lineClamp={1}>Depends on: {issue.dependsOn.join(", ")}</Text>
+            ) : null}
+          </div>
+          <Group gap={6} wrap="wrap" justify="flex-end">
+            {canHandoffToQa ? <ProjectHandoffToQaButton projectId={projectId} issueId={issue.issueId} /> : null}
+            {qaStatus.id === "failed" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
+            {canArchitectReview ? <ProjectArchitectReviewButton projectId={projectId} issueId={issue.issueId} /> : null}
+            {canMerge ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
+          </Group>
+        </Group>
+      </div>
+    );
   });
 }
 
