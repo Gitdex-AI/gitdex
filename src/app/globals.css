@@ -307,7 +307,7 @@ pre,
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 28px min(8vw, 84px) 12px;
+  padding: 18px 20px 12px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
     #f8fbff;
@@ -319,7 +319,7 @@ pre,
   bottom: 0;
   z-index: 5;
   flex: 0 0 auto;
-  padding: 10px min(8vw, 84px) 22px;
+  padding: 10px 20px 18px;
   border-top: 0;
   background:
     radial-gradient(circle at 10% -160%, rgba(37, 99, 235, 0.06), transparent 34%),
@@ -327,7 +327,7 @@ pre,
 }
 
 .chat-composer-form {
-  max-width: 920px;
+  max-width: none;
   margin: 0 auto;
   padding: 12px;
   background: rgba(255, 255, 255, 0.94);
@@ -911,10 +911,12 @@ pre,
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 12px;
-  max-width: 860px;
+  width: 100%;
+  max-width: none;
 }
 
 .chat-message.user {
+  width: min(100%, 900px);
   margin-left: auto;
 }
 
@@ -937,7 +939,7 @@ pre,
 }
 
 .chat-bubble {
-  max-width: 780px;
+  max-width: none;
   padding: 12px 14px;
   background: #ffffff;
   border: 1px solid #e0e7f0;
