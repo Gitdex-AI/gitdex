@@ -567,17 +567,28 @@ function renderRequirementRows(projectId: string, workflows: WorkflowRecord[], j
     const planningJob = latestWorkflowJob(workflow.workflowId, jobs, "workflow_run");
     const status = requirementStatus(workflow, planningJob);
     return (
-      <a key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row">
+      <div key={workflow.workflowId} className="requirement-row">
         <div className="requirement-row-body">
           <div className="requirement-row-main">
-            <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
-            <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
+            <a href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row-link">
+              <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+              <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
+            </a>
           </div>
-          <Badge className="requirement-status-badge" size="xs" variant="light" color={status.color}>{status.label}</Badge>
+          <div className="requirement-row-actions">
+            <Badge className="requirement-status-badge" size="xs" variant="light" color={status.color}>{status.label}</Badge>
+            {renderRequirementRunAction(projectId, planningJob)}
+          </div>
         </div>
-      </a>
+      </div>
     );
   });
+}
+
+function renderRequirementRunAction(projectId: string, planningJob: JobRecord | null): ReactNode {
+  if (planningJob?.status === "pending") return <ProjectRunJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
+  if (planningJob?.status === "failed") return <ProjectRetryJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
+  return null;
 }
 
 function latestWorkflowJob(workflowId: string, jobs: JobRecord[], type: JobRecord["type"]): JobRecord | null {

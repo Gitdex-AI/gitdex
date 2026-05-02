@@ -610,6 +610,11 @@ pre,
   border-color: #bfdbfe;
 }
 
+.requirement-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
 .requirement-row-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
@@ -619,6 +624,13 @@ pre,
 
 .requirement-row-main {
   min-width: 0;
+}
+
+.requirement-row-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .requirement-status-badge {
