@@ -69,7 +69,7 @@ test("forwarding headers do not prove a localhost caller", () => {
   assert.equal(selfUpdateGuard(new Headers({ "x-forwarded-for": "127.0.0.1" })).ok, false);
 });
 
-test("request URLs do not prove a localhost caller", () => {
+test("plain request URLs do not prove a localhost caller", () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
@@ -79,8 +79,26 @@ test("request URLs do not prove a localhost caller", () => {
     }),
     false
   );
+});
+
+test("next route localhost URLs prove localhost route callers", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
   assert.equal(
     selfUpdateGuard(new NextRequest("http://127.0.0.1:8000/api/self-update/update", { method: "POST" })).ok,
+    true
+  );
+  assert.equal(
+    selfUpdateGuard(
+      new NextRequest("http://127.0.0.1:8000/api/self-update/update", {
+        method: "POST",
+        headers: { "x-forwarded-for": "203.0.113.10", host: "example.com" }
+      })
+    ).ok,
+    true
+  );
+  assert.equal(
+    selfUpdateGuard(new NextRequest("http://example.com/api/self-update/update", { method: "POST" })).ok,
     false
   );
 });

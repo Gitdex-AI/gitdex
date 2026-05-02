@@ -34,6 +34,9 @@ type RequestSource =
   | Headers
   | {
       headers: Headers;
+      nextUrl?: {
+        hostname?: string | null;
+      } | null;
       ip?: string | null;
       remoteAddress?: string | null;
     };
@@ -106,7 +109,12 @@ function getRuntimeRemoteAddress(source: RequestSource) {
     return null;
   }
 
-  return source.ip || source.remoteAddress || null;
+  const runtimeAddress = source.ip || source.remoteAddress;
+  if (runtimeAddress) {
+    return runtimeAddress;
+  }
+
+  return source.nextUrl?.hostname || null;
 }
 
 export async function runSelfUpdate(cwd = process.cwd()): Promise<SelfUpdateRunResult> {
