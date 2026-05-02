@@ -641,8 +641,10 @@ function renderDeveloperIssueRows(projectId: string, workflows: WorkflowRecord[]
 }
 
 function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[]): ReactNode {
-  const rows = workflows.flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })));
-  if (!rows.length) return <Text size="xs" c="dimmed">No GitHub issues are being tracked yet.</Text>;
+  const rows = workflows
+    .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })))
+    .filter(({ issue }) => issue.githubState !== "CLOSED" && issue.prState !== "MERGED");
+  if (!rows.length) return <Text size="xs" c="dimmed">No unfinished GitHub issues are being tracked.</Text>;
   return rows.map(({ workflow, issue }) => {
     const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
     const qaStatus = getIssueQaStatus(issue, qaSession);
@@ -651,23 +653,26 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
     const canArchitectReview = Boolean(issue.prUrl) && qaPassed && !reviewed && issue.prState !== "MERGED";
     const canMerge = Boolean(issue.prUrl) && reviewed && issue.prState !== "MERGED";
+    const issueMetaParts = [
+      workflow.trackingCode,
+      issue.prState ? `PR ${issue.prState}` : issue.prUrl ? "PR open" : "no PR",
+      issue.executionOrder ? `order ${issue.executionOrder}` : null,
+      issue.parallelGroup ? `parallel ${issue.parallelGroup}` : null
+    ].filter(Boolean);
 
     return (
       <div key={issue.issueId} className="github-issue-row">
         <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
           <div style={{ minWidth: 0 }}>
             <Group gap={6} wrap="wrap">
-              <Text size="sm" fw={780} lineClamp={1}>{issue.title}</Text>
+              <Text size="sm" fw={780} lineClamp={1}>{issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}</Text>
               <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
               <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge>
               {reviewed ? <Badge size="xs" color="green" variant="light">reviewed</Badge> : null}
             </Group>
+            <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{issue.title}</Text>
             <Text size="xs" c="dimmed" mt={4} lineClamp={2}>
-              {issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}
-              {workflow.trackingCode ? ` · ${workflow.trackingCode}` : ""}
-              {issue.prState ? ` · PR ${issue.prState}` : issue.prUrl ? " · PR open" : " · no PR"}
-              {issue.executionOrder ? ` · order ${issue.executionOrder}` : ""}
-              {issue.parallelGroup ? ` · parallel ${issue.parallelGroup}` : ""}
+              {issueMetaParts.join(" · ")}
             </Text>
             {issue.dependsOn?.length ? (
               <Text size="xs" c="dimmed" mt={2} lineClamp={1}>Depends on: {issue.dependsOn.join(", ")}</Text>
