@@ -36,8 +36,6 @@ type RequestSource =
       headers: Headers;
       ip?: string | null;
       remoteAddress?: string | null;
-      nextUrl?: { hostname?: string | null } | null;
-      url?: string | null;
     };
 
 const updateCommands: SelfUpdateCommand[] = [
@@ -108,43 +106,7 @@ function getRuntimeRemoteAddress(source: RequestSource) {
     return null;
   }
 
-  const runtimeAddress = source.ip || source.remoteAddress;
-  if (runtimeAddress) {
-    return runtimeAddress;
-  }
-
-  if (hasForwardedCallerAddress(source.headers)) {
-    return null;
-  }
-
-  return getRequestUrlHostname(source);
-}
-
-function hasForwardedCallerAddress(headers: Headers) {
-  return Boolean(
-    headers.get("forwarded") ||
-      headers.get("x-forwarded-for") ||
-      headers.get("x-real-ip") ||
-      headers.get("x-client-ip") ||
-      headers.get("cf-connecting-ip")
-  );
-}
-
-function getRequestUrlHostname(source: Exclude<RequestSource, Headers>) {
-  const nextHostname = source.nextUrl?.hostname;
-  if (nextHostname) {
-    return nextHostname;
-  }
-
-  if (!source.url) {
-    return null;
-  }
-
-  try {
-    return new URL(source.url).hostname;
-  } catch {
-    return null;
-  }
+  return source.ip || source.remoteAddress || null;
 }
 
 export async function runSelfUpdate(cwd = process.cwd()): Promise<SelfUpdateRunResult> {

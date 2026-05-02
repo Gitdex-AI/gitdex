@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import process from "node:process";
+import { NextRequest } from "next/server.js";
 
 import {
   consumeRestartAvailability,
@@ -68,7 +69,7 @@ test("forwarding headers do not prove a localhost caller", () => {
   assert.equal(selfUpdateGuard(new Headers({ "x-forwarded-for": "127.0.0.1" })).ok, false);
 });
 
-test("route-shaped localhost requests are accepted without trusting forwarded caller headers", () => {
+test("request URLs do not prove a localhost caller", () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
@@ -76,14 +77,32 @@ test("route-shaped localhost requests are accepted without trusting forwarded ca
       headers: new Headers({ host: "127.0.0.1:8000" }),
       url: "http://127.0.0.1:8000/api/self-update"
     }),
+    false
+  );
+  assert.equal(
+    selfUpdateGuard(new NextRequest("http://127.0.0.1:8000/api/self-update/update", { method: "POST" })).ok,
+    false
+  );
+});
+
+test("runtime loopback addresses prove localhost route callers", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  assert.equal(
+    isLocalhostRequest({
+      headers: new Headers({ host: "example.com" }),
+      url: "http://example.com/api/self-update",
+      ip: "127.0.0.1"
+    }),
     true
   );
   assert.equal(
     selfUpdateGuard({
       headers: new Headers({ "x-forwarded-for": "127.0.0.1", host: "127.0.0.1:8000" }),
-      url: "http://127.0.0.1:8000/api/self-update"
+      url: "http://127.0.0.1:8000/api/self-update",
+      remoteAddress: "127.0.0.1"
     }).ok,
-    false
+    true
   );
 });
 
