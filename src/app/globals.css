@@ -888,7 +888,7 @@ pre,
   border: 1px solid #1e293b;
   border-radius: 8px;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1040,7 +1040,7 @@ pre,
   border: 1px solid #1e293b;
   border-radius: 12px;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
