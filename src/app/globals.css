@@ -893,6 +893,27 @@ pre,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  scrollbar-color: #64748b transparent;
+  scrollbar-width: thin;
+}
+
+.running-agent-log::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.running-agent-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.running-agent-log::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border: 2px solid #0f172a;
+  border-radius: 999px;
+}
+
+.running-agent-log::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .blocked-session-alert {
@@ -1024,6 +1045,27 @@ pre,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  scrollbar-color: #94a3b8 transparent;
+  scrollbar-width: thin;
+}
+
+.execution-log-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.execution-log-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.execution-log-content::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f8fafc;
+  border-radius: 999px;
+}
+
+.execution-log-content::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .project-context {
