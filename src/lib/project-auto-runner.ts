@@ -1,5 +1,6 @@
 import { runJobsById } from "@/lib/job-runner";
 import { shouldCancelAutoRun, shouldPauseAutoRun, startAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
+import { canAutoRunQa, isClosedIssue } from "@/lib/auto-run-policy";
 import { addLabelsWithGh, commentIssueWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
@@ -173,10 +174,7 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
 }
 
 function canRunQa(issue: IssueRecord): boolean {
-  return Boolean(issue.prUrl)
-    && !isClosedIssue(issue)
-    && issue.prState !== "MERGED"
-    && !hasAnyIssueLabel(issue, ["taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:merged"]);
+  return canAutoRunQa(issue);
 }
 
 function canRunArchitectReview(issue: IssueRecord): boolean {
@@ -204,10 +202,6 @@ function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: Workflow
     .filter((job) => job.payload.workflowId === workflow.workflowId && job.payload.issueId === issue.issueId && (job.type === "architect_review_run" || job.type === "merge_run"))
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
   return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && latest?.status === "failed";
-}
-
-function isClosedIssue(issue: IssueRecord): boolean {
-  return issue.githubState === "CLOSED" || issue.prState === "CLOSED" || issue.prState === "MERGED";
 }
 
 function hasAnyIssueLabel(issue: IssueRecord, labels: string[]): boolean {
