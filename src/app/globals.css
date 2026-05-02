@@ -305,6 +305,7 @@ pre,
 .chat-scroll {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px 20px 12px;
@@ -856,7 +857,9 @@ pre,
 }
 
 .running-agent-log {
+  box-sizing: border-box;
   max-height: 220px;
+  max-width: calc(100% - 19px);
   margin: 6px 0 0 19px;
   padding: 8px 10px;
   overflow: auto;
@@ -868,6 +871,7 @@ pre,
   font-size: var(--text-xs);
   line-height: 1.45;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -911,6 +915,7 @@ pre,
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
   width: 100%;
   max-width: none;
 }
@@ -939,8 +944,10 @@ pre,
 }
 
 .chat-bubble {
+  min-width: 0;
   max-width: none;
   padding: 12px 14px;
+  overflow-wrap: anywhere;
   background: #ffffff;
   border: 1px solid #e0e7f0;
   border-radius: 16px;
@@ -952,6 +959,13 @@ pre,
   font-size: var(--text-chat);
   line-height: var(--leading-reading);
   font-weight: var(--weight-regular);
+  overflow-wrap: anywhere;
+}
+
+.chat-bubble .mantine-Group-root,
+.chat-bubble .mantine-Stack-root {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-bubble time,
@@ -974,7 +988,9 @@ pre,
 }
 
 .execution-log-content {
+  box-sizing: border-box;
   max-height: 360px;
+  max-width: 100%;
   margin: 12px 0 0;
   padding: 12px;
   overflow: auto;
@@ -986,6 +1002,8 @@ pre,
   font-size: var(--text-xs);
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .project-context {
