@@ -9,10 +9,15 @@ import {
   isSelfUpdateEnabled,
   isLocalhostRequest,
   hasTrustedCallerAddress,
+  mintSelfUpdateOperatorIntent,
   resetSelfUpdateStateForTests,
+  runOperatorSelfUpdateAndRestart,
+  runOperatorSelfUpdate,
   runSelfUpdate,
   selfUpdateGuard,
-  setSelfUpdateCommandRunnerForTests
+  setSelfUpdateCommandRunnerForTests,
+  setSelfUpdateOperatorIntentClockForTests,
+  validateSelfUpdateOperatorIntent
 } from "../src/lib/self-update.ts";
 
 const originalFlag = process.env.TASKIX_ENABLE_SELF_UPDATE;
@@ -134,6 +139,171 @@ test("self-update state reports trusted caller validation availability", () => {
       trustedLocalhostCallerValidated: true
     }
   );
+});
+
+test("self-update state exposes operator submission and boot readiness markers", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  const state = getSelfUpdateState(new NextRequest("http://127.0.0.1:8000/api/self-update"));
+
+  assert.equal(state.operatorSubmissionAvailable, true);
+  assert.equal(typeof state.operatorIntentToken, "string");
+  assert.equal(typeof state.bootId, "string");
+  assert.equal(typeof state.startedAt, "string");
+  assert.equal(state.restartStatus, "idle");
+});
+
+test("operator intent validation rejects missing stale and invalid tokens", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  const firstIntent = mintSelfUpdateOperatorIntent();
+  const secondIntent = mintSelfUpdateOperatorIntent();
+
+  assert.ok(firstIntent);
+  assert.ok(secondIntent);
+  assert.equal(validateSelfUpdateOperatorIntent({ nonce: firstIntent.cookie.value, token: null }).ok, false);
+  assert.equal(validateSelfUpdateOperatorIntent({ nonce: firstIntent.cookie.value, token: "invalid" }).ok, false);
+  assert.equal(
+    validateSelfUpdateOperatorIntent({ nonce: secondIntent.cookie.value, token: firstIntent.token }).ok,
+    false
+  );
+  assert.equal(
+    validateSelfUpdateOperatorIntent({ nonce: firstIntent.cookie.value, token: firstIntent.token }).ok,
+    false
+  );
+  assert.equal(
+    validateSelfUpdateOperatorIntent({ nonce: secondIntent.cookie.value, token: secondIntent.token }).ok,
+    true
+  );
+  assert.equal(
+    validateSelfUpdateOperatorIntent({ nonce: secondIntent.cookie.value, token: secondIntent.token }).ok,
+    false
+  );
+});
+
+test("operator intent validation rejects expired tokens", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  let now = 1_000;
+  setSelfUpdateOperatorIntentClockForTests(() => now);
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  now += intent.cookie.maxAge * 1000 + 1;
+
+  assert.equal(validateSelfUpdateOperatorIntent({ nonce: intent.cookie.value, token: intent.token }).ok, false);
+});
+
+test("operator self-update flow requires a valid server-minted intent token", async () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  const calls = [];
+  setSelfUpdateCommandRunnerForTests(async (command) => {
+    calls.push(command.command);
+    return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
+  });
+
+  const missing = await runOperatorSelfUpdate({ nonce: null, token: null }, "/tmp/taskix-self-update-operator-test");
+  assert.equal(missing.status, 403);
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  const stale = await runOperatorSelfUpdate(
+    { nonce: "stale", token: intent.token },
+    "/tmp/taskix-self-update-operator-test"
+  );
+  assert.equal(stale.status, 403);
+
+  const accepted = await runOperatorSelfUpdate(
+    { nonce: intent.cookie.value, token: intent.token },
+    "/tmp/taskix-self-update-operator-test"
+  );
+
+  assert.equal(accepted.status, 200);
+  assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
+
+  const replay = await runOperatorSelfUpdate(
+    { nonce: intent.cookie.value, token: intent.token },
+    "/tmp/taskix-self-update-operator-test"
+  );
+  assert.equal(replay.status, 403);
+  assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
+});
+
+test("operator self-update flow requests restart through internal server integration", async () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  const calls = [];
+  let restartCalls = 0;
+  setSelfUpdateCommandRunnerForTests(async (command) => {
+    calls.push(command.command);
+    return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
+  });
+  const restartTaskixService = async () => {
+    restartCalls += 1;
+    return {
+      ok: true,
+      manager: "systemctl",
+      serviceName: "taskix-next.service",
+      stdout: "restarted",
+      stderr: "",
+      error: null
+    };
+  };
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  const response = await runOperatorSelfUpdateAndRestart(
+    { nonce: intent.cookie.value, token: intent.token },
+    restartTaskixService,
+    "/tmp/taskix-self-update-operator-restart-test"
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.ok, true);
+  assert.equal(response.update?.ok, true);
+  assert.equal(response.restart?.restartRequested, true);
+  assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
+  assert.equal(restartCalls, 1);
+  assert.equal(getSelfUpdateState().restartStatus, "requested");
+  assert.equal(getSelfUpdateState().restartAvailable, false);
+});
+
+test("operator self-update flow reports terminal restart failure distinctly", async () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  setSelfUpdateCommandRunnerForTests(async (command) => {
+    return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
+  });
+  const restartTaskixService = async () => {
+    return {
+      ok: false,
+      manager: "systemctl",
+      serviceName: "taskix-next.service",
+      stdout: "",
+      stderr: "restart failed",
+      error: "Taskix service restart failed."
+    };
+  };
+
+  const intent = mintSelfUpdateOperatorIntent();
+  assert.ok(intent);
+
+  const response = await runOperatorSelfUpdateAndRestart(
+    { nonce: intent.cookie.value, token: intent.token },
+    restartTaskixService,
+    "/tmp/taskix-self-update-operator-restart-failure-test"
+  );
+
+  assert.equal(response.status, 500);
+  assert.equal(response.ok, false);
+  assert.equal(response.update?.ok, true);
+  assert.equal(response.restart?.restartRequested, false);
+
+  const state = getSelfUpdateState();
+  assert.equal(state.restartStatus, "failed");
+  assert.match(state.restartError, /restart failed/i);
 });
 
 test("runtime loopback addresses prove localhost route callers", () => {

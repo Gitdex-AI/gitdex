@@ -12,14 +12,14 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /aria-label=\{`Taskix version \$\{packageJson\.version\}`\}/,
-  "Root layout should expose the package version in the header affordance label"
+  /<SelfUpdateDialog version=\{packageJson\.version\} \/>/,
+  "Root layout should wire the package version into the self-update dialog entry point"
 );
 
 assert.match(
   layoutSource,
-  /v\{packageJson\.version\}/,
-  "Root layout should render the package version without duplicating the version literal"
+  /version=\{packageJson\.version\}/,
+  "Root layout should pass the package version without duplicating the version literal"
 );
 
 assert.ok(packageJson.version, "package.json should define a version value");
