@@ -408,6 +408,10 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     activeBranch: issue.branch ?? null,
     returnedFromQa: includesAny([...(issue.labels ?? []), ...(issue.prLabels ?? [])], ["taskix:qa-failed", "qa-failed", "taskix:blocked", "taskix:dev-running"])
   });
+  if (developerResult.prUrl && !isPullRequestUrl(developerResult.prUrl)) {
+    timeline.push(`Developer returned a non-PR URL for issue ${issue.issueId}; Taskix will create or recover the pull request from branch ${developerResult.branch || "unknown"}.`);
+    developerResult.prUrl = "";
+  }
   if (!developerResult.prUrl && developerResult.blockedType !== "spec") {
     const recovery = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
     if (recovery) {
@@ -616,7 +620,7 @@ async function createDeveloperPullRequest(repo: string, issue: IssueRecord, work
     issue.githubIssueNumber ? `Closes #${issue.githubIssueNumber}` : ""
   ].filter(Boolean).join("\n");
 
-  return createPullRequestWithGh({
+  const prUrl = await createPullRequestWithGh({
     repo,
     head: developerResult.branch,
     base: expectedDeveloperBaseBranch(),
@@ -624,6 +628,12 @@ async function createDeveloperPullRequest(repo: string, issue: IssueRecord, work
     body,
     labels: ["taskix:pr-opened", "taskix:architect-review", issue.developerRole ? `role:${issue.developerRole}` : ""].filter(Boolean)
   });
+  if (!isPullRequestUrl(prUrl)) throw new Error(`GitHub did not return a pull request URL for branch ${developerResult.branch}.`);
+  return prUrl;
+}
+
+function isPullRequestUrl(value: string): boolean {
+  return /\/pull\/\d+(?:\D|$)/.test(value);
 }
 
 async function publishDeveloperPrStateToGitHub(repo: string, issue: IssueRecord, prUrl: string): Promise<void> {

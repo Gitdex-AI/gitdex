@@ -16,18 +16,19 @@ type AutoRunStep = {
   jobIds: string[];
 };
 
-export async function runProjectIssueAutoRun(project: ProjectRecord): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
+export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[] } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
   if (!project.githubRepo) throw new Error("Project has no GitHub repo configured.");
+  const workflowScope = new Set(options.workflowIds ?? []);
   const steps: AutoRunStep[] = [];
 
   for (let cycle = 0; cycle < 40; cycle += 1) {
-    await syncProjectWorkflows(project);
+    await syncProjectWorkflows(project, workflowScope);
     const jobs = await listJobs(project.projectId);
     if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
       return { completed: false, steps, message: "Auto Run paused because issue jobs are still running." };
     }
 
-    const workflows = await listProjectWorkflows(project.projectId);
+    const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
     const sessions = await listAgentSessions(project.projectId);
     const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs);
     if (!batch.jobIds.length) return { completed: true, steps, message: "No runnable issue jobs remain." };
@@ -39,11 +40,15 @@ export async function runProjectIssueAutoRun(project: ProjectRecord): Promise<{ 
   return { completed: false, steps, message: "Auto Run stopped after reaching the safety cycle limit." };
 }
 
-async function syncProjectWorkflows(project: ProjectRecord): Promise<void> {
-  const workflows = await listProjectWorkflows(project.projectId);
+async function syncProjectWorkflows(project: ProjectRecord, workflowScope = new Set<string>()): Promise<void> {
+  const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
   for (const workflow of workflows) {
     await syncWorkflowFromGitHub(workflow.workflowId, project);
   }
+}
+
+function filterWorkflows(workflows: WorkflowRecord[], workflowScope: Set<string>): WorkflowRecord[] {
+  return workflowScope.size ? workflows.filter((workflow) => workflowScope.has(workflow.workflowId)) : workflows;
 }
 
 async function findOrCreateNextBatch(

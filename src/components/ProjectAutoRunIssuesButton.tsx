@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { announceIssueAutoRunStart } from "@/components/ProjectAutoRunIssueAction";
 
-export function ProjectAutoRunIssuesButton({ projectId }: { projectId: string }) {
+export function ProjectAutoRunIssuesButton({ projectId, workflowIds }: { projectId: string; workflowIds: string[] }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -15,7 +15,11 @@ export function ProjectAutoRunIssuesButton({ projectId }: { projectId: string })
     setPending(true);
     setError("");
     announceIssueAutoRunStart();
-    void fetch(`/api/projects/${projectId}/issues/auto-run`, { method: "POST" })
+    void fetch(`/api/projects/${projectId}/issues/auto-run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workflowIds })
+    })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({})) as { error?: string };
         if (!response.ok) throw new Error(payload.error ?? "Auto Run failed.");

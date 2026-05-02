@@ -307,7 +307,7 @@ function ThreePhaseWorkflowPanel(input: {
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
-          <ProjectAutoRunIssuesButton projectId={input.projectId} />
+          <ProjectAutoRunIssuesButton projectId={input.projectId} workflowIds={input.workflows.map((workflow) => workflow.workflowId)} />
         </Group>
         <Stack gap="xs" mt="sm">
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions, input.jobs, input.queuedJobId)}
