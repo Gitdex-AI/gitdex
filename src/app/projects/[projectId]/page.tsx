@@ -704,6 +704,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const canRunDev = canRunDeveloperIssue(issue, workflow.issues);
     const isHighlighted = activeJob?.jobId === queuedJobId;
     const issueJobStatus = activeJob ? readableIssueJobStatus(activeJob) : null;
+    const showQaStatusBadge = !(activeJob?.type === "qa_run" && (activeJob.status === "pending" || activeJob.status === "running"));
     const prNumber = extractPullRequestNumber(issue.prUrl);
     const issueMetaParts = [
       workflow.trackingCode,
@@ -721,7 +722,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
               {prNumber ? <Badge size="xs" color="gray" variant="light">PR #{prNumber}</Badge> : null}
               <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
               {issueJobStatus ? <Badge size="xs" color={issueJobStatus.color} variant="light">{issueJobStatus.label}</Badge> : null}
-              <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge>
+              {showQaStatusBadge ? <Badge size="xs" color={qaStatus.color} variant="light">{qaStatus.label}</Badge> : null}
               {reviewed ? <Badge size="xs" color="green" variant="light">reviewed</Badge> : null}
             </Group>
             <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{issue.title}</Text>
