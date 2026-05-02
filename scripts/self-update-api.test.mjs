@@ -31,32 +31,28 @@ afterEach(() => {
   resetSelfUpdateStateForTests();
 });
 
-test("disabled flag rejects self-update requests", () => {
+test("self-update does not require an enablement flag", () => {
   delete process.env.TASKIX_ENABLE_SELF_UPDATE;
 
   const guard = selfUpdateGuard(localHeaders());
 
-  assert.equal(guard.ok, false);
-  assert.equal(guard.status, 403);
-  assert.match(guard.error, /disabled/);
+  assert.equal(guard.ok, true);
 });
 
-test("enablement flag must be exactly true", () => {
+test("self-update enablement state defaults to available", () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "TRUE";
-  assert.equal(isSelfUpdateEnabled(), false);
-
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
   assert.equal(isSelfUpdateEnabled(), true);
+
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "false";
+  assert.equal(isSelfUpdateEnabled(), false);
 });
 
-test("non-localhost callers are rejected even when enabled", () => {
+test("self-update guard does not require localhost callers", () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
 
   const guard = selfUpdateGuard(new Headers({ "x-forwarded-for": "203.0.113.10", host: "example.com" }));
 
-  assert.equal(guard.ok, false);
-  assert.equal(guard.status, 403);
-  assert.match(guard.error, /localhost/);
+  assert.equal(guard.ok, true);
 });
 
 test("host headers do not prove a localhost caller", () => {
@@ -64,7 +60,7 @@ test("host headers do not prove a localhost caller", () => {
 
   assert.equal(isLocalhostRequest(new Headers({ host: "127.0.0.1:8000" })), false);
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-host": "127.0.0.1:8000" })), false);
-  assert.equal(selfUpdateGuard(new Headers({ host: "127.0.0.1:8000" })).ok, false);
+  assert.equal(selfUpdateGuard(new Headers({ host: "127.0.0.1:8000" })).ok, true);
 });
 
 test("forwarding headers do not prove a localhost caller", () => {
@@ -72,7 +68,7 @@ test("forwarding headers do not prove a localhost caller", () => {
 
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-for": "127.0.0.1" })), false);
   assert.equal(isLocalhostRequest(new Headers({ "x-real-ip": "127.0.0.1" })), false);
-  assert.equal(selfUpdateGuard(new Headers({ "x-forwarded-for": "127.0.0.1" })).ok, false);
+  assert.equal(selfUpdateGuard(new Headers({ "x-forwarded-for": "127.0.0.1" })).ok, true);
 });
 
 test("plain request URLs do not prove a localhost caller", () => {
@@ -87,12 +83,12 @@ test("plain request URLs do not prove a localhost caller", () => {
   );
 });
 
-test("next route localhost URLs fail closed without trusted runtime caller addresses", () => {
+test("next route localhost URLs do not affect self-update guard authorization", () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
     selfUpdateGuard(new NextRequest("http://127.0.0.1:8000/api/self-update/update", { method: "POST" })).ok,
-    false
+    true
   );
   assert.equal(
     selfUpdateGuard(
@@ -101,7 +97,7 @@ test("next route localhost URLs fail closed without trusted runtime caller addre
         headers: { "x-forwarded-for": "203.0.113.10", host: "example.com" }
       })
     ).ok,
-    false
+    true
   );
   assert.equal(
     selfUpdateGuard(
@@ -110,7 +106,7 @@ test("next route localhost URLs fail closed without trusted runtime caller addre
         headers: { host: "127.0.0.1:8000" }
       })
     ).ok,
-    false
+    true
   );
 });
 

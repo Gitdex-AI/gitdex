@@ -28,22 +28,22 @@ afterEach(() => {
   resetTaskixServiceRestarterForTests();
 });
 
-test("restart endpoint rejects requests when self-update is disabled", async () => {
+test("restart endpoint does not require self-update flag", async () => {
   delete process.env.TASKIX_ENABLE_SELF_UPDATE;
 
   const response = await restartRequest(trustedRequest());
 
-  assert.equal(response.status, 403);
-  assert.match(response.error, /disabled/);
+  assert.equal(response.status, 409);
+  assert.match(response.error, /self-update completes successfully/);
 });
 
-test("restart endpoint rejects callers without trusted localhost proof", async () => {
+test("restart endpoint does not require trusted localhost proof", async () => {
   process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
 
   const response = await restartRequest({ headers: new Headers(), remoteAddress: "203.0.113.10" });
 
-  assert.equal(response.status, 403);
-  assert.match(response.error, /localhost/);
+  assert.equal(response.status, 409);
+  assert.match(response.error, /self-update completes successfully/);
 });
 
 test("restart endpoint blocks before a successful update build", async () => {
