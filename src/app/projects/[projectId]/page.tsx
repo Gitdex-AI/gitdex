@@ -437,6 +437,7 @@ function renderJobRows(projectId: string, jobs: JobRecord[], queuedJobId: string
         <Group gap={6} wrap="nowrap">
           <Badge size="xs" color={job.status === "failed" ? "red" : undefined} variant="light">{job.status}</Badge>
           {job.status === "failed" ? <ProjectRetryJobButton projectId={projectId} jobId={job.jobId} /> : null}
+          {job.status === "running" ? <ProjectRetryJobButton projectId={projectId} jobId={job.jobId} status="running" /> : null}
         </Group>
       </Group>
       <Text size="xs" c="dimmed" mt={4}>

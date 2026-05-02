@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Anchor, Badge, Button, Code, Divider, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { ArrowLeft, Bot, CheckCircle2, CircleDot, GitPullRequest, Play, RefreshCw } from "lucide-react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
+import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -102,7 +103,7 @@ export default async function WorkflowDetailPage({
             </Group>
             <Stack p="md" gap="xs">
               {workflowJobs.map((job) => (
-                <JobRow key={job.jobId} job={job} />
+                <JobRow key={job.jobId} projectId={project.projectId} job={job} />
               ))}
               {!workflowJobs.length && <Text c="dimmed" size="sm">No jobs for this workflow.</Text>}
             </Stack>
@@ -227,12 +228,16 @@ function SessionLink({
   );
 }
 
-function JobRow({ job }: { job: JobRecord }) {
+function JobRow({ projectId, job }: { projectId: string; job: JobRecord }) {
   return (
     <div className="workflow-job-row">
       <Group justify="space-between" wrap="nowrap">
         <Text size="sm" fw={720}>{job.type}</Text>
-        <Badge size="sm" variant="light">{job.status}</Badge>
+        <Group gap={6} wrap="nowrap">
+          <Badge size="sm" variant="light">{job.status}</Badge>
+          {job.status === "failed" ? <ProjectRetryJobButton projectId={projectId} jobId={job.jobId} /> : null}
+          {job.status === "running" ? <ProjectRetryJobButton projectId={projectId} jobId={job.jobId} status="running" /> : null}
+        </Group>
       </Group>
       <Text size="xs" c="dimmed">Job {job.jobId} · attempts {job.attempts}</Text>
       <Text size="xs" c="dimmed">Updated {formatDate(job.updatedAt)}</Text>
@@ -243,10 +248,13 @@ function JobRow({ job }: { job: JobRecord }) {
         </Group>
       ) : null}
       {job.status === "running" ? (
-        <Group gap={6} mt={6}>
-          <ThemeIcon size="xs" variant="light"><RefreshCw size={10} /></ThemeIcon>
-          <Text size="xs" c="dimmed">Agent execution is in progress.</Text>
-        </Group>
+        <Stack gap={4} mt={6}>
+          <Group gap={6}>
+            <ThemeIcon size="xs" variant="light"><RefreshCw size={10} /></ThemeIcon>
+            <Text size="xs" c="dimmed">Agent execution is in progress.</Text>
+          </Group>
+          <Text size="xs" c="dimmed">If the Codex process has exited but this job is still running, use Recover to mark it stalled and queue a replacement.</Text>
+        </Stack>
       ) : null}
       {job.error ? <Text size="xs" c="red" mt={6}>{job.error}</Text> : null}
     </div>

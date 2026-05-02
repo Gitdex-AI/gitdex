@@ -6,10 +6,14 @@ export async function POST(_request: Request, context: { params: Promise<unknown
   const [project, job] = await Promise.all([getProject(projectId), getJob(jobId)]);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
   if (!job || job.projectId !== project.projectId) return NextResponse.json({ error: "Job not found." }, { status: 404 });
-  if (job.status !== "failed") return NextResponse.json({ error: "Only failed or stalled jobs can be retried." }, { status: 409 });
+  if (job.status !== "failed" && job.status !== "running") return NextResponse.json({ error: "Only failed or running jobs can be recovered." }, { status: 409 });
 
   const now = new Date().toISOString();
-  job.error = job.error ? `Retry queued after failure: ${job.error}` : "Retry queued after stalled job.";
+  const wasRunning = job.status === "running";
+  job.status = "failed";
+  job.error = wasRunning
+    ? "Recovered by user: running job was treated as stalled and a replacement job was queued."
+    : job.error ? `Retry queued after failure: ${job.error}` : "Retry queued after stalled job.";
   job.updatedAt = now;
   job.runtime = { ...(job.runtime ?? {}), finishedAt: job.runtime?.finishedAt ?? now };
   await saveJob(job);
@@ -23,7 +27,7 @@ export async function POST(_request: Request, context: { params: Promise<unknown
   const workflow = await getWorkflow(job.payload.workflowId);
   if (workflow) {
     workflow.status = "in_progress";
-    workflow.timeline.push(`Retry queued for ${job.type} job ${job.jobId}.`);
+    workflow.timeline.push(wasRunning ? `Recovered stalled ${job.type} job ${job.jobId} and queued a replacement.` : `Retry queued for ${job.type} job ${job.jobId}.`);
     await saveWorkflow(workflow);
   }
 
