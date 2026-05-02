@@ -141,16 +141,22 @@ export async function getJob(jobId: string): Promise<JobRecord | null> {
   return row ? (JSON.parse(row.payload) as JobRecord) : null;
 }
 
-export async function touchJobRuntime(jobId: string, input: { pid?: number | null; output?: boolean } = {}): Promise<void> {
+const jobRuntimeOutputTailLimit = 12000;
+
+export async function touchJobRuntime(jobId: string, input: { pid?: number | null; output?: boolean; outputChunk?: string | null } = {}): Promise<void> {
   const job = await getJob(jobId);
   if (!job || job.status !== "running") return;
   const now = new Date().toISOString();
+  const outputChunk = input.outputChunk ?? "";
+  const outputTail = outputChunk ? `${job.runtime?.outputTail ?? ""}${outputChunk}`.slice(-jobRuntimeOutputTailLimit) : job.runtime?.outputTail ?? null;
   job.runtime = {
     ...(job.runtime ?? {}),
     pid: input.pid ?? job.runtime?.pid ?? null,
     startedAt: job.runtime?.startedAt ?? job.updatedAt ?? now,
     lastHeartbeatAt: now,
-    lastOutputAt: input.output ? now : job.runtime?.lastOutputAt ?? null
+    lastOutputAt: input.output || outputChunk ? now : job.runtime?.lastOutputAt ?? null,
+    outputTail,
+    outputBytes: (job.runtime?.outputBytes ?? 0) + Buffer.byteLength(outputChunk)
   };
   job.updatedAt = now;
   await saveJob(job);

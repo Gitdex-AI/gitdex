@@ -172,11 +172,23 @@ function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: A
             const session = findJobSession(job, sessions);
             const label = runningAgentLabel(job, session);
             const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
+            const outputTail = job.runtime?.outputTail?.trimEnd();
             return (
-              <Text key={job.jobId} size="sm" c="dimmed" className="running-agent-line">
-                <LoaderCircle size={13} className="chat-composer-spinner" />
-                <span>{label} thinking ...({formatElapsed(startedAt)})</span>
-              </Text>
+              <div key={job.jobId} className="running-agent-item">
+                <Text size="sm" c="dimmed" className="running-agent-line">
+                  <LoaderCircle size={13} className="chat-composer-spinner" />
+                  <span>{label} thinking ...({formatElapsed(startedAt)})</span>
+                </Text>
+                {outputTail ? (
+                  <pre className="running-agent-log" aria-label={`${label} live output`}>
+                    {outputTail}
+                  </pre>
+                ) : (
+                  <Text size="xs" c="dimmed" className="running-agent-waiting">
+                    Waiting for Codex output...
+                  </Text>
+                )}
+              </div>
             );
           })}
         </Stack>

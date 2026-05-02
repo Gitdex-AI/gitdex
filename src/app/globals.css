@@ -833,6 +833,30 @@ pre,
   gap: 6px;
 }
 
+.running-agent-item {
+  min-width: 0;
+}
+
+.running-agent-waiting {
+  margin-left: 19px;
+}
+
+.running-agent-log {
+  max-height: 220px;
+  margin: 6px 0 0 19px;
+  padding: 8px 10px;
+  overflow: auto;
+  color: #dbeafe;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .blocked-session-alert {
   border: 1px solid #fecaca;
   border-radius: 16px;

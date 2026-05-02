@@ -221,6 +221,8 @@ export type JobRecord = {
     startedAt?: string | null;
     lastHeartbeatAt?: string | null;
     lastOutputAt?: string | null;
+    outputTail?: string | null;
+    outputBytes?: number | null;
     finishedAt?: string | null;
   };
   payload: {

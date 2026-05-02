@@ -17,6 +17,12 @@ type RunJsonOptions = { cwd?: string };
 type RunCodexOptions = { cwd?: string };
 const execFileAsync = promisify(execFile);
 const codexTimeoutMs = 10 * 60 * 1000;
+const ansiPattern = /\x1B\[[0-?]*[ -/]*[@-~]/g;
+
+function normalizeRuntimeOutput(chunk: Buffer | string): string {
+  return String(chunk).replace(ansiPattern, "");
+}
+
 export type ArchitectBlockerResolution = {
   action: "retry_developer" | "request_user_input" | "mark_blocked";
   summary: string;
@@ -659,12 +665,14 @@ Summarize code review outcome, merge readiness, and deployment status according 
         resolve({ ok: false, stdout, stderr: `${stderr}\nCodex timed out after ${Math.round(codexTimeoutMs / 1000)} seconds.` });
       }, codexTimeoutMs);
       child.stdout.on("data", (chunk) => {
-        stdout += String(chunk);
-        if (activeJobId) void touchJobRuntime(activeJobId, { output: true });
+        const text = normalizeRuntimeOutput(chunk);
+        stdout += text;
+        if (activeJobId) void touchJobRuntime(activeJobId, { output: true, outputChunk: text });
       });
       child.stderr.on("data", (chunk) => {
-        stderr += String(chunk);
-        if (activeJobId) void touchJobRuntime(activeJobId, { output: true });
+        const text = normalizeRuntimeOutput(chunk);
+        stderr += text;
+        if (activeJobId) void touchJobRuntime(activeJobId, { output: true, outputChunk: text });
       });
       child.on("error", () => {
         if (settled) return;
