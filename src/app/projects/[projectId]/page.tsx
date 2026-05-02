@@ -146,9 +146,10 @@ export default async function ProjectDetailPage({
                       projectId={project.projectId}
                       selectedPhase="requirements"
                       isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={readyForArchitectPayload}
+                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
                       pmSession={pmSession}
                       workflows={visibleActiveWorkflows}
+                      requirementWorkflows={sortedWorkflows}
                       doneWorkflows={doneWorkflows}
                       sessions={sessions}
                       jobs={jobs}
@@ -160,9 +161,10 @@ export default async function ProjectDetailPage({
                       projectId={project.projectId}
                       selectedPhase="github"
                       isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={readyForArchitectPayload}
+                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
                       pmSession={pmSession}
                       workflows={visibleActiveWorkflows}
+                      requirementWorkflows={sortedWorkflows}
                       doneWorkflows={doneWorkflows}
                       sessions={sessions}
                       jobs={jobs}
@@ -174,9 +176,10 @@ export default async function ProjectDetailPage({
                       projectId={project.projectId}
                       selectedPhase="operations"
                       isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={readyForArchitectPayload}
+                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
                       pmSession={pmSession}
                       workflows={visibleActiveWorkflows}
+                      requirementWorkflows={sortedWorkflows}
                       doneWorkflows={doneWorkflows}
                       sessions={sessions}
                       jobs={jobs}
@@ -264,6 +267,7 @@ function ThreePhaseWorkflowPanel(input: {
   readyForArchitectPayload: ProjectHandoffPayload;
   pmSession: AgentSessionRecord | undefined;
   workflows: WorkflowRecord[];
+  requirementWorkflows: WorkflowRecord[];
   doneWorkflows: WorkflowRecord[];
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
@@ -285,7 +289,8 @@ function ThreePhaseWorkflowPanel(input: {
         </Group>
         <Stack gap="xs" mt="sm">
           {input.pmSession ? <SessionLink session={input.pmSession} /> : <Text size="xs" c="dimmed">No PM session has been recorded yet.</Text>}
-          {!input.isInspectingIssueSession ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
+          {!input.isInspectingIssueSession && input.readyForArchitectPayload ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
+          {renderRequirementRows(input.projectId, input.requirementWorkflows)}
           {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
           {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
         </Stack>
@@ -527,6 +532,53 @@ function renderStepRunAction(projectId: string, jobs: JobRecord[], jobType: JobR
       </Group>
     </div>
   );
+}
+
+function renderRequirementRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
+  if (!workflows.length) return <Text size="xs" c="dimmed">No numbered requirements yet. Once PM confirms a requirement, the confirm action appears here.</Text>;
+  return workflows.slice(0, 6).map((workflow) => (
+    <a key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row">
+      <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+        <div style={{ minWidth: 0 }}>
+          <Text size="sm" fw={780} lineClamp={1}>Requirement ID: {workflow.trackingCode ?? workflow.workflowId}</Text>
+          <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
+        </div>
+        <Badge size="xs" variant="light" color={requirementStatusColor(workflow.status)}>{requirementStatusLabel(workflow.status)}</Badge>
+      </Group>
+    </a>
+  ));
+}
+
+function requirementStatusLabel(status: WorkflowRecord["status"]): string {
+  switch (status) {
+    case "created":
+    case "ready_for_architect":
+      return "Awaiting confirmation";
+    case "planned":
+      return "Awaiting GitHub intake";
+    case "transferred_to_github":
+      return "Tracked in GitHub";
+    case "in_progress":
+      return "In progress";
+    case "blocked":
+      return "Blocked";
+    case "done":
+      return "Done";
+  }
+}
+
+function requirementStatusColor(status: WorkflowRecord["status"]): string {
+  switch (status) {
+    case "blocked":
+      return "red";
+    case "done":
+      return "green";
+    case "created":
+    case "ready_for_architect":
+      return "blue";
+    default:
+      return "gray";
+  }
 }
 
 function CompletedWorkflowHistory({ projectId, workflows }: { projectId: string; workflows: WorkflowRecord[] }) {

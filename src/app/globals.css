@@ -593,6 +593,20 @@ pre,
   border-radius: 8px;
 }
 
+.requirement-row {
+  display: block;
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e0e7f0;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.requirement-row:hover {
+  border-color: #bfdbfe;
+}
+
 .workflow-step-action {
   padding: 10px 0;
   border-bottom: 1px solid #eef2f7;
