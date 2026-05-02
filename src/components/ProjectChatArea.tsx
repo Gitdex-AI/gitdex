@@ -389,7 +389,7 @@ function timelineMessagesForSession(session: AgentSessionRecord): Array<Timeline
     sourceRole: session.role,
     session
   } satisfies TimelineExecutionLog));
-  const lastAssistantIndex = findLastIndex(session.messages, (message) => message.role === "assistant");
+  const logsByMessageIndex = pairExecutionLogsWithAssistantMessages(session.messages, logs);
   const messages = session.messages.map((message, index) => ({
     ...message,
     kind: "message",
@@ -397,16 +397,42 @@ function timelineMessagesForSession(session: AgentSessionRecord): Array<Timeline
     sourceLabel: message.role === "user" ? `You → ${chatRoleLabel(session.role, session.title, session.developerRole)}` : chatRoleLabel(session.role, session.title, session.developerRole),
     sourceRole: session.role,
     session,
-    executionLogs: index === lastAssistantIndex ? logs : undefined
+    executionLogs: logsByMessageIndex.get(index)
   } satisfies TimelineMessage));
-  return lastAssistantIndex === -1 ? [...messages, ...logs] : messages;
+  const attachedLogs = new Set([...logsByMessageIndex.values()].flat());
+  const unattachedLogs = logs.filter((log) => !attachedLogs.has(log));
+  return [...messages, ...unattachedLogs];
 }
 
-function findLastIndex<T>(items: T[], predicate: (item: T) => boolean): number {
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    if (predicate(items[index])) return index;
+function pairExecutionLogsWithAssistantMessages(messages: AgentMessage[], logs: TimelineExecutionLog[]): Map<number, TimelineExecutionLog[]> {
+  const assistantIndexes = messages
+    .map((message, index) => ({ message, index }))
+    .filter((item) => item.message.role === "assistant");
+  const logsByMessageIndex = new Map<number, TimelineExecutionLog[]>();
+  const usedAssistantIndexes = new Set<number>();
+
+  for (const log of logs) {
+    const logTime = new Date(log.createdAt).getTime();
+    const match = assistantIndexes.find((item) => {
+      if (usedAssistantIndexes.has(item.index)) return false;
+      return new Date(item.message.createdAt).getTime() >= logTime;
+    }) ?? findLastUnusedAssistantIndex(assistantIndexes, usedAssistantIndexes);
+    if (!match) continue;
+    usedAssistantIndexes.add(match.index);
+    logsByMessageIndex.set(match.index, [...(logsByMessageIndex.get(match.index) ?? []), log]);
   }
-  return -1;
+  return logsByMessageIndex;
+}
+
+function findLastUnusedAssistantIndex(
+  assistantIndexes: Array<{ message: AgentMessage; index: number }>,
+  usedAssistantIndexes: Set<number>
+): { message: AgentMessage; index: number } | undefined {
+  for (let index = assistantIndexes.length - 1; index >= 0; index -= 1) {
+    const item = assistantIndexes[index];
+    if (!usedAssistantIndexes.has(item.index)) return item;
+  }
+  return undefined;
 }
 
 function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
