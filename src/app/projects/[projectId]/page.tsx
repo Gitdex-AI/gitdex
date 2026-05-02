@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/
 import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
+import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
 import { ProjectAutoSync } from "@/components/ProjectAutoSync";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
@@ -16,7 +17,6 @@ import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
 import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
 import { ProjectRunDeveloperIssueButton } from "@/components/ProjectRunDeveloperIssueButton";
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
-import { ProjectRunJobBatchButton } from "@/components/ProjectRunJobBatchButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -302,12 +302,11 @@ function ThreePhaseWorkflowPanel(input: {
   }
 
   if (input.selectedPhase === "github") {
-    const runnableBatch = getParallelIssueJobBatch(input.workflows, input.jobs);
     return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <Text size="xs" c="dimmed">GitHub issues drive development, QA, architect review, and merge.</Text>
-          <ProjectRunJobBatchButton projectId={input.projectId} jobIds={runnableBatch.jobIds} disabledReason={runnableBatch.reason} />
+          <ProjectAutoRunIssuesButton projectId={input.projectId} />
         </Group>
         <Stack gap="xs" mt="sm">
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions, input.jobs, input.queuedJobId)}
@@ -356,38 +355,6 @@ function filterSessionsForWorkflows(sessions: AgentSessionRecord[], workflows: W
     if (session.issueId && issueSessionIds.has(session.issueId)) return true;
     return issueSessionIds.has(session.sessionKey);
   });
-}
-
-function getParallelIssueJobBatch(workflows: WorkflowRecord[], jobs: JobRecord[]): { type: "issue_run" | "qa_run" | null; jobIds: string[]; reason: string } {
-  const issues = new Map(workflows.flatMap((workflow) => workflow.issues.map((issue) => [issue.issueId, issue] as const)));
-  const pendingRowsByIssue = new Map<string, { job: JobRecord & { type: "issue_run" | "qa_run" }; issue: IssueRecord }>();
-  jobs
-    .filter((job) => (job.type === "issue_run" || job.type === "qa_run") && job.status === "pending" && job.payload.issueId)
-    .map((job) => ({ job, issue: issues.get(job.payload.issueId ?? "") }))
-    .filter((row): row is { job: JobRecord & { type: "issue_run" | "qa_run" }; issue: IssueRecord } => Boolean(row.issue))
-    .forEach((row) => {
-      const existing = pendingRowsByIssue.get(row.issue.issueId);
-      if (!existing || Date.parse(row.job.updatedAt) > Date.parse(existing.job.updatedAt)) pendingRowsByIssue.set(row.issue.issueId, row);
-    });
-  const pendingRows = [...pendingRowsByIssue.values()];
-  const stage = pendingRows.some((row) => row.job.type === "issue_run") ? "issue_run" : pendingRows.some((row) => row.job.type === "qa_run") ? "qa_run" : null;
-  if (!stage) return { type: null, jobIds: [], reason: "No pending Dev or QA jobs." };
-
-  const stageRows = pendingRows.filter((row) => row.job.type === stage);
-  if (stageRows.length < 2) return { type: stage, jobIds: [], reason: "No parallel issues are ready in this stage." };
-  const minOrder = Math.min(...stageRows.map((row) => row.issue.executionOrder ?? Number.MAX_SAFE_INTEGER));
-  const sameOrderRows = stageRows.filter((row) => (row.issue.executionOrder ?? Number.MAX_SAFE_INTEGER) === minOrder);
-  const groupedRows = sameOrderRows.filter((row) => row.issue.parallelGroup);
-  if (groupedRows.length) {
-    const firstGroup = groupedRows[0]?.issue.parallelGroup;
-    const jobIds = groupedRows.filter((row) => row.issue.parallelGroup === firstGroup).map((row) => row.job.jobId);
-    return jobIds.length > 1 ? { type: stage, jobIds, reason: "" } : { type: stage, jobIds: [], reason: "No parallel issues are ready in this stage." };
-  }
-  if (sameOrderRows.length > 1 && minOrder !== Number.MAX_SAFE_INTEGER) return { type: stage, jobIds: sameOrderRows.map((row) => row.job.jobId), reason: "" };
-  const independentRows = stageRows.filter((row) => !(row.issue.dependsOn?.length));
-  return independentRows.length > 1
-    ? { type: stage, jobIds: independentRows.map((row) => row.job.jobId), reason: "" }
-    : { type: stage, jobIds: [], reason: "No parallel issues are ready in this stage." };
 }
 
 const highlightedCardStyle = {
