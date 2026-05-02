@@ -5,6 +5,7 @@ import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
+import { ProjectArchitectReviewButton } from "@/components/ProjectArchitectReviewButton";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
 import { ProjectHandoffToQaButton } from "@/components/ProjectHandoffToQaButton";
 import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
@@ -508,24 +509,28 @@ function renderQaIssueRows(projectId: string, workflows: WorkflowRecord[], sessi
 function renderMergeIssueRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
   const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"]));
   if (!issues.length) return <Text size="xs" c="dimmed">No QA-passed or ready-to-merge issues yet.</Text>;
-  return issues.map((issue) => (
-    <div key={issue.issueId} className="workflow-job-row">
-      <Group justify="space-between" gap="xs" wrap="nowrap">
-        <div style={{ minWidth: 0 }}>
-          <Text size="sm" fw={700} lineClamp={1}>{issue.title}</Text>
-          <Text size="xs" c="dimmed" mt={4}>
-            {issue.githubIssueNumber ? `Issue #${issue.githubIssueNumber}` : issue.issueId}
-            {issue.prState ? ` · PR ${issue.prState}` : ""}
-          </Text>
-        </div>
-        <Group gap={6} wrap="nowrap">
-          <Badge size="xs" color="green" variant="light">ready</Badge>
-          {issue.prUrl && issue.prState !== "MERGED" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
-          {issue.prUrl && issue.prState !== "MERGED" ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
+  return issues.map((issue) => {
+    const reviewed = hasAnyLabel(issue, ["taskix:ready-to-merge"]);
+    return (
+      <div key={issue.issueId} className="workflow-job-row">
+        <Group justify="space-between" gap="xs" wrap="nowrap">
+          <div style={{ minWidth: 0 }}>
+            <Text size="sm" fw={700} lineClamp={1}>{issue.title}</Text>
+            <Text size="xs" c="dimmed" mt={4}>
+              {issue.githubIssueNumber ? `Issue #${issue.githubIssueNumber}` : issue.issueId}
+              {issue.prState ? ` · PR ${issue.prState}` : ""}
+            </Text>
+          </div>
+          <Group gap={6} wrap="nowrap">
+            <Badge size="xs" color={reviewed ? "green" : "blue"} variant="light">{reviewed ? "reviewed" : "needs review"}</Badge>
+            {issue.prUrl && issue.prState !== "MERGED" ? <ProjectReturnToDeveloperButton projectId={projectId} issueId={issue.issueId} /> : null}
+            {issue.prUrl && issue.prState !== "MERGED" && !reviewed ? <ProjectArchitectReviewButton projectId={projectId} issueId={issue.issueId} /> : null}
+            {issue.prUrl && issue.prState !== "MERGED" && reviewed ? <ProjectMergePrButton projectId={projectId} issueId={issue.issueId} prUrl={issue.prUrl} /> : null}
+          </Group>
         </Group>
-      </Group>
-    </div>
-  ));
+      </div>
+    );
+  });
 }
 
 function renderCompletedWorkflowRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {

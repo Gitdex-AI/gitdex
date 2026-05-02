@@ -17,8 +17,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   if (issue.prState === "MERGED") return NextResponse.json({ ok: true, merged: true, issueId, prUrl: issue.prUrl });
 
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  const isReady = labels.has("qa-passed") || labels.has("taskix:qa-passed") || labels.has("taskix:ready-to-merge");
-  if (!isReady) return NextResponse.json({ error: "Issue is not QA-passed or ready to merge." }, { status: 409 });
+  const isReady = labels.has("taskix:ready-to-merge");
+  if (!isReady) {
+    return NextResponse.json({
+      error: "Architect code review must pass before merge.",
+      action: "Run Architect review after QA passes. Merge is only enabled after taskix:ready-to-merge is applied."
+    }, { status: 409 });
+  }
 
   const architectResult = await runArchitectMergeRequest(project, workflow, issue);
 
@@ -44,7 +49,7 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
     `PR labels: ${(issue.prLabels ?? []).join(", ") || "none"}`,
     `Recorded PR state: ${issue.prState ?? "unknown"}`,
     "",
-    "Handle this as architect now. Inspect the PR and current branch state. If it can be merged under the repository workflow, merge it and report the result. If it has conflicts or needs rework, explain the blocker and next action for developer or user follow-up."
+    "Handle this as architect now. This PR already passed QA and architect code review. Inspect the current branch state one last time. If it can be merged under the repository workflow, merge it and report the result. If it has conflicts or needs rework, explain the blocker and next action for developer or user follow-up."
   ].join("\n");
 
   workflow.timeline.push(`Requested architect merge handling for ${issue.issueId}.`);

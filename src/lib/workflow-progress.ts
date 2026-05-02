@@ -30,8 +30,8 @@ const stepCopy: Record<WorkflowProgressStepId, { label: string; detail: string }
     detail: "Run automated tests first, then verify the targeted browser flow."
   },
   merge: {
-    label: "5. Ready to merge",
-    detail: "Wait for QA pass and architect merge readiness."
+    label: "5. Architect review / merge",
+    detail: "Architect reviews code after QA passes, then handles merge readiness."
   },
   done: {
     label: "6. Done",

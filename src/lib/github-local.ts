@@ -341,7 +341,8 @@ Project: ${projectName}
 - Architect creates issues with developerRole and ownedPaths.
 - Developers must stay inside ownedPaths.
 - QA must validate every developer PR before merge.
-- Architect may merge only after QA passes.
+- Architect must perform code review after QA passes and before merge.
+- Architect may merge only after QA passes and code review is approved.
 - DevOps owns deployment setup, GitHub Actions/CD workflow, deployment secrets guidance, release automation, and rollback planning.
 - Automatic deployment is ${autoDeploy ? "enabled after merge when DevOps CD setup is ready." : "disabled until manual approval or DevOps enables CD."}
 ${end}`;
