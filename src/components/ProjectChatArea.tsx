@@ -229,9 +229,7 @@ function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: A
                   <span>{label} thinking ...({formatElapsed(startedAt)})</span>
                 </Text>
                 {outputTail ? (
-                  <pre className="running-agent-log" aria-label={`${label} live output`}>
-                    {outputTail}
-                  </pre>
+                  <RunningAgentLog label={label} output={outputTail} />
                 ) : (
                   <Text size="xs" c="dimmed" className="running-agent-waiting">
                     Waiting for Codex output...
@@ -243,6 +241,22 @@ function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: A
         </Stack>
       </div>
     </div>
+  );
+}
+
+function RunningAgentLog({ label, output }: { label: string; output: string }) {
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    const element = logRef.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+  }, [output]);
+
+  return (
+    <pre ref={logRef} className="running-agent-log" aria-label={`${label} live output`}>
+      {output}
+    </pre>
   );
 }
 
