@@ -381,6 +381,12 @@ export async function appendAgentMessages(input: {
 }): Promise<AgentSessionRecord> {
   const now = new Date().toISOString();
   const existing = await getAgentSession(input.sessionKey);
+  const contextChanged = Boolean(existing) && (
+    Boolean(input.workflowId && input.workflowId !== existing?.workflowId) ||
+    Boolean(input.issueId && input.issueId !== existing?.issueId) ||
+    Boolean(input.prUrl && input.prUrl !== existing?.prUrl)
+  );
+  const resetLifecycle = contextChanged || input.status === "active";
   const session: AgentSessionRecord = {
     sessionKey: input.sessionKey,
     projectId: input.projectId,
@@ -393,16 +399,16 @@ export async function appendAgentMessages(input: {
     developerRole: input.developerRole ?? existing?.developerRole ?? null,
     ownedPaths: input.ownedPaths ?? existing?.ownedPaths ?? [],
     currentStep: input.currentStep ?? existing?.currentStep ?? null,
-    startedAt: input.startedAt ?? existing?.startedAt ?? null,
-    finishedAt: input.finishedAt ?? existing?.finishedAt ?? null,
-    durationMs: input.durationMs ?? existing?.durationMs ?? null,
+    startedAt: input.startedAt ?? (resetLifecycle ? null : existing?.startedAt ?? null),
+    finishedAt: input.finishedAt ?? (resetLifecycle ? null : existing?.finishedAt ?? null),
+    durationMs: input.durationMs ?? (resetLifecycle ? null : existing?.durationMs ?? null),
     githubIssueNumber: input.githubIssueNumber ?? existing?.githubIssueNumber ?? null,
     githubIssueUrl: input.githubIssueUrl ?? existing?.githubIssueUrl ?? null,
     prUrl: input.prUrl ?? existing?.prUrl ?? null,
     labels: input.labels ?? existing?.labels ?? [],
     lastSyncedAt: input.lastSyncedAt ?? existing?.lastSyncedAt ?? null,
-    closedAt: input.closedAt ?? existing?.closedAt ?? null,
-    archivedAt: input.archivedAt ?? existing?.archivedAt ?? null,
+    closedAt: input.closedAt ?? (resetLifecycle ? null : existing?.closedAt ?? null),
+    archivedAt: input.archivedAt ?? (resetLifecycle ? null : existing?.archivedAt ?? null),
     messages: [...(existing?.messages ?? []), ...input.messages],
     executionLogs: [...(existing?.executionLogs ?? []), ...(input.executionLogs ?? [])],
     updatedAt: now

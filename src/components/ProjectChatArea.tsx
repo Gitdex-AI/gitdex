@@ -293,7 +293,7 @@ function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): 
 
 function runningJobIssueLabel(job: JobRecord, session: AgentSessionRecord | null, workflows: WorkflowRecord[]): string | null {
   const issue = findWorkflowIssue(job.payload.issueId ?? null, workflows);
-  const issueNumber = session?.githubIssueNumber ?? issue?.githubIssueNumber ?? null;
+  const issueNumber = issue?.githubIssueNumber ?? session?.githubIssueNumber ?? null;
   if (issueNumber) return `issue #${issueNumber}`;
   if (job.payload.issueId) return `issue ${job.payload.issueId}`;
   if (job.type === "workflow_run") return `requirement ${job.payload.workflowId}`;
