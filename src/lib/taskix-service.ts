@@ -1,0 +1,181 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+export type TaskixServiceManager = "systemctl" | "launchctl" | "pm2";
+
+export type TaskixServiceRestartResult = {
+  ok: boolean;
+  manager: TaskixServiceManager | null;
+  serviceName: string | null;
+  stdout: string;
+  stderr: string;
+  error: string | null;
+};
+
+export type TaskixServiceRestartResponse = TaskixServiceRestartResult & {
+  status: number;
+  restartRequested: boolean;
+};
+
+type RestartCommand = {
+  manager: TaskixServiceManager;
+  bin: string;
+  args: string[];
+  serviceName: string;
+};
+
+type ServiceRestarter = (command: RestartCommand) => Promise<TaskixServiceRestartResult>;
+type RestartGuardResult = { ok: true } | { ok: false; status: number; error: string };
+
+let serviceRestarter: ServiceRestarter = runRestartCommand;
+
+export async function requestTaskixServiceRestart<TSource>(input: {
+  source: TSource;
+  guard: (source: TSource) => RestartGuardResult;
+  consumeRestartAvailability: () => boolean;
+}): Promise<TaskixServiceRestartResponse> {
+  const guard = input.guard(input.source);
+  if (!guard.ok) {
+    return {
+      ok: false,
+      status: guard.status,
+      restartRequested: false,
+      manager: null,
+      serviceName: null,
+      stdout: "",
+      stderr: "",
+      error: guard.error
+    };
+  }
+
+  if (!input.consumeRestartAvailability()) {
+    return {
+      ok: false,
+      status: 409,
+      restartRequested: false,
+      manager: null,
+      serviceName: null,
+      stdout: "",
+      stderr: "",
+      error: "Restart is not available until self-update completes successfully."
+    };
+  }
+
+  const result = await restartTaskixService();
+  return {
+    ...result,
+    status: result.ok ? 200 : result.manager ? 500 : 503,
+    restartRequested: result.ok
+  };
+}
+
+export async function restartTaskixService(env: NodeJS.ProcessEnv = process.env): Promise<TaskixServiceRestartResult> {
+  const config = getTaskixServiceRestartCommand(env);
+  if (!config.ok) {
+    return {
+      ok: false,
+      manager: null,
+      serviceName: null,
+      stdout: "",
+      stderr: "",
+      error: config.error
+    };
+  }
+
+  return serviceRestarter(config.command);
+}
+
+export function getTaskixServiceRestartCommand(env: NodeJS.ProcessEnv = process.env) {
+  const manager = env.TASKIX_NEXT_SERVICE_MANAGER;
+  const serviceName = env.TASKIX_NEXT_SERVICE_NAME?.trim() ?? "";
+
+  if (!isTaskixServiceManager(manager)) {
+    return {
+      ok: false as const,
+      error: "Taskix service restart is not configured. Set TASKIX_NEXT_SERVICE_MANAGER to systemctl, launchctl, or pm2."
+    };
+  }
+
+  if (!isTaskixServiceName(serviceName)) {
+    return {
+      ok: false as const,
+      error: "Taskix service restart requires TASKIX_NEXT_SERVICE_NAME to identify the Taskix Next.js service."
+    };
+  }
+
+  return {
+    ok: true as const,
+    command: buildRestartCommand(manager, serviceName)
+  };
+}
+
+export function setTaskixServiceRestarterForTests(restarter: ServiceRestarter) {
+  serviceRestarter = restarter;
+}
+
+export function resetTaskixServiceRestarterForTests() {
+  serviceRestarter = runRestartCommand;
+}
+
+function buildRestartCommand(manager: TaskixServiceManager, serviceName: string): RestartCommand {
+  if (manager === "systemctl") {
+    return { manager, bin: "systemctl", args: ["restart", serviceName], serviceName };
+  }
+
+  if (manager === "launchctl") {
+    return { manager, bin: "launchctl", args: ["kickstart", "-k", serviceName], serviceName };
+  }
+
+  return { manager, bin: "pm2", args: ["restart", serviceName], serviceName };
+}
+
+function isTaskixServiceManager(value: string | undefined): value is TaskixServiceManager {
+  return value === "systemctl" || value === "launchctl" || value === "pm2";
+}
+
+function isTaskixServiceName(value: string) {
+  // This endpoint is intentionally not a general service-control API.
+  return /^[a-zA-Z0-9._:@-]+$/.test(value) && value.toLowerCase().includes("taskix");
+}
+
+async function runRestartCommand(command: RestartCommand): Promise<TaskixServiceRestartResult> {
+  try {
+    const { stdout, stderr } = await execFileAsync(command.bin, command.args, {
+      maxBuffer: 1024 * 1024 * 2
+    });
+
+    return {
+      ok: true,
+      manager: command.manager,
+      serviceName: command.serviceName,
+      stdout,
+      stderr,
+      error: null
+    };
+  } catch (error) {
+    const failure = error as {
+      stdout?: string | Buffer;
+      stderr?: string | Buffer;
+      message?: string;
+    };
+
+    return {
+      ok: false,
+      manager: command.manager,
+      serviceName: command.serviceName,
+      stdout: stringifyOutput(failure.stdout),
+      stderr: stringifyOutput(failure.stderr),
+      error: failure.message ?? "Taskix service restart failed."
+    };
+  }
+}
+
+function stringifyOutput(value: string | Buffer | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return Buffer.isBuffer(value) ? value.toString("utf8") : value;
+}
