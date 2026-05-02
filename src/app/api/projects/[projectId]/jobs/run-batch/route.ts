@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { runJobsById } from "@/lib/job-runner";
 import { getProject } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 type RunBatchRequest = {
   jobIds?: string[];
 };
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });

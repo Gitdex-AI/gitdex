@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSettings, saveSettings } from "@/lib/settings";
 import type { Settings } from "@/lib/types";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(request: Request) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const form = await request.formData();
   const current = await getSettings();
   const settings: Settings = {

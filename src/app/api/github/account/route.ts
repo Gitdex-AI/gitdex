@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { ensureGitHubSshKey } from "@/lib/github-local";
 import { getSettings, saveSettings } from "@/lib/settings";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(request: Request) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const form = await request.formData();
   const owner = String(form.get("githubUsername") ?? "").trim();
   if (!owner) {

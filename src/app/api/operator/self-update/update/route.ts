@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 import {
   runOperatorSelfUpdateAndRestart,
   selfUpdateOperatorNonceCookieName
@@ -10,6 +11,8 @@ type OperatorUpdatePayload = {
 };
 
 export async function POST(request: NextRequest) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   let payload: OperatorUpdatePayload = {};
 
   try {

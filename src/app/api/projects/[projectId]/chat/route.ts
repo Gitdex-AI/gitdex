@@ -3,8 +3,11 @@ import { CodexClient } from "@/lib/codex";
 import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, getAgentSession, getProject, saveProject } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const form = await request.formData();
   const rawMessage = String(form.get("message") ?? "").trim();

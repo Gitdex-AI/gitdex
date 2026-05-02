@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { TelegramClient } from "@/lib/telegram";
 import type { Settings } from "@/lib/types";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(request: Request) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const form = await request.formData();
   const current = await getSettings();
   const settings: Settings = {
@@ -33,6 +36,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const settings = await getSettings();
   if (!settings.telegramBotToken) {
     return NextResponse.json({ error: "Missing Telegram bot token" }, { status: 400 });

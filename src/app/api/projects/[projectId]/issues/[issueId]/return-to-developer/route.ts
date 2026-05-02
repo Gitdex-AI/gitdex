@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 const removeReadyLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked"];
 const addDeveloperLabels = ["taskix:dev-running"];
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId, issueId } = await params;
   const project = await getProject(projectId);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });

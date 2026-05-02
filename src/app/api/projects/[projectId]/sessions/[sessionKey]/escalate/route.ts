@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createJob, getAgentSession, getProject, listJobs } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; sessionKey: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId, sessionKey } = await params;
   const decodedSessionKey = decodeURIComponent(sessionKey);
   const [project, session] = await Promise.all([getProject(projectId), getAgentSession(decodedSessionKey)]);

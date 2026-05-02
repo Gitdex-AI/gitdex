@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { upsertAgentsFileWithGh, verifyLocalGitHubRepo } from "@/lib/github-local";
 import { getSettings } from "@/lib/settings";
 import { createProject, listProjects } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function GET() {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const projects = await listProjects();
   return NextResponse.json(
     projects.map(({ githubAccessToken: _githubAccessToken, ...project }) => project)
@@ -11,6 +14,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const form = await request.formData();
   const projectName = String(form.get("projectName") ?? "").trim();
   const githubRepo = String(form.get("githubRepo") ?? "").trim();

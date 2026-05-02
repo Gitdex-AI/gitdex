@@ -1,5 +1,6 @@
 import { subscribeProjectJobEvents } from "@/lib/job-events";
 import { getProject, listJobs } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ function encodeEvent(event: string, data: unknown): Uint8Array {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await context.params;
   const project = await getProject(projectId);
   if (!project) return new Response("Project not found.", { status: 404 });

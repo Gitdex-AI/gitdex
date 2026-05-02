@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { getProjectTriageWithGh } from "@/lib/github-local";
 import { getProject } from "@/lib/store";
 import type { ProjectTriageGroup, ProjectTriageResponse } from "@/lib/types";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 const triageGroups: ProjectTriageGroup[] = ["blocked", "needs_qa", "ready_to_merge", "in_progress", "done", "untracked"];
 
 export async function GET(_request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
   if (!project) {

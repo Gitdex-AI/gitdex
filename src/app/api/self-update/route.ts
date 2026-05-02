@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildSelfUpdateState, mintSelfUpdateOperatorIntent } from "@/lib/self-update";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function GET(request: NextRequest) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const operatorIntent = mintSelfUpdateOperatorIntent();
   const response = NextResponse.json(buildSelfUpdateState(request, operatorIntent));
 

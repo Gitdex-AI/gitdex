@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { cancelAutoRunJobs, getAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
 import { getProject } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
@@ -10,6 +13,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });

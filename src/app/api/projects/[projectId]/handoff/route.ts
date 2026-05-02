@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { createWorkflow } from "@/lib/orchestrator";
 import { findReadyForArchitectPayload, formatPmHandoffPayload, parseReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { createJob, getAgentSession, getProject } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
   if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);

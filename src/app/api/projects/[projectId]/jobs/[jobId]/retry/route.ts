@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createJob, getJob, getProject, getWorkflow, saveJob, saveWorkflow } from "@/lib/store";
+import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(_request: Request, context: { params: Promise<unknown> }) {
+  const unauthorized = await requireConsoleApiAuth();
+  if (unauthorized) return unauthorized;
   const { projectId, jobId } = await context.params as { projectId: string; jobId: string };
   const [project, job] = await Promise.all([getProject(projectId), getJob(jobId)]);
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
