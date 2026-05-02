@@ -12,6 +12,7 @@ import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
 import { ProjectPhaseSwitcher } from "@/components/ProjectPhaseSwitcher";
 import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
 import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
+import { ProjectRunDeveloperIssueButton } from "@/components/ProjectRunDeveloperIssueButton";
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
 import { ProjectRunJobBatchButton } from "@/components/ProjectRunJobBatchButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
@@ -774,7 +775,7 @@ function renderIssueStageAction(input: {
   if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
   if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />;
-  if (!input.issue.prUrl && input.completedDeveloperJob) return <ProjectRetryJobButton projectId={input.projectId} jobId={input.completedDeveloperJob.jobId} label="Run Dev" />;
+  if (!input.issue.prUrl && input.completedDeveloperJob) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   return null;
 }
 
