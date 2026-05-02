@@ -560,11 +560,19 @@ pre,
 }
 
 .phase-stat {
+  display: block;
   min-width: 0;
   padding: 10px;
   background: #f8fafc;
   border: 1px solid #e0e7f0;
   border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.phase-stat.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
 }
 
 .phase-panel {

@@ -32,7 +32,7 @@ export default async function ProjectDetailPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ role?: string; session?: string; error?: string; autorun?: string; workflow?: string; job?: string; queued?: string }>;
+  searchParams: Promise<{ role?: string; session?: string; error?: string; autorun?: string; workflow?: string; job?: string; queued?: string; phase?: string }>;
 }) {
   const [{ projectId }, query] = await Promise.all([params, searchParams]);
   const project = await getProject(projectId);
@@ -66,6 +66,7 @@ export default async function ProjectDetailPage({
     ? sortedWorkflows.some((workflow) => workflow.userRequirement === formatPmHandoffPayload(readyForArchitectPayload))
     : false;
   const hasUnqueuedPmHandoff = Boolean(readyForArchitectPayload && !hasMatchingPmHandoffWorkflow && !queuedWorkflow && !isInspectingIssueSession);
+  const selectedPhase = normalizeSelectedPhase(query.phase, hasUnqueuedPmHandoff);
   const workflowPanelWorkflows = hasUnqueuedPmHandoff ? [] : latestWorkflow ? [latestWorkflow] : [];
   const workflowPanelJobs = filterJobsForWorkflows(jobs, workflowPanelWorkflows);
   const workflowPanelSessions = filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
@@ -135,9 +136,10 @@ export default async function ProjectDetailPage({
             </Group>
             <Stack p="md">
               <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
-              <ProjectPhaseSummary workflows={sortedWorkflows} jobs={jobs} />
+              <ProjectPhaseSummary projectId={project.projectId} workflows={sortedWorkflows} jobs={jobs} selectedPhase={selectedPhase} />
               <ThreePhaseWorkflowPanel
                 projectId={project.projectId}
+                selectedPhase={selectedPhase}
                 isInspectingIssueSession={isInspectingIssueSession}
                 readyForArchitectPayload={readyForArchitectPayload}
                 pmSession={pmSession}
@@ -192,7 +194,24 @@ function prioritizeById<T extends { workflowId?: string; jobId?: string }>(items
   });
 }
 
-function ProjectPhaseSummary({ workflows, jobs }: { workflows: WorkflowRecord[]; jobs: JobRecord[] }) {
+type WorkflowPhase = "requirements" | "github" | "operations";
+
+function normalizeSelectedPhase(value: string | undefined, hasUnqueuedPmHandoff: boolean): WorkflowPhase {
+  if (value === "requirements" || value === "github" || value === "operations") return value;
+  return hasUnqueuedPmHandoff ? "requirements" : "github";
+}
+
+function ProjectPhaseSummary({
+  projectId,
+  workflows,
+  jobs,
+  selectedPhase
+}: {
+  projectId: string;
+  workflows: WorkflowRecord[];
+  jobs: JobRecord[];
+  selectedPhase: WorkflowPhase;
+}) {
   const requirementCount = workflows.filter((workflow) => !workflow.issues.length || workflow.status === "created" || workflow.status === "ready_for_architect").length;
   const githubIssues = workflows.flatMap((workflow) => workflow.issues);
   const activeGithubIssues = githubIssues.filter((issue) => issue.githubState !== "CLOSED" && issue.prState !== "MERGED").length;
@@ -201,25 +220,40 @@ function ProjectPhaseSummary({ workflows, jobs }: { workflows: WorkflowRecord[];
 
   return (
     <div className="phase-summary">
-      <PhaseStat title="Requirements" value={requirementCount} detail="PM to architect handoff" />
-      <PhaseStat title="GitHub issues" value={activeGithubIssues} detail={`${readyJobs} ready job${readyJobs === 1 ? "" : "s"}`} />
-      <PhaseStat title="Operations" value={opsJobs} detail="DevOps events after merge" />
+      <PhaseStat projectId={projectId} phase="requirements" selectedPhase={selectedPhase} title="Requirements" value={requirementCount} detail="PM to architect handoff" />
+      <PhaseStat projectId={projectId} phase="github" selectedPhase={selectedPhase} title="GitHub issues" value={activeGithubIssues} detail={`${readyJobs} ready job${readyJobs === 1 ? "" : "s"}`} />
+      <PhaseStat projectId={projectId} phase="operations" selectedPhase={selectedPhase} title="Operations" value={opsJobs} detail="DevOps events after merge" />
     </div>
   );
 }
 
-function PhaseStat({ title, value, detail }: { title: string; value: number; detail: string }) {
+function PhaseStat({
+  projectId,
+  phase,
+  selectedPhase,
+  title,
+  value,
+  detail
+}: {
+  projectId: string;
+  phase: WorkflowPhase;
+  selectedPhase: WorkflowPhase;
+  title: string;
+  value: number;
+  detail: string;
+}) {
   return (
-    <div className="phase-stat">
+    <a href={`/projects/${projectId}?phase=${phase}`} className={`phase-stat${selectedPhase === phase ? " active" : ""}`}>
       <Text size="xs" fw={780}>{title}</Text>
       <Text size="lg" fw={820}>{value}</Text>
       <Text size="xs" c="dimmed">{detail}</Text>
-    </div>
+    </a>
   );
 }
 
 function ThreePhaseWorkflowPanel(input: {
   projectId: string;
+  selectedPhase: WorkflowPhase;
   isInspectingIssueSession: boolean;
   readyForArchitectPayload: ProjectHandoffPayload;
   pmSession: AgentSessionRecord | undefined;
@@ -233,8 +267,8 @@ function ThreePhaseWorkflowPanel(input: {
   const githubJobs = input.jobs.filter((job) => job.type === "issue_run" || job.type === "qa_run");
   const devopsSessions = input.sessions.filter((session) => session.role === "devops");
 
-  return (
-    <Stack gap="md">
+  if (input.selectedPhase === "requirements") {
+    return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <div>
@@ -250,7 +284,11 @@ function ThreePhaseWorkflowPanel(input: {
           {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
         </Stack>
       </section>
+    );
+  }
 
+  if (input.selectedPhase === "github") {
+    return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <div>
@@ -264,7 +302,10 @@ function ThreePhaseWorkflowPanel(input: {
           {renderGithubIssueRows(input.projectId, input.workflows, input.sessions)}
         </Stack>
       </section>
+    );
+  }
 
+  return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm">
           <div>
@@ -280,7 +321,6 @@ function ThreePhaseWorkflowPanel(input: {
           <CompletedWorkflowHistory projectId={input.projectId} workflows={input.doneWorkflows} />
         </Stack>
       </section>
-    </Stack>
   );
 }
 
