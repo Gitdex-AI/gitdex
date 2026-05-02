@@ -582,11 +582,11 @@ pre,
 
 .phase-panel {
   margin-top: 8px;
-  padding: 12px;
-  background: #fbfdff;
-  border: 1px solid #93c5fd;
-  border-radius: 8px;
-  box-shadow: inset 0 2px 0 #bfdbfe;
+  padding: 10px 0 0;
+  background: transparent;
+  border-top: 2px solid #bfdbfe;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .github-issue-row {
