@@ -8,11 +8,13 @@ import { useState } from "react";
 export function ProjectRunJobBatchButton({
   projectId,
   jobIds,
-  label = "Run All"
+  label = "Run All",
+  disabledReason
 }: {
   projectId: string;
   jobIds: string[];
   label?: string;
+  disabledReason?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -38,7 +40,7 @@ export function ProjectRunJobBatchButton({
 
   return (
     <>
-      <Button type="button" variant="light" size="compact-xs" radius="xl" leftSection={<Play size={14} />} loading={pending} disabled={!jobIds.length} onClick={runBatch}>
+      <Button type="button" variant="light" size="compact-xs" radius="xl" leftSection={<Play size={14} />} loading={pending} disabled={!jobIds.length} onClick={runBatch} title={!jobIds.length ? disabledReason : undefined}>
         {label}
       </Button>
       {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
