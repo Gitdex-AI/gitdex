@@ -68,6 +68,25 @@ test("forwarding headers do not prove a localhost caller", () => {
   assert.equal(selfUpdateGuard(new Headers({ "x-forwarded-for": "127.0.0.1" })).ok, false);
 });
 
+test("route-shaped localhost requests are accepted without trusting forwarded caller headers", () => {
+  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+
+  assert.equal(
+    isLocalhostRequest({
+      headers: new Headers({ host: "127.0.0.1:8000" }),
+      url: "http://127.0.0.1:8000/api/self-update"
+    }),
+    true
+  );
+  assert.equal(
+    selfUpdateGuard({
+      headers: new Headers({ "x-forwarded-for": "127.0.0.1", host: "127.0.0.1:8000" }),
+      url: "http://127.0.0.1:8000/api/self-update"
+    }).ok,
+    false
+  );
+});
+
 test("localhost detection accepts loopback address forms", () => {
   assert.equal(isLocalhostRequest(localRequest("127.0.0.1")), true);
   assert.equal(isLocalhostRequest(localRequest("::1")), true);
