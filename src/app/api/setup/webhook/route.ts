@@ -23,7 +23,10 @@ export async function POST(request: Request) {
     githubApiUrl: String(form.get("githubApiUrl") ?? "https://api.github.com").trim(),
     githubUsername: current.githubUsername,
     githubSshPrivateKeyPath: current.githubSshPrivateKeyPath,
-    githubSshPublicKey: current.githubSshPublicKey
+    githubSshPublicKey: current.githubSshPublicKey,
+    worktreeRetentionDays: current.worktreeRetentionDays,
+    autoCleanupCompletedWorktrees: current.autoCleanupCompletedWorktrees,
+    rebuildWorktreeOnEnvironmentBlocked: current.rebuildWorktreeOnEnvironmentBlocked
   };
   await saveSettings(settings);
 

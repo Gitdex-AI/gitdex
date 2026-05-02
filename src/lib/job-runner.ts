@@ -4,6 +4,8 @@ import { runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } 
 import { runWithJobRuntime } from "@/lib/job-runtime";
 import { claimNextPendingJob, claimPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
 import type { JobRecord } from "@/lib/types";
+import { getSettings } from "@/lib/settings";
+import { cleanupInactiveWorktrees } from "@/lib/worktree-manager";
 
 export async function runNextJob(projectId?: string): Promise<{ job: JobRecord | null; ran: boolean }> {
   const job = await claimNextPendingJob(projectId);
@@ -79,5 +81,16 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
   job.updatedAt = new Date().toISOString();
   job.runtime = { ...(job.runtime ?? {}), ...(latestJob?.runtime ?? {}), finishedAt: skipped ? latestJob?.runtime?.finishedAt ?? job.runtime?.finishedAt ?? null : job.updatedAt };
   await saveJob(job);
+  await cleanupCompletedWorktreesIfEnabled();
   return { job, ran: !skipped };
+}
+
+async function cleanupCompletedWorktreesIfEnabled(): Promise<void> {
+  try {
+    const settings = await getSettings();
+    if (!settings.autoCleanupCompletedWorktrees) return;
+    await cleanupInactiveWorktrees(settings.worktreeRetentionDays);
+  } catch {
+    // Cleanup is opportunistic and should not affect workflow job outcomes.
+  }
 }

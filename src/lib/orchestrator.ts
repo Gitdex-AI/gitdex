@@ -7,9 +7,11 @@ import { GitHubClient } from "@/lib/github";
 import { addLabelsWithGh, commentIssueWithGh, commentPullRequestWithGh, createIssueWithGh, createPullRequestWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh, updateIssueWithGh } from "@/lib/github-local";
 import { findDependencyIssue, isDependencySatisfied, normalizeIssueDependenciesToNumbers } from "@/lib/issue-dependencies";
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
+import { getActiveJobId } from "@/lib/job-runtime";
 import { getSettings } from "@/lib/settings";
-import { appendAgentMessages, cancelPendingJobs, createJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
+import { appendAgentMessages, cancelPendingJobs, createJob, getJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { DeveloperIssueResult, IssueRecord, IssueSpec, ProjectRecord, QaPrReviewResult, WorkflowRecord } from "@/lib/types";
+import { rebuildDeveloperWorktree } from "@/lib/worktree-manager";
 
 const execFileAsync = promisify(execFile);
 
@@ -420,7 +422,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     timeline.push(`Developer returned a non-PR URL for issue ${issue.issueId}; Taskix will create or recover the pull request from branch ${developerResult.branch || "unknown"}.`);
     developerResult.prUrl = "";
   }
-  if (!developerResult.prUrl && developerResult.blockedType !== "spec") {
+  if (!developerResult.prUrl && developerResult.blockedType === "none") {
     const recovery = await recoverDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult.branch);
     if (recovery) {
       developerResult.prUrl = recovery.prUrl;
@@ -429,7 +431,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       timeline.push(`Recovered existing PR context for issue ${issue.issueId} via ${recovery.source}; base ${recovery.base ?? "repository default branch"}.`);
     }
   }
-  if (!developerResult.prUrl && developerResult.branch && developerResult.blockedType !== "spec") {
+  if (!developerResult.prUrl && developerResult.branch && developerResult.blockedType === "none") {
     try {
       developerResult.prUrl = await createDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult);
       timeline.push(`Taskix created PR ${developerResult.prUrl} for issue ${issue.issueId} from branch ${developerResult.branch}.`);
@@ -496,6 +498,29 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   timeline.push(developerResult.prUrl ? `Developer opened PR ${developerResult.prUrl} for issue ${issue.issueId}.` : `Developer did not return a PR for issue ${issue.issueId}.`);
 
   if (!developerResult.prUrl) {
+    const recovered = await maybeRebuildEnvironmentBlockedWorktree({
+      project,
+      workflow,
+      issue,
+      developerResult
+    });
+    if (recovered) {
+      timeline.push(recovered);
+      return {
+        timeline,
+        releaseNote: {
+          issueId: issue.issueId,
+          issueTitle: issue.title,
+          developerRole: issue.developerRole ?? issue.assigneeRole,
+          ownedPaths,
+          developerSummary: developerResult.summary,
+          blocked: false,
+          reason: "Developer environment blocked; worktree rebuilt and developer retry queued"
+        },
+        blocked: false
+      };
+    }
+
     const blockedLabels = developerResult.blockedType === "spec" ? ["taskix:spec-blocked", "taskix:blocked"] : ["taskix:blocked"];
     const blockedCleanupLabels = ["taskix:dev-running", "taskix:qa-failed", "qa-failed"];
     issue.labels = [...new Set([...(issue.labels ?? []).filter((label) => !blockedCleanupLabels.includes(label.toLowerCase())), ...blockedLabels])];
@@ -663,6 +688,65 @@ async function createDeveloperPullRequest(repo: string, issue: IssueRecord, work
 
 function isPullRequestUrl(value: string): boolean {
   return /\/pull\/\d+(?:\D|$)/.test(value);
+}
+
+async function maybeRebuildEnvironmentBlockedWorktree(input: {
+  project: ProjectRecord;
+  workflow: WorkflowRecord;
+  issue: IssueRecord;
+  developerResult: DeveloperIssueResult;
+}): Promise<string | null> {
+  if (input.developerResult.blockedType !== "environment") return null;
+  if (!input.project.githubRepo || !input.issue.githubIssueNumber) return null;
+  const settings = await getSettings();
+  if (!settings.rebuildWorktreeOnEnvironmentBlocked) return null;
+
+  const activeJobId = getActiveJobId();
+  const activeJob = activeJobId ? await getJob(activeJobId) : null;
+  if ((activeJob?.payload.worktreeRecoveryAttempt ?? 0) > 0) return null;
+
+  const branch = input.developerResult.branch || expectedDeveloperBranch(displayWorkflowCode(input.workflow), input.issue.githubIssueNumber);
+  const rebuilt = await rebuildDeveloperWorktree({
+    repo: input.project.githubRepo,
+    workflowCode: displayWorkflowCode(input.workflow),
+    issueNumberOrId: input.issue.githubIssueNumber,
+    branch,
+    baseBranch: expectedDeveloperBaseBranch()
+  });
+  if (!rebuilt.rebuilt) return `Developer environment blocked for ${input.issue.issueId}; worktree rebuild failed: ${rebuilt.error ?? "unknown error"}.`;
+
+  input.issue.branch = branch;
+  input.issue.labels = [...new Set([...(input.issue.labels ?? []).filter((label) => label.toLowerCase() !== "taskix:blocked"), "taskix:dev-running"])];
+  input.workflow.status = "in_progress";
+  input.workflow.timeline.push(`Rebuilt developer worktree for ${input.issue.issueId}${rebuilt.archivedDir ? `; archived previous workspace at ${rebuilt.archivedDir}.` : "."}`);
+  await saveWorkflow(input.workflow);
+  await createJob({
+    projectId: input.project.projectId,
+    type: "issue_run",
+    payload: {
+      workflowId: input.workflow.workflowId,
+      issueId: input.issue.issueId,
+      branch,
+      returnedFromQa: false,
+      previousPrUrl: input.issue.prUrl ?? null,
+      worktreeRecoveryAttempt: (activeJob?.payload.worktreeRecoveryAttempt ?? 0) + 1
+    }
+  });
+  if (input.issue.githubIssueNumber) {
+    try {
+      await removeLabelsWithGh(input.project.githubRepo, input.issue.githubIssueNumber, ["taskix:blocked"]);
+      await addLabelsWithGh(input.project.githubRepo, input.issue.githubIssueNumber, ["taskix:dev-running"]);
+      await commentIssueWithGh(input.project.githubRepo, input.issue.githubIssueNumber, [
+        "Taskix rebuilt the developer worktree after an environment blocker.",
+        "",
+        `Archived previous workspace: ${rebuilt.archivedDir ?? "none"}`,
+        `Retry branch: ${branch}`
+      ].join("\n"));
+    } catch (error) {
+      input.workflow.timeline.push(`Worktree rebuild for ${input.issue.issueId} succeeded, but GitHub label/comment update failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return `Developer environment blocked for ${input.issue.issueId}; rebuilt worktree and queued developer retry.`;
 }
 
 async function publishDeveloperPrStateToGitHub(repo: string, issue: IssueRecord, prUrl: string): Promise<void> {

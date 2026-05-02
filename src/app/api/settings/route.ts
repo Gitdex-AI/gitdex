@@ -22,8 +22,17 @@ export async function POST(request: Request) {
     githubApiUrl: String(form.get("githubApiUrl") ?? "https://api.github.com").trim(),
     githubUsername: current.githubUsername,
     githubSshPrivateKeyPath: current.githubSshPrivateKeyPath,
-    githubSshPublicKey: current.githubSshPublicKey
+    githubSshPublicKey: current.githubSshPublicKey,
+    worktreeRetentionDays: normalizeRetentionDays(form.get("worktreeRetentionDays")),
+    autoCleanupCompletedWorktrees: form.get("autoCleanupCompletedWorktrees") === "on",
+    rebuildWorktreeOnEnvironmentBlocked: form.get("rebuildWorktreeOnEnvironmentBlocked") === "on"
   };
   await saveSettings(settings);
   return NextResponse.redirect(new URL("/settings?message=Settings%20saved.", request.url), { status: 303 });
+}
+
+function normalizeRetentionDays(value: FormDataEntryValue | null): number {
+  const days = Number(value);
+  if (!Number.isFinite(days)) return 7;
+  return Math.max(1, Math.min(365, Math.round(days)));
 }

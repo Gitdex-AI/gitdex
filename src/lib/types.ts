@@ -35,6 +35,9 @@ export type Settings = {
   githubUsername: string;
   githubSshPrivateKeyPath: string;
   githubSshPublicKey: string;
+  worktreeRetentionDays: number;
+  autoCleanupCompletedWorktrees: boolean;
+  rebuildWorktreeOnEnvironmentBlocked: boolean;
 };
 
 export type IssueSpec = {
@@ -238,6 +241,7 @@ export type JobRecord = {
     returnedFromQa?: boolean | null;
     previousPrUrl?: string | null;
     sessionKey?: string | null;
+    worktreeRecoveryAttempt?: number | null;
   };
 };
 

@@ -1,5 +1,5 @@
-import { Alert, Badge, Button, Code, Group, Paper, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
-import { GitBranch, Info, KeyRound, Save, Webhook, Wrench } from "lucide-react";
+import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, Paper, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
+import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { getSettings } from "@/lib/settings";
 
@@ -107,12 +107,27 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </SimpleGrid>
             <PasswordInput name="githubToken" label="GitHub Token" defaultValue={settings.githubToken} placeholder="ghp_..." />
 
+            <Text className="section-title">Worktrees</Text>
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+              <NumberInput name="worktreeRetentionDays" label="Worktree Retention Days" min={1} max={365} defaultValue={settings.worktreeRetentionDays} />
+              <div>
+                <Checkbox name="autoCleanupCompletedWorktrees" label="Auto cleanup completed worktrees" defaultChecked={settings.autoCleanupCompletedWorktrees} mb="sm" />
+                <Checkbox name="rebuildWorktreeOnEnvironmentBlocked" label="Rebuild worktree on environment blocked" defaultChecked={settings.rebuildWorktreeOnEnvironmentBlocked} />
+              </div>
+            </SimpleGrid>
+            <Text size="sm" c="dimmed">
+              Completed issue, QA, review, and archived recovery worktrees are local execution buffers. Taskix keeps recent worktrees for diagnosis and removes older completed buffers after the retention window.
+            </Text>
+
             <Group className="form-actions">
               <Button type="submit" leftSection={<Save size={16} />}>
                 Save Settings
               </Button>
               <Button type="submit" variant="light" leftSection={<Webhook size={16} />} formAction="/api/setup/webhook">
                 Setup Telegram Webhook
+              </Button>
+              <Button type="submit" variant="light" color="red" leftSection={<Trash2 size={16} />} formAction="/api/worktrees/cleanup">
+                Clean Inactive Worktrees
               </Button>
             </Group>
           </form>
