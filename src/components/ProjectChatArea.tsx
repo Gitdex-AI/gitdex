@@ -42,7 +42,17 @@ export function ProjectChatArea({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
   const [optimisticMessage, setOptimisticMessage] = useState<TimelineMessage | null>(null);
+  const [liveJobs, setLiveJobs] = useState(jobs);
+  const liveJobsRef = useRef(jobs);
   const visibleSessions = readOnly && inspectedSession ? [inspectedSession] : sessions;
+
+  useEffect(() => {
+    setLiveJobs(jobs);
+  }, [jobs]);
+
+  useEffect(() => {
+    liveJobsRef.current = liveJobs;
+  }, [liveJobs]);
 
   useEffect(() => {
     setPending(false);
@@ -53,13 +63,52 @@ export function ProjectChatArea({
     const scroll = scrollRef.current;
     if (!scroll) return;
     scroll.scrollTop = scroll.scrollHeight;
-  }, [visibleSessions, optimisticMessage?.createdAt, pending, jobs]);
+  }, [visibleSessions, optimisticMessage?.createdAt, pending, liveJobs]);
 
   useEffect(() => {
-    if (!jobs.some((job) => job.status === "running")) return;
-    const timer = window.setInterval(() => router.refresh(), 3000);
-    return () => window.clearInterval(timer);
-  }, [jobs, router]);
+    const source = new EventSource(`/api/projects/${projectId}/jobs/events`);
+    let refreshTimer: number | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) return;
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        router.refresh();
+      }, 350);
+    };
+    const upsertJob = (job: JobRecord) => {
+      setLiveJobs((current) => {
+        const index = current.findIndex((item) => item.jobId === job.jobId);
+        if (index === -1) return [job, ...current];
+        const next = [...current];
+        next[index] = job;
+        return next;
+      });
+      if (job.status !== "running") scheduleRefresh();
+    };
+    source.addEventListener("snapshot", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent<string>).data) as { jobs: JobRecord[] };
+        setLiveJobs(payload.jobs);
+      } catch {
+        scheduleRefresh();
+      }
+    });
+    source.addEventListener("job", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent<string>).data) as { job: JobRecord };
+        upsertJob(payload.job);
+      } catch {
+        scheduleRefresh();
+      }
+    });
+    source.onerror = () => {
+      if (liveJobsRef.current.some((job) => job.status === "running")) scheduleRefresh();
+    };
+    return () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      source.close();
+    };
+  }, [projectId, router]);
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,7 +153,7 @@ export function ProjectChatArea({
   return (
     <>
       <div ref={scrollRef} className="chat-scroll">
-        <MessageList projectId={projectId} sessions={visibleSessions} jobs={jobs} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
+        <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
       </div>
       {!readOnly && (
         <div className="chat-composer">

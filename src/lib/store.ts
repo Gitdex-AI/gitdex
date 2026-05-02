@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
+import { publishJobEvent } from "@/lib/job-events";
 import { deleteProjectLocalState } from "@/lib/project-delete";
 import type { AgentSessionRecord, JobRecord, JobType, ProjectRecord, Role, WorkflowRecord } from "@/lib/types";
 
@@ -134,6 +135,7 @@ export async function saveJob(job: JobRecord): Promise<void> {
       "INSERT INTO jobs (job_id, project_id, type, status, created_at, updated_at, payload) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(job_id) DO UPDATE SET project_id = excluded.project_id, type = excluded.type, status = excluded.status, updated_at = excluded.updated_at, payload = excluded.payload"
     )
     .run(job.jobId, job.projectId ?? null, job.type, job.status, job.createdAt, job.updatedAt, JSON.stringify(job));
+  publishJobEvent(job);
 }
 
 export async function getJob(jobId: string): Promise<JobRecord | null> {
@@ -225,6 +227,7 @@ export async function claimNextPendingJob(projectId?: string): Promise<JobRecord
       .prepare("UPDATE jobs SET status = ?, updated_at = ?, payload = ? WHERE job_id = ? AND status = 'pending'")
       .run(job.status, job.updatedAt, JSON.stringify(job), row.job_id) as { changes: number };
     db.exec("COMMIT");
+    if (result.changes) publishJobEvent(job);
     return result.changes ? job : null;
   } catch (error) {
     db.exec("ROLLBACK");
@@ -263,6 +266,7 @@ export async function claimPendingJob(jobId: string, projectId?: string): Promis
       .prepare("UPDATE jobs SET status = ?, updated_at = ?, payload = ? WHERE job_id = ? AND status = 'pending'")
       .run(job.status, job.updatedAt, JSON.stringify(job), row.job_id) as { changes: number };
     db.exec("COMMIT");
+    if (result.changes) publishJobEvent(job);
     return result.changes ? job : null;
   } catch (error) {
     db.exec("ROLLBACK");
