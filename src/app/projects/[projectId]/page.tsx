@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/
 import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
+import { ProjectAutoSync } from "@/components/ProjectAutoSync";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
 import { ProjectArchitectReviewButton } from "@/components/ProjectArchitectReviewButton";
@@ -100,6 +101,7 @@ export default async function ProjectDetailPage({
           {query.error}
         </Alert>
       )}
+      <ProjectAutoSync projectId={project.projectId} />
       <div className="project-chat-layout">
         <Paper className="chat-panel">
           <div className="chat-header">
