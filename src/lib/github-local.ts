@@ -193,7 +193,21 @@ export async function addLabelsWithGh(repo: string, target: number | string, lab
 
 export async function removeLabelsWithGh(repo: string, target: number | string, labels: string[]): Promise<void> {
   if (!labels.length) return;
-  await execFileAsync("gh", ["issue", "edit", String(target), "--repo", repo, "--remove-label", labels.join(",")]);
+  const existingLabels = await getTargetLabelNamesWithGh(repo, target);
+  const existing = new Set(existingLabels.map((label) => label.toLowerCase()));
+  const labelsToRemove = labels.filter((label) => existing.has(label.toLowerCase()));
+  if (!labelsToRemove.length) return;
+  await execFileAsync("gh", ["issue", "edit", String(target), "--repo", repo, "--remove-label", labelsToRemove.join(",")]);
+}
+
+async function getTargetLabelNamesWithGh(repo: string, target: number | string): Promise<string[]> {
+  try {
+    const { stdout } = await execFileAsync("gh", ["issue", "view", String(target), "--repo", repo, "--json", "labels"]);
+    const payload = JSON.parse(stdout) as { labels?: Array<{ name?: string }> };
+    return (payload.labels ?? []).map((label) => label.name).filter((name): name is string => Boolean(name));
+  } catch {
+    return [];
+  }
 }
 
 export async function getIssueSnapshotWithGh(repo: string, issueNumber: number): Promise<GhIssueSnapshot> {
