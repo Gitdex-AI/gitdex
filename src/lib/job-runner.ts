@@ -1,3 +1,4 @@
+import { runWorkflowArchitectReview, runWorkflowMerge } from "@/lib/architect-runner";
 import { runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
 import { claimNextPendingJob, claimPendingJob, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
@@ -34,7 +35,7 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
 
   try {
     await runWithJobRuntime(job.jobId, async () => {
-      if (job.type !== "workflow_run" && job.type !== "issue_run" && job.type !== "qa_run") return;
+      if (!["workflow_run", "issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type)) return;
       const project = job.projectId ? await getProject(job.projectId) : null;
       const workflow = await getWorkflow(job.payload.workflowId);
       if (workflow?.paused) {
@@ -53,6 +54,10 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
           headSha: job.payload.headSha ?? null,
           qaAttempt: job.payload.qaAttempt ?? null
         });
+      } else if (job.type === "architect_review_run" && job.payload.issueId) {
+        await runWorkflowArchitectReview(job.payload.workflowId, job.payload.issueId, project);
+      } else if (job.type === "merge_run" && job.payload.issueId) {
+        await runWorkflowMerge(job.payload.workflowId, job.payload.issueId, project);
       } else {
         await runWorkflow(job.payload.workflowId, project);
       }

@@ -37,16 +37,32 @@ export function ProjectMergePrButton({
       }
       setResult({
         ok: true,
-        message: "Architect started",
+        message: "Architect merge queued",
         architectUrl: payload.architectUrl,
         prUrl: payload.prUrl ?? prUrl
       });
+      if (payload.jobId) runQueuedJob(payload.jobId);
       router.refresh();
     } catch (error) {
       setResult({ ok: false, message: error instanceof Error ? error.message : "Architect handoff failed", prUrl });
     } finally {
       setPending(false);
     }
+  }
+
+  function runQueuedJob(jobId: string) {
+    void fetch(`/api/projects/${projectId}/jobs/${jobId}/run`, { method: "POST" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Architect handoff failed";
+        if (!message.includes("not pending")) setResult({ ok: false, message, prUrl });
+      })
+      .finally(() => {
+        router.refresh();
+      });
+    window.setTimeout(() => router.refresh(), 500);
   }
 
   return (
@@ -104,6 +120,7 @@ type MergeResponse = {
   error?: string;
   action?: string;
   architectUrl?: string;
+  jobId?: string;
   prUrl?: string | null;
   mergeable?: string | null;
 };

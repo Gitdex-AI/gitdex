@@ -26,13 +26,29 @@ export function ProjectArchitectReviewButton({
         setResult({ ok: false, message: payload.error ?? "Architect review failed", action: payload.action });
         return;
       }
-      setResult({ ok: true, message: payload.message ?? "Architect reviewed" });
+      setResult({ ok: true, message: "Architect review queued" });
+      if (payload.jobId) runQueuedJob(payload.jobId);
       router.refresh();
     } catch (error) {
       setResult({ ok: false, message: error instanceof Error ? error.message : "Architect review failed" });
     } finally {
       setPending(false);
     }
+  }
+
+  function runQueuedJob(jobId: string) {
+    void fetch(`/api/projects/${projectId}/jobs/${jobId}/run`, { method: "POST" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Architect review failed";
+        if (!message.includes("not pending")) setResult({ ok: false, message });
+      })
+      .finally(() => {
+        router.refresh();
+      });
+    window.setTimeout(() => router.refresh(), 500);
   }
 
   return (
@@ -68,6 +84,7 @@ export function ProjectArchitectReviewButton({
 type ReviewResponse = {
   error?: string;
   action?: string;
+  jobId?: string;
   message?: string;
 };
 

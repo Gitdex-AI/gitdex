@@ -191,6 +191,9 @@ function findJobSession(job: JobRecord, sessions: AgentSessionRecord[]): AgentSe
     return null;
   }
   const expectedRole = job.type === "qa_run" ? "qa" : "developer";
+  if (job.type === "architect_review_run" || job.type === "merge_run") {
+    return sessions.find((session) => session.role === "architect" && session.workflowId === job.payload.workflowId) ?? null;
+  }
   return sessions.find((session) => session.role === expectedRole && session.issueId === job.payload.issueId) ?? null;
 }
 
@@ -201,7 +204,7 @@ function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): 
   if (session?.role === "architect") return "Architect";
   if (job.type === "issue_run") return "Dev";
   if (job.type === "qa_run") return "QA";
-  if (job.type === "workflow_run") return "Architect";
+  if (job.type === "workflow_run" || job.type === "architect_review_run" || job.type === "merge_run") return "Architect";
   return "Agent";
 }
 
