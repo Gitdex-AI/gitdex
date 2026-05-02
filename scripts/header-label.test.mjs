@@ -5,8 +5,8 @@ const layoutSource = await readFile(new URL("../src/app/layout.tsx", import.meta
 
 assert.match(
   layoutSource,
-  /<Text[^>]*>\s*Gitdex Console\s*<\/Text>/,
-  "Root layout header should visibly render Gitdex Console"
+  /<Text[^>]*>\s*Gitdex Management\s*<\/Text>/,
+  "Root layout header should visibly render Gitdex Management"
 );
 
 console.log("header label verification passed");
