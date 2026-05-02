@@ -22,12 +22,20 @@ export function ProjectRunJobButton({
     setPending(true);
     setError("");
     try {
-      const response = await fetch(`/api/projects/${projectId}/jobs/${jobId}/run`, { method: "POST" });
-      if (!response.ok) throw new Error(await response.text());
-      router.refresh();
+      void fetch(`/api/projects/${projectId}/jobs/${jobId}/run`, { method: "POST" })
+        .then(async (response) => {
+          if (!response.ok) throw new Error(await response.text());
+        })
+        .catch((caught: unknown) => {
+          setError(caught instanceof Error ? caught.message : "Run job failed.");
+        })
+        .finally(() => {
+          setPending(false);
+          router.refresh();
+        });
+      window.setTimeout(() => router.refresh(), 500);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Run job failed.");
-    } finally {
       setPending(false);
     }
   }

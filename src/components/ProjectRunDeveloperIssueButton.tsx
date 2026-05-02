@@ -21,17 +21,33 @@ export function ProjectRunDeveloperIssueButton({
     setError("");
     try {
       const response = await fetch(`/api/projects/${projectId}/issues/${issueId}/run-dev`, { method: "POST" });
-      const payload = await response.json() as { error?: string; redirectTo?: string };
+      const payload = await response.json() as { error?: string; jobId?: string };
       if (!response.ok) {
         setError(payload.error ?? "Run Dev failed");
         return;
       }
+      if (payload.jobId) runQueuedJob(payload.jobId);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Run Dev failed");
     } finally {
       setPending(false);
     }
+  }
+
+  function runQueuedJob(jobId: string) {
+    void fetch(`/api/projects/${projectId}/jobs/${jobId}/run`, { method: "POST" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+      })
+      .catch((caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : "Run Dev failed";
+        if (!message.includes("not pending")) setError(message);
+      })
+      .finally(() => {
+        router.refresh();
+      });
+    window.setTimeout(() => router.refresh(), 500);
   }
 
   return (
