@@ -98,8 +98,7 @@ export function ProjectChatArea({
   return (
     <>
       <div ref={scrollRef} className="chat-scroll">
-        <RunningAgentStatus jobs={jobs} sessions={visibleSessions} />
-        <MessageList projectId={projectId} sessions={visibleSessions} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
+        <MessageList projectId={projectId} sessions={visibleSessions} jobs={jobs} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
       </div>
       {!readOnly && (
         <div className="chat-composer">
@@ -153,21 +152,29 @@ function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: A
   if (!runningJobs.length) return null;
 
   return (
-    <div className="running-agent-status" aria-live="polite">
-      <Group gap={8} wrap="wrap">
-        <Badge variant="light" color="blue">{runningJobs.length} running</Badge>
-        {runningJobs.map((job) => {
-          const session = findJobSession(job, sessions);
-          const label = runningAgentLabel(job, session);
-          const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
-          return (
-            <span key={job.jobId} className="running-agent-pill">
-              <LoaderCircle size={13} className="chat-composer-spinner" />
-              <span>{label} thinking ...({formatElapsed(startedAt)})</span>
-            </span>
-          );
-        })}
-      </Group>
+    <div className="chat-message assistant pending" aria-live="polite">
+      <div className="chat-avatar">A</div>
+      <div className="chat-bubble running-agent-bubble">
+        <Group gap="xs" mb={6} justify="space-between" align="center">
+          <Badge variant="light">agent status</Badge>
+          <Text component="time" dateTime={new Date().toISOString()} size="xs" c="dimmed">
+            now
+          </Text>
+        </Group>
+        <Stack gap={4}>
+          {runningJobs.map((job) => {
+            const session = findJobSession(job, sessions);
+            const label = runningAgentLabel(job, session);
+            const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
+            return (
+              <Text key={job.jobId} size="sm" c="dimmed" className="running-agent-line">
+                <LoaderCircle size={13} className="chat-composer-spinner" />
+                <span>{label} thinking ...({formatElapsed(startedAt)})</span>
+              </Text>
+            );
+          })}
+        </Stack>
+      </div>
     </div>
   );
 }
@@ -195,12 +202,14 @@ function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): 
 function MessageList({
   projectId,
   sessions,
+  jobs,
   inspectedSession,
   optimisticMessage,
   pending
 }: {
   projectId: string;
   sessions: AgentSessionRecord[];
+  jobs: JobRecord[];
   inspectedSession: AgentSessionRecord | null;
   optimisticMessage: TimelineMessage | null;
   pending: boolean;
@@ -225,7 +234,9 @@ function MessageList({
     ...(optimisticMessage ? [optimisticMessage] : [])
   ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
-  if (!messages.length) {
+  const runningStatus = <RunningAgentStatus jobs={jobs} sessions={sessions} />;
+
+  if (!messages.length && !jobs.some((job) => job.status === "running")) {
     return <Text c="dimmed" ta="center" mt="xl">No messages yet.</Text>;
   }
 
@@ -268,6 +279,7 @@ function MessageList({
           </div>
         </div>
       )}
+      {runningStatus}
     </Stack>
   );
 }

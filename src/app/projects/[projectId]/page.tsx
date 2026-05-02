@@ -588,6 +588,7 @@ function renderRequirementRows(projectId: string, workflows: WorkflowRecord[], j
 
 function renderRequirementRunAction(projectId: string, planningJob: JobRecord | null): ReactNode {
   if (planningJob?.status === "pending") return <ProjectRunJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
+  if (planningJob?.status === "running") return <RunningActionButton label="Planning running" />;
   if (planningJob?.status === "failed") return <ProjectRetryJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
   return null;
 }
@@ -768,10 +769,10 @@ function renderIssueStageAction(input: {
   canArchitectReview: boolean;
   canMerge: boolean;
 }): ReactNode {
-  if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.activeJob?.status === "pending") return <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
+  if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob)} />;
   if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
-  if (input.activeJob?.status === "running") return null;
+  if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
   if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />;
@@ -781,6 +782,18 @@ function renderIssueStageAction(input: {
 
 function runLabelForJob(job: JobRecord): string {
   return job.type === "qa_run" ? "Run QA" : "Run Dev";
+}
+
+function runningLabelForJob(job: JobRecord): string {
+  return job.type === "qa_run" ? "QA running" : "Dev running";
+}
+
+function RunningActionButton({ label }: { label: string }): ReactNode {
+  return (
+    <Button type="button" variant="light" size="compact-xs" radius="xl" loading disabled>
+      {label}
+    </Button>
+  );
 }
 
 function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["type"], status?: JobRecord["status"]): JobRecord | null {
