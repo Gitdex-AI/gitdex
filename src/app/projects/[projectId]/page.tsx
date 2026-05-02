@@ -119,7 +119,7 @@ export default async function ProjectDetailPage({
               {isInspectingIssueSession ? <Badge variant="outline">Read-only session</Badge> : null}
             </Group>
           </div>
-          <ProjectChatArea projectId={project.projectId} sessions={sessions} jobs={jobs} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
+          <ProjectChatArea projectId={project.projectId} sessions={sessions} jobs={jobs} workflows={workflows} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
         </Paper>
 
         <aside className="project-context">

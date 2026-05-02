@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
-import type { AgentMessage, AgentSessionRecord, JobRecord } from "@/lib/types";
+import type { AgentMessage, AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 
 type TimelineMessage = AgentMessage & {
   kind: "message";
@@ -28,12 +28,14 @@ export function ProjectChatArea({
   projectId,
   sessions,
   jobs,
+  workflows,
   inspectedSession,
   readOnly
 }: {
   projectId: string;
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
+  workflows: WorkflowRecord[];
   inspectedSession: AgentSessionRecord | null;
   readOnly: boolean;
 }) {
@@ -153,7 +155,7 @@ export function ProjectChatArea({
   return (
     <>
       <div ref={scrollRef} className="chat-scroll">
-        <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
+        <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} workflows={workflows} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
       </div>
       {!readOnly && (
         <div className="chat-composer">
@@ -194,7 +196,7 @@ export function ProjectChatArea({
   );
 }
 
-function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: AgentSessionRecord[] }) {
+function RunningAgentStatus({ jobs, sessions, workflows }: { jobs: JobRecord[]; sessions: AgentSessionRecord[]; workflows: WorkflowRecord[] }) {
   const runningJobs = jobs.filter((job) => job.status === "running");
   const [, setTick] = useState(0);
 
@@ -220,13 +222,14 @@ function RunningAgentStatus({ jobs, sessions }: { jobs: JobRecord[]; sessions: A
           {runningJobs.map((job) => {
             const session = findJobSession(job, sessions);
             const label = runningAgentLabel(job, session);
+            const issueLabel = runningJobIssueLabel(job, session, workflows);
             const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
             const outputTail = job.runtime?.outputTail?.trimEnd();
             return (
               <div key={job.jobId} className="running-agent-item">
                 <Text size="sm" c="dimmed" className="running-agent-line">
                   <LoaderCircle size={13} className="chat-composer-spinner" />
-                  <span>{label} thinking ...({formatElapsed(startedAt)})</span>
+                  <span>{label} thinking{issueLabel ? ` on ${issueLabel}` : ""} ...({formatElapsed(startedAt)})</span>
                 </Text>
                 {outputTail ? (
                   <RunningAgentLog label={label} output={outputTail} />
@@ -288,10 +291,25 @@ function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): 
   return "Agent";
 }
 
+function runningJobIssueLabel(job: JobRecord, session: AgentSessionRecord | null, workflows: WorkflowRecord[]): string | null {
+  const issue = findWorkflowIssue(job.payload.issueId ?? null, workflows);
+  const issueNumber = session?.githubIssueNumber ?? issue?.githubIssueNumber ?? null;
+  if (issueNumber) return `issue #${issueNumber}`;
+  if (job.payload.issueId) return `issue ${job.payload.issueId}`;
+  if (job.type === "workflow_run") return `requirement ${job.payload.workflowId}`;
+  return null;
+}
+
+function findWorkflowIssue(issueId: string | null, workflows: WorkflowRecord[]): IssueRecord | null {
+  if (!issueId) return null;
+  return workflows.flatMap((workflow) => workflow.issues).find((issue) => issue.issueId === issueId) ?? null;
+}
+
 function MessageList({
   projectId,
   sessions,
   jobs,
+  workflows,
   inspectedSession,
   optimisticMessage,
   pending
@@ -299,6 +317,7 @@ function MessageList({
   projectId: string;
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
+  workflows: WorkflowRecord[];
   inspectedSession: AgentSessionRecord | null;
   optimisticMessage: TimelineMessage | null;
   pending: boolean;
@@ -323,7 +342,7 @@ function MessageList({
     ...(optimisticMessage ? [optimisticMessage] : [])
   ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
-  const runningStatus = <RunningAgentStatus jobs={jobs} sessions={sessions} />;
+  const runningStatus = <RunningAgentStatus jobs={jobs} sessions={sessions} workflows={workflows} />;
 
   if (!messages.length && !jobs.some((job) => job.status === "running")) {
     return <Text c="dimmed" ta="center" mt="xl">No messages yet.</Text>;
