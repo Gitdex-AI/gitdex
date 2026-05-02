@@ -319,6 +319,7 @@ function ThreePhaseWorkflowPanel(input: {
             workflowIds={input.workflows.map((workflow) => workflow.workflowId)}
             issueIds={input.workflows.flatMap((workflow) => workflow.issues.map((issue) => issue.issueId))}
             initialState={input.autoRunState}
+            runningLabel={activeAutoRunLabel(input.jobs, input.workflows)}
           />
         </Group>
         <Stack gap="xs" mt="sm">
@@ -824,6 +825,17 @@ function runningLabelForStage(stage: string, issue: IssueRecord): string {
 
 function isAutoRunRunningForIssue(state: AutoRunState | null, issue: IssueRecord): boolean {
   return Boolean(state && ["running", "pause_requested", "cancel_requested"].includes(state.status) && state.issueIds.includes(issue.issueId));
+}
+
+function activeAutoRunLabel(jobs: JobRecord[], workflows: WorkflowRecord[]): string | null {
+  const activeJob = jobs.find((job) => job.status === "running" && isIssueStageJob(job));
+  if (!activeJob?.payload.issueId) return null;
+  const issue = workflows.flatMap((workflow) => workflow.issues).find((candidate) => candidate.issueId === activeJob.payload.issueId);
+  return issue ? runningLabelForJob(activeJob, issue) : null;
+}
+
+function isIssueStageJob(job: JobRecord): boolean {
+  return ["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type);
 }
 
 function RunningActionButton({ label }: { label: string }): ReactNode {

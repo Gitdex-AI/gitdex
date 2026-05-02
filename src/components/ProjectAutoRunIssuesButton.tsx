@@ -13,18 +13,22 @@ export function ProjectAutoRunIssuesButton({
   projectId,
   workflowIds,
   issueIds,
-  initialState
+  initialState,
+  runningLabel
 }: {
   projectId: string;
   workflowIds: string[];
   issueIds: string[];
   initialState: AutoRunState | null;
+  runningLabel?: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<AutoRunState | null>(initialState);
   const [error, setError] = useState("");
-  const running = pending || runningStatuses.has(state?.status ?? "idle");
+  const autoRunActive = runningStatuses.has(state?.status ?? "idle");
+  const externalRunActive = Boolean(runningLabel);
+  const running = pending || autoRunActive || externalRunActive;
   const paused = state?.status === "paused";
 
   useEffect(() => {
@@ -115,15 +119,25 @@ export function ProjectAutoRunIssuesButton({
   return (
     <>
       <Group gap={4}>
-        <Button type="button" variant="filled" size="compact-xs" radius="xl" leftSection={<Play size={14} />} loading={running} disabled={running} onClick={autoRun}>
-          {paused ? "Resume" : "Auto Run"}
+        <Button
+          type="button"
+          variant="filled"
+          size="compact-xs"
+          radius="xl"
+          leftSection={<Play size={14} />}
+          loading={running}
+          disabled={running}
+          title={runningLabel ?? "Auto Run"}
+          onClick={autoRun}
+        >
+          {runningLabel ?? (paused ? "Resume" : "Auto Run")}
         </Button>
-        {running && state?.status !== "pause_requested" && state?.status !== "cancel_requested" ? (
+        {autoRunActive && state?.status !== "pause_requested" && state?.status !== "cancel_requested" ? (
           <Button type="button" variant="light" size="compact-xs" radius="xl" leftSection={<Pause size={14} />} onClick={() => control("pause")}>
             Pause
           </Button>
         ) : null}
-        {(running || paused) ? (
+        {(autoRunActive || paused) ? (
           <Button type="button" color="red" variant="light" size="compact-xs" radius="xl" leftSection={<Square size={14} />} onClick={() => control("cancel")}>
             Stop
           </Button>
