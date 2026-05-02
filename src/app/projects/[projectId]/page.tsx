@@ -22,7 +22,6 @@ import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
 import { getIssueQaStatus } from "@/lib/qa-status";
-import { isIssueSpecBlocked } from "@/lib/spec-blocker";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
@@ -713,7 +712,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const reviewed = hasAnyLabel(issue, ["taskix:ready-to-merge"]);
     const qaPassed = hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed"]);
     const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
-    const qaSpecBlocked = isIssueSpecBlocked(issue, qaSession);
+    const specBlockedSessionKey = qaStatus.id === "spec_blocked" && qaSession?.status === "blocked" ? qaSession.sessionKey : null;
     const canArchitectReview = Boolean(issue.prUrl) && qaPassed && !reviewed && issue.prState !== "MERGED";
     const canMerge = Boolean(issue.prUrl) && reviewed && issue.prState !== "MERGED";
     const activeJob = latestIssueJob(issue.issueId, jobs);
@@ -760,7 +759,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
               canArchitectReview,
               canMerge,
               canRunDev,
-              specBlockedSessionKey: qaSpecBlocked ? issue.qaSessionId ?? null : null
+              specBlockedSessionKey
             })}
           </Group>
         </Group>
@@ -785,7 +784,7 @@ function renderIssueStageAction(input: {
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob)} />;
   if (input.activeJob?.status === "failed" && shouldFailedJobReturnToDeveloper(input.activeJob)) return <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
-  if (input.specBlockedSessionKey) return <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />;
+  if (input.qaStatusId === "spec_blocked" && input.specBlockedSessionKey) return <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />;
   if (input.qaStatusId === "failed") return <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.canMerge) return <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />;
   if (input.canArchitectReview) return <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />;

@@ -490,9 +490,11 @@ Hard rules:
 - Classify the result with failureType:
   - "none" only when passed is true.
   - "implementation" when the issue requirements are clear and the PR implementation does not satisfy them. These go back to developer.
-  - "spec" when acceptance criteria are missing, contradictory, or not executable in this stack without an architect decision. These go back to architect, not developer.
+  - "spec" when acceptance criteria are missing, contradictory, mutually unsatisfiable, or not executable in this stack without an architect decision. These go back to architect, not developer.
   - "environment" when validation is blocked by local tooling/runtime constraints unrelated to the PR.
   - "stale" when the expected PR head SHA no longer matches.
+- Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. In that case, labelsApplied must include "taskix:spec-blocked" and "taskix:blocked", and must not include "taskix:qa-failed".
+- Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. In that case, labelsApplied should include "taskix:qa-failed".
 - When failing QA, include actionable findings and reproduction notes. For spec failures, explain the architectural decision that is missing and do not prescribe code changes as if the developer can choose the policy alone.
 - If a required baseline command fails for a repo-level reason that is clearly unrelated to the PR diff, report it as an environment or repository blocker in findings, but do not mark the PR implementation failed solely for that unrelated baseline failure when the acceptance criteria and PR-scoped automated tests pass.
 - Do not modify the current Taskix app checkout or its .git directory.

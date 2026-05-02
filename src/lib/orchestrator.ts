@@ -6,7 +6,6 @@ import { GitHubClient } from "@/lib/github";
 import { addLabelsWithGh, commentIssueWithGh, commentPullRequestWithGh, createIssueWithGh, createPullRequestWithGh, findPullRequestByHeadWithGh, getIssueSnapshotWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getSettings } from "@/lib/settings";
-import { normalizeQaFailureType } from "@/lib/spec-blocker";
 import { appendAgentMessages, cancelPendingJobs, createJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { DeveloperIssueResult, IssueRecord, IssueSpec, ProjectRecord, QaPrReviewResult, WorkflowRecord } from "@/lib/types";
 
@@ -184,8 +183,7 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
     headSha: qaHeadSha
   });
   const qaFinishedAt = new Date().toISOString();
-  const qaFailureType = normalizeQaFailureType(qaResult);
-  qaResult.failureType = qaFailureType;
+  const qaFailureType = qaResult.passed ? "none" : qaResult.failureType;
   const qaCloseAt = qaResult.passed ? qaFinishedAt : null;
   const appliedLabels = qaResult.passed
     ? ["taskix:qa-passed"]
