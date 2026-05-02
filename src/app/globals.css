@@ -69,6 +69,20 @@ pre,
   font-weight: var(--weight-heavy);
 }
 
+.topbar-version {
+  min-height: 28px;
+  padding: 0 10px;
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(191, 219, 254, 0.34);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .shell {
   width: 100%;
   padding: 22px 28px 36px;
