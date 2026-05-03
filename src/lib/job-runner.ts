@@ -1,7 +1,7 @@
 import { architectMergeInstruction, architectReviewInstruction, runWorkflowArchitectReview, runWorkflowMerge } from "@/lib/architect-runner";
 import { architectBlockerInstruction, runArchitectBlockerResolution } from "@/lib/architect-blocker-runner";
 import { appendAgentRunPlaceholder } from "@/lib/agent-run-messages";
-import { developerIssueInstruction, qaValidationInstruction, runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
+import { developerIssueInstruction, plannerWorkflowInstruction, qaValidationInstruction, runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
 import { appendAgentMessages, claimNextPendingJob, claimPendingJob, getAgentSession, getJob, getProject, getWorkflow, saveJob } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
@@ -95,6 +95,17 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
   if (job.type === "workflow_run") {
     const sessionKey = `${workflow.workflowId}:planner`;
     const existing = await getAgentSession(sessionKey);
+    await appendRunUserInstruction({
+      project,
+      workflow,
+      sessionKey,
+      role: "planner",
+      title: "Planner",
+      content: plannerWorkflowInstruction(workflow),
+      sessionId: existing?.sessionId ?? null,
+      currentStep: "planning GitHub issues",
+      labels: []
+    });
     await appendAgentRunPlaceholder({
       project,
       workflow,
@@ -259,7 +270,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
 async function appendRunUserInstruction(input: {
   project: ProjectRecord;
   workflow: WorkflowRecord;
-  issue: Pick<IssueRecord, "issueId" | "githubIssueNumber" | "githubIssueUrl" | "prUrl" | "ownedPaths">;
+  issue?: Pick<IssueRecord, "issueId" | "githubIssueNumber" | "githubIssueUrl" | "prUrl" | "ownedPaths"> | null;
   sessionKey: string;
   role: AgentSessionRecord["role"];
   title: string;
@@ -282,15 +293,15 @@ async function appendRunUserInstruction(input: {
     title: input.title,
     sessionId: input.sessionId ?? existing?.sessionId ?? null,
     workflowId: input.workflow.workflowId,
-    issueId: input.issue.issueId,
+    issueId: input.issue?.issueId ?? null,
     developerRole: input.developerRole,
-    ownedPaths: input.ownedPaths ?? input.issue.ownedPaths ?? [],
+    ownedPaths: input.ownedPaths ?? input.issue?.ownedPaths ?? [],
     status: "active",
     currentStep: input.currentStep,
     startedAt: new Date().toISOString(),
-    githubIssueNumber: input.githubIssueNumber ?? input.issue.githubIssueNumber ?? null,
-    githubIssueUrl: input.githubIssueUrl ?? input.issue.githubIssueUrl ?? null,
-    prUrl: input.prUrl ?? input.issue.prUrl ?? null,
+    githubIssueNumber: input.githubIssueNumber ?? input.issue?.githubIssueNumber ?? null,
+    githubIssueUrl: input.githubIssueUrl ?? input.issue?.githubIssueUrl ?? null,
+    prUrl: input.prUrl ?? input.issue?.prUrl ?? null,
     labels: input.labels,
     messages: [
       { role: "user", content: input.content, createdAt: new Date().toISOString() }

@@ -66,6 +66,8 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
   workflow.timeline.push("PM confirmed scope and handed requirement to planner.");
   workflow.timeline.push("Planner generated implementation issue breakdown.");
   if (project?.projectId) {
+    const plannerInstruction = plannerWorkflowInstruction(workflow);
+    const existingPlannerSession = await getAgentSession(`${workflow.workflowId}:planner`);
     await appendAgentMessages({
       sessionKey: `${workflow.workflowId}:planner`,
       projectId: project.projectId,
@@ -73,11 +75,11 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
       title: "Planner",
       workflowId: workflow.workflowId,
       messages: [
-        {
-          role: "user",
-          content: `PM handed off workflow ${displayWorkflowCode(workflow)}:\n\n${workflow.userRequirement}`,
+        ...(hasAgentMessage(existingPlannerSession, plannerInstruction) ? [] : [{
+          role: "user" as const,
+          content: plannerInstruction,
           createdAt: new Date().toISOString()
-        },
+        }]),
         {
           role: "assistant",
           content: `Planner created ${issues.length} implementation issue(s):\n\n${issues.map((issue, index) => {
@@ -699,6 +701,10 @@ function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" 
 }
 
 export { qaValidationInstruction };
+
+export function plannerWorkflowInstruction(workflow: Pick<WorkflowRecord, "trackingCode" | "workflowId" | "userRequirement">): string {
+  return `PM handed off requirement ${workflow.trackingCode ?? workflow.workflowId}:\n\n${workflow.userRequirement}`;
+}
 
 export function developerIssueInstruction(issue: Pick<IssueRecord, "githubIssueNumber" | "title">): string {
   return `Handle GitHub issue #${issue.githubIssueNumber}: ${issue.title}`;
