@@ -7,7 +7,7 @@ import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueActio
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
 import { ProjectAutoSync } from "@/components/ProjectAutoSync";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
-import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
+import { ProjectDetailPanel } from "@/components/ProjectDetailPanel";
 import { ProjectArchitectReviewButton } from "@/components/ProjectArchitectReviewButton";
 import { ProjectEscalateSessionButton } from "@/components/ProjectEscalateSessionButton";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
@@ -125,6 +125,18 @@ export default async function ProjectDetailPage({
                 <Text size="sm" c="dimmed">Current project delivery flow.</Text>
               </div>
               <Group gap="xs">
+                <ProjectDetailPanel
+                  project={{
+                    projectId: project.projectId,
+                    slug: project.slug,
+                    githubRepo: project.githubRepo,
+                    autoDeploy: project.autoDeploy,
+                    agentsFilePath: project.agentsFilePath,
+                    updateAgentsFile: project.updateAgentsFile,
+                    projectManagerSessionId: project.projectManagerSessionId,
+                    devopsSessionId: project.devopsSessionId
+                  }}
+                />
                 <Button
                   component="a"
                   href={`/projects/${project.projectId}/github-triage`}
@@ -197,29 +209,6 @@ export default async function ProjectDetailPage({
             </Stack>
           </Paper>
 
-          <Paper mt="md">
-            <details className="project-details-panel">
-              <summary className="section-header project-details-summary">
-                <div>
-                  <Text fw={760}>Project</Text>
-                  <Text size="sm" c="dimmed">{project.githubRepo}</Text>
-                </div>
-                <Badge variant="light">{project.autoDeploy ? "auto deploy" : "manual deploy"}</Badge>
-              </summary>
-              <Stack p="md" gap="xs">
-                <Text size="sm">Slug: <Code>{project.slug}</Code></Text>
-                <Text size="sm">PM: <Code>{project.projectManagerSessionId ?? "new"}</Code></Text>
-                <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
-                <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
-                <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
-                <div className="project-danger-zone">
-                  <Text size="xs" fw={780} c="red">Delete local project</Text>
-                  <Text size="xs" c="dimmed">Type <Code>{project.slug}</Code> to remove this local project and its local Taskix state. GitHub data is not deleted.</Text>
-                  <ProjectDeleteForm projectId={project.projectId} slug={project.slug} />
-                </div>
-              </Stack>
-            </details>
-          </Paper>
         </aside>
       </div>
     </>
