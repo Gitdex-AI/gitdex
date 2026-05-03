@@ -22,18 +22,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <Providers>
           <header className="topbar">
-            <Group gap="sm" wrap="nowrap">
+            <Group className="topbar-brand" gap="xs" wrap="nowrap">
               <div className="mark">TB</div>
-              <div>
-                <Text fw={800} size="md" c="white" lh={1.15}>
-                  Gitdex Management
-                </Text>
-                <Text size="xs" c="blue.1">
-                  Project routing, Codex sessions, GitHub orchestration
-                </Text>
-              </div>
+              <Text className="topbar-title" fw={800} c="white">
+                Gitdex
+              </Text>
             </Group>
-            <Group gap="xs" justify="flex-end">
+            <Group className="topbar-actions" gap={6} justify="flex-start" wrap="nowrap">
               <Badge color="dark" variant="light">
                 Model <Code>{settings.codexModel}</Code>
               </Badge>
