@@ -41,8 +41,9 @@ export function authorizeConsoleApiRequest({ initialized, authenticated }: { ini
   return Response.json({ ok: false, error: "Authentication required." }, { status: 401 });
 }
 
-export function authorizeConsolePageRequest({ authenticated }: { authenticated: boolean }): "allow" | "login" {
-  return authenticated ? "allow" : "login";
+export function authorizeConsolePageRequest({ initialized, authenticated }: { initialized: boolean; authenticated: boolean }): "allow" | "setup" | "login" {
+  if (authenticated) return "allow";
+  return initialized ? "login" : "setup";
 }
 
 export async function requireConsoleApiAuth(pathname = ""): Promise<Response | null> {
