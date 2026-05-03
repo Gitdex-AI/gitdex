@@ -49,29 +49,55 @@ pre,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  min-height: 64px;
-  padding: 0 28px;
+  gap: 14px;
+  min-height: 52px;
+  padding: 8px 28px;
   color: #ffffff;
   background: #111827;
   border-bottom: 1px solid #0b1220;
 }
 
+.topbar-brand {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.topbar-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topbar-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.topbar-actions .mantine-Badge-root {
+  flex: 0 0 auto;
+}
+
 .mark {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   background: linear-gradient(135deg, #2563eb, #0f766e);
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   font-weight: var(--weight-heavy);
 }
 
 .topbar-version {
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 24px;
+  padding: 0 9px;
   color: #dbeafe;
   background: rgba(37, 99, 235, 0.16);
   border: 1px solid rgba(191, 219, 254, 0.34);
@@ -1245,9 +1271,8 @@ pre,
 
 @media (max-width: 720px) {
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 14px 16px;
+    min-height: 48px;
+    padding: 8px 12px;
   }
 
   .shell {
