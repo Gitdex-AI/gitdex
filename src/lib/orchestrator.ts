@@ -60,7 +60,8 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
 
   const issueCreator = createIssueCreator(project, settings);
 
-  const issues = await codex.architectPlanIssues(workflow.userRequirement);
+  const plan = await codex.architectPlanIssues(workflow.userRequirement);
+  const issues = plan.issues;
   workflow.issues = [];
   workflow.status = "transferred_to_github";
   workflow.timeline.push("PM confirmed scope and handed requirement to planner.");
@@ -94,6 +95,13 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
           role: "assistant",
           status: "done" as const,
           durationMs,
+          executionLogs: plan.executionLog ? [{
+            title: `Planner Codex execution for ${displayWorkflowCode(workflow)}`,
+            content: plan.executionLog,
+            createdAt: finishedAt,
+            status: "ok" as const,
+            durationMs
+          }] : [],
           content: `Planner created ${issues.length} implementation issue(s):\n\n${issues.map((issue, index) => {
             const ownedPaths = issue.ownedPaths.length ? issue.ownedPaths.join(", ") : "unspecified";
             return `${index + 1}. ${issue.title}\nDeveloper role: ${issue.developerRole ?? issue.assigneeRole}\nOwned paths: ${ownedPaths}\nAcceptance criteria:\n${issue.acceptanceCriteria.map((item) => `- ${item}`).join("\n")}`;
