@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { architectMergeInstruction } from "@/lib/architect-runner";
+import { appendAgentMessages, createJob, getAgentSession, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
@@ -44,6 +45,32 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   workflow.status = "in_progress";
   workflow.timeline.push(existingJob ? `Architect merge job already queued for ${issue.issueId}.` : `Architect merge job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
+
+  const sessionKey = `${project.projectId}:architect`;
+  const mergeInstruction = architectMergeInstruction(project, issue);
+  const existingArchitectSession = await getAgentSession(sessionKey);
+  if (!existingArchitectSession?.messages.some((message) => message.content === mergeInstruction)) {
+    const startedAt = new Date().toISOString();
+    await appendAgentMessages({
+      sessionKey,
+      projectId: project.projectId,
+      role: "architect",
+      title: "Architect",
+      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      githubIssueNumber: issue.githubIssueNumber,
+      githubIssueUrl: issue.githubIssueUrl ?? null,
+      prUrl: issue.prUrl,
+      labels: issue.labels ?? [],
+      status: "active",
+      currentStep: "merge requested",
+      startedAt,
+      messages: [
+        { role: "user", content: mergeInstruction, createdAt: startedAt }
+      ]
+    });
+  }
 
   return NextResponse.json({
     ok: true,

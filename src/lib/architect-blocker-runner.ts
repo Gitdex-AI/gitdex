@@ -13,23 +13,7 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
   if (!session || session.projectId !== project.projectId) throw new Error("Blocked session not found.");
 
   const startedAt = new Date().toISOString();
-  const lastMessage = [...session.messages].reverse().find((message) => message.role === "assistant") ?? session.messages.at(-1);
-  const content = [
-    `Blocked session needs architect resolution: ${session.title}`,
-    "",
-    `Session: ${session.sessionKey}`,
-    `Workflow: ${session.workflowId ?? "none"}`,
-    `Issue: ${session.issueId ?? "none"}`,
-    `GitHub issue: ${session.githubIssueNumber ? `#${session.githubIssueNumber}` : "none"}`,
-    `PR: ${session.prUrl ?? "none"}`,
-    `Current step: ${session.currentStep ?? "unknown"}`,
-    `Status: ${session.status}`,
-    "",
-    "Blocked output:",
-    lastMessage?.content ?? "No detailed blocked output was recorded.",
-    "",
-    "Resolve this blocker so the workflow can continue. If safe, correct the issue scope and return retry_developer."
-  ].join("\n");
+  const content = architectBlockerInstruction(session);
 
   const existingArchitectSession = await getAgentSession(`${project.projectId}:architect`);
   const codex = new CodexClient(settings);
@@ -138,7 +122,7 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
     durationMs,
     executionLogs,
     messages: [
-      { role: "user", content, createdAt: startedAt },
+      ...(existingArchitectSession?.messages.some((message) => message.content === content) ? [] : [{ role: "user" as const, content, createdAt: startedAt }]),
       { role: "assistant", content: resolutionText, createdAt: finishedAt }
     ]
   });
@@ -147,6 +131,36 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
   session.durationMs = durationMs;
   session.updatedAt = finishedAt;
   await saveAgentSession(session);
+}
+
+export function architectBlockerInstruction(session: {
+  title: string;
+  sessionKey: string;
+  workflowId?: string | null;
+  issueId?: string | null;
+  githubIssueNumber?: number | null;
+  prUrl?: string | null;
+  currentStep?: string | null;
+  status: string;
+  messages: Array<{ role: string; content: string }>;
+}): string {
+  const lastMessage = [...session.messages].reverse().find((message) => message.role === "assistant") ?? session.messages.at(-1);
+  return [
+    `Blocked session needs architect resolution: ${session.title}`,
+    "",
+    `Session: ${session.sessionKey}`,
+    `Workflow: ${session.workflowId ?? "none"}`,
+    `Issue: ${session.issueId ?? "none"}`,
+    `GitHub issue: ${session.githubIssueNumber ? `#${session.githubIssueNumber}` : "none"}`,
+    `PR: ${session.prUrl ?? "none"}`,
+    `Current step: ${session.currentStep ?? "unknown"}`,
+    `Status: ${session.status}`,
+    "",
+    "Blocked output:",
+    lastMessage?.content ?? "No detailed blocked output was recorded.",
+    "",
+    "Resolve this blocker so the workflow can continue. If safe, correct the issue scope and return retry_developer."
+  ].join("\n");
 }
 
 function removeResolvedBlockerLabels(labels: string[]): string[] {

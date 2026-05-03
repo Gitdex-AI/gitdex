@@ -22,7 +22,32 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
 
   const settings = await getSettings();
   const codex = new CodexClient(settings);
+  const sessionKey = `${project.projectId}:architect`;
+  const existingArchitectSession = await getAgentSession(sessionKey);
+  const reviewInstruction = architectReviewInstruction(issue);
   const reviewStartedAt = Date.now();
+  const reviewStartedAtIso = new Date(reviewStartedAt).toISOString();
+  if (!existingArchitectSession?.messages.some((message) => message.content === reviewInstruction)) {
+    await appendAgentMessages({
+      sessionKey,
+      projectId: project.projectId,
+      role: "architect",
+      title: "Architect",
+      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      githubIssueNumber: issue.githubIssueNumber,
+      githubIssueUrl: issue.githubIssueUrl ?? null,
+      prUrl: issue.prUrl,
+      labels: issue.prLabels,
+      status: "active",
+      currentStep: "code review requested",
+      startedAt: reviewStartedAtIso,
+      messages: [
+        { role: "user", content: reviewInstruction, createdAt: reviewStartedAtIso }
+      ]
+    });
+  }
   const review = await codex.architectConfirmManualReady({
     repo: project.githubRepo,
     issueNumber: issue.githubIssueNumber,
@@ -96,17 +121,7 @@ export async function runWorkflowMerge(workflowId: string, issueId: string, proj
 
 async function runArchitectMergeRequest(project: ProjectRecord, workflow: WorkflowRecord, issue: IssueRecord): Promise<void> {
   const now = new Date().toISOString();
-  const content = [
-    "You are architect merge owner.",
-    "",
-    `GitHub repo: ${project.githubRepo}`,
-    `Issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}`,
-    `PR: ${issue.prUrl ?? "none"}`,
-    "",
-    "Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat GitHub as the source of truth.",
-    "Only merge if taskix:ready-to-merge is present and no blocker exists.",
-    "If merged, apply taskix:merged and close the issue. If blocked by conflict or checks, report the blocker so Taskix can return it to developer."
-  ].join("\n");
+  const content = architectMergeInstruction(project, issue);
 
   workflow.timeline.push(`Requested architect merge handling for ${issue.issueId}.`);
   await saveWorkflow(workflow);
@@ -118,6 +133,25 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
   ]);
   const codex = new CodexClient(settings);
   const mergeStartedAt = Date.now();
+  if (!existingArchitectSession?.messages.some((message) => message.content === content)) {
+    await appendAgentMessages({
+      sessionKey,
+      projectId: project.projectId,
+      role: "architect",
+      title: "Architect",
+      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      prUrl: issue.prUrl ?? null,
+      labels: issue.labels ?? [],
+      status: "active",
+      currentStep: "merge requested",
+      startedAt: now,
+      messages: [
+        { role: "user", content, createdAt: now }
+      ]
+    });
+  }
   const result = await codex.architectChat({
     projectName: project.name,
     githubRepo: project.githubRepo,
@@ -150,10 +184,33 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
       durationMs: mergeDurationMs
     }] : [],
     messages: [
-      { role: "user", content, createdAt: now },
       { role: "assistant", content: result.text, createdAt: new Date().toISOString() }
     ]
   });
+}
+
+export function architectReviewInstruction(issue: Pick<IssueRecord, "githubIssueNumber" | "issueId" | "title" | "prUrl">): string {
+  return [
+    "Review this PR for merge readiness.",
+    "",
+    `Issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}`,
+    `Title: ${issue.title}`,
+    `PR: ${issue.prUrl ?? "none"}`
+  ].join("\n");
+}
+
+export function architectMergeInstruction(project: ProjectRecord, issue: IssueRecord): string {
+  return [
+    "You are architect merge owner.",
+    "",
+    `GitHub repo: ${project.githubRepo}`,
+    `Issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}`,
+    `PR: ${issue.prUrl ?? "none"}`,
+    "",
+    "Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat GitHub as the source of truth.",
+    "Only merge if taskix:ready-to-merge is present and no blocker exists.",
+    "If merged, apply taskix:merged and close the issue. If blocked by conflict or checks, report the blocker so Taskix can return it to developer."
+  ].join("\n");
 }
 
 function labelsToRemove(labels: string[]): string[] {

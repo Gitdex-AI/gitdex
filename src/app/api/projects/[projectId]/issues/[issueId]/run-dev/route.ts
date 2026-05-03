@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { developerIssueInstruction } from "@/lib/orchestrator";
+import { appendAgentMessages, createJob, getAgentSession, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
@@ -39,6 +40,33 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   workflow.status = "in_progress";
   workflow.timeline.push(existingJob ? `Developer job already queued for ${issue.issueId}.` : `Developer job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
+
+  const sessionKey = issue.developerSessionId ?? `${issue.issueId}:developer`;
+  const developerInstruction = developerIssueInstruction(issue);
+  const existingDeveloperSession = await getAgentSession(sessionKey);
+  if (!existingDeveloperSession?.messages.some((message) => message.content === developerInstruction)) {
+    const startedAt = new Date().toISOString();
+    await appendAgentMessages({
+      sessionKey,
+      projectId: project.projectId,
+      role: "developer",
+      title: `${issue.developerRole ?? "general_developer"}: ${issue.title}`,
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      developerRole: issue.developerRole ?? "general_developer",
+      ownedPaths: issue.ownedPaths ?? [],
+      status: "active",
+      currentStep: "developer handling GitHub issue",
+      startedAt,
+      githubIssueNumber: issue.githubIssueNumber,
+      githubIssueUrl: issue.githubIssueUrl ?? null,
+      prUrl: issue.prUrl ?? null,
+      labels: ["taskix:dev-running"],
+      messages: [
+        { role: "user", content: developerInstruction, createdAt: startedAt }
+      ]
+    });
+  }
 
   return NextResponse.json({
     ok: true,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createJob, getAgentSession, getProject, listJobs } from "@/lib/store";
+import { architectBlockerInstruction } from "@/lib/architect-blocker-runner";
+import { appendAgentMessages, createJob, getAgentSession, getProject, listJobs } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 import { requestAutoRunPause } from "@/lib/auto-run-control";
 
@@ -29,6 +30,31 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       sessionKey: session.sessionKey
     }
   });
+  const architectSessionKey = `${project.projectId}:architect`;
+  const architectInstruction = architectBlockerInstruction(session);
+  const existingArchitectSession = await getAgentSession(architectSessionKey);
+  if (!existingArchitectSession?.messages.some((message) => message.content === architectInstruction)) {
+    const startedAt = new Date().toISOString();
+    await appendAgentMessages({
+      sessionKey: architectSessionKey,
+      projectId: project.projectId,
+      role: "architect",
+      title: "Architect",
+      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      workflowId: session.workflowId,
+      issueId: session.issueId,
+      githubIssueNumber: session.githubIssueNumber ?? null,
+      githubIssueUrl: session.githubIssueUrl ?? null,
+      prUrl: session.prUrl ?? null,
+      labels: session.labels ?? [],
+      status: "active",
+      currentStep: "resolving blocker",
+      startedAt,
+      messages: [
+        { role: "user", content: architectInstruction, createdAt: startedAt }
+      ]
+    });
+  }
   requestAutoRunPause(project.projectId, "Auto Run pause requested because a blocked issue was manually sent to Architect.");
 
   return NextResponse.json({

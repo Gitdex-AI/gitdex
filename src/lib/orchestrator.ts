@@ -9,7 +9,7 @@ import { findDependencyIssue, isDependencySatisfied, normalizeIssueDependenciesT
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getActiveJobId } from "@/lib/job-runtime";
 import { getSettings } from "@/lib/settings";
-import { appendAgentMessages, cancelPendingJobs, createJob, getJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
+import { appendAgentMessages, cancelPendingJobs, createJob, getAgentSession, getJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { DeveloperIssueResult, IssueRecord, IssueSpec, ProjectRecord, QaPrReviewResult, WorkflowRecord } from "@/lib/types";
 import { rebuildDeveloperWorktree } from "@/lib/worktree-manager";
 
@@ -165,7 +165,9 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
 
   const issueOwnedPaths = issue.ownedPaths ?? [];
   const qaStartedAt = new Date().toISOString();
+  const qaInstruction = qaValidationInstruction(qaPrUrl, issue, qaHeadSha);
   if (workflow.projectId) {
+    const existingQaSession = await getAgentSession(issue.qaSessionId ?? `${issue.issueId}:qa`);
     await appendAgentMessages({
       sessionKey: issue.qaSessionId ?? `${issue.issueId}:qa`,
       projectId: workflow.projectId,
@@ -181,8 +183,8 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
       githubIssueUrl: issue.githubIssueUrl ?? null,
       prUrl: qaPrUrl,
       labels: ["taskix:need-qa", "taskix:qa-running"],
-      messages: [
-        { role: "user", content: `Validate PR ${qaPrUrl} for issue #${issue.githubIssueNumber}: ${issue.title}${qaHeadSha ? `\nExpected head SHA: ${qaHeadSha}` : ""}`, createdAt: qaStartedAt }
+      messages: hasAgentMessage(existingQaSession, qaInstruction) ? [] : [
+        { role: "user", content: qaInstruction, createdAt: qaStartedAt }
       ]
     });
   }
@@ -386,7 +388,9 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   }
 
   const developerStartedAt = new Date().toISOString();
+  const developerInstruction = developerIssueInstruction(issue);
   if (workflow.projectId) {
+    const existingDeveloperSession = await getAgentSession(issue.developerSessionId ?? `${issue.issueId}:developer`);
     await appendAgentMessages({
       sessionKey: issue.developerSessionId ?? `${issue.issueId}:developer`,
       projectId: workflow.projectId,
@@ -402,8 +406,8 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
       githubIssueNumber: issue.githubIssueNumber,
       githubIssueUrl: issue.githubIssueUrl ?? null,
       labels: ["taskix:dev-running"],
-      messages: [
-        { role: "user", content: `Handle GitHub issue #${issue.githubIssueNumber}: ${issue.title}`, createdAt: developerStartedAt }
+      messages: hasAgentMessage(existingDeveloperSession, developerInstruction) ? [] : [
+        { role: "user", content: developerInstruction, createdAt: developerStartedAt }
       ]
     });
   }
@@ -653,6 +657,18 @@ function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" 
   if (normalizedLabels.includes("taskix:qa-failed") || normalizedLabels.includes("taskix:spec-blocked")) return "blocked";
   if (normalizedLabels.includes("taskix:need-qa") || normalizedLabels.includes("taskix:qa-running")) return "active";
   return null;
+}
+
+export function qaValidationInstruction(prUrl: string, issue: Pick<IssueRecord, "githubIssueNumber" | "title">, headSha?: string | null): string {
+  return `Validate PR ${prUrl} for issue #${issue.githubIssueNumber}: ${issue.title}${headSha ? `\nExpected head SHA: ${headSha}` : ""}`;
+}
+
+export function developerIssueInstruction(issue: Pick<IssueRecord, "githubIssueNumber" | "title">): string {
+  return `Handle GitHub issue #${issue.githubIssueNumber}: ${issue.title}`;
+}
+
+function hasAgentMessage(session: Awaited<ReturnType<typeof getAgentSession>> | null, content: string): boolean {
+  return Boolean(session?.messages.some((message) => message.content === content));
 }
 
 async function createDeveloperPullRequest(repo: string, issue: IssueRecord, workflow: WorkflowRecord, developerResult: DeveloperIssueResult): Promise<string> {
