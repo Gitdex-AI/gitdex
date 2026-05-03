@@ -22,8 +22,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const isReady = labels.has("taskix:ready-to-merge");
   if (!isReady) {
     return NextResponse.json({
-      error: "Architect code review must pass before merge.",
-      action: "Run Architect review after QA passes. Merge is only enabled after taskix:ready-to-merge is applied."
+      error: "Reviewer code review must pass before merge.",
+      action: "Run Review after QA passes. Merge is only enabled after taskix:ready-to-merge is applied."
     }, { status: 409 });
   }
 
@@ -34,20 +34,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.issueId === issue.issueId
   ));
   workflow.status = "in_progress";
-  workflow.timeline.push(existingJob ? `Architect merge job already queued for ${issue.issueId}.` : `Architect merge job queued for ${issue.issueId}.`);
+  workflow.timeline.push(existingJob ? `Reviewer merge job already queued for ${issue.issueId}.` : `Reviewer merge job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
 
-  const sessionKey = `${project.projectId}:architect`;
+  const sessionKey = `${issue.issueId}:reviewer`;
   const mergeInstruction = architectMergeInstruction(project, issue);
-  const existingArchitectSession = await getAgentSession(sessionKey);
-  if (!existingArchitectSession?.messages.some((message) => message.content === mergeInstruction)) {
+  const existingReviewerSession = await getAgentSession(sessionKey);
+  if (!existingReviewerSession?.messages.some((message) => message.content === mergeInstruction)) {
     const startedAt = new Date().toISOString();
     await appendAgentMessages({
       sessionKey,
       projectId: project.projectId,
-      role: "architect",
-      title: "Architect",
-      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      role: "reviewer",
+      title: "Reviewer",
+      sessionId: existingReviewerSession?.sessionId ?? null,
       workflowId: workflow.workflowId,
       issueId: issue.issueId,
       githubIssueNumber: issue.githubIssueNumber,
@@ -78,10 +78,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     issue,
     job,
     sessionKey,
-    role: "architect",
-    title: "Architect",
-    label: "Architect",
-    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+    role: "reviewer",
+    title: "Reviewer",
+    label: "Reviewer",
+    sessionId: existingReviewerSession?.sessionId ?? null,
     currentStep: "merge requested",
     prUrl: issue.prUrl,
     labels: issue.labels ?? []
@@ -94,6 +94,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     runStatus: job.status,
     issueId,
     prUrl: issue.prUrl,
-    architectUrl: `/projects/${project.projectId}?session=${encodeURIComponent(`${project.projectId}:architect`)}`
+    architectUrl: `/projects/${project.projectId}?session=${encodeURIComponent(sessionKey)}`
   });
 }

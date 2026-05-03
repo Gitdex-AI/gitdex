@@ -16,12 +16,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const workflow = workflows.find((item) => item.issues.some((issue) => issue.issueId === issueId));
   const issue = workflow?.issues.find((item) => item.issueId === issueId);
   if (!workflow || !issue) return NextResponse.json({ error: "Issue not found." }, { status: 404 });
-  if (!issue.githubIssueNumber || !issue.prUrl) return NextResponse.json({ error: "Issue has no GitHub PR for architect review." }, { status: 400 });
-  if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged PRs do not need architect review." }, { status: 409 });
+  if (!issue.githubIssueNumber || !issue.prUrl) return NextResponse.json({ error: "Issue has no GitHub PR for review." }, { status: 400 });
+  if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged PRs do not need review." }, { status: 409 });
 
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
   const qaPassed = labels.has("qa-passed") || labels.has("taskix:qa-passed");
-  if (!qaPassed) return NextResponse.json({ error: "Architect review requires QA to pass first." }, { status: 409 });
+  if (!qaPassed) return NextResponse.json({ error: "Reviewer requires QA to pass first." }, { status: 409 });
 
   const existingJob = (await listJobs(project.projectId)).find((job) => (
     job.type === "architect_review_run"
@@ -30,20 +30,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.issueId === issue.issueId
   ));
   workflow.status = "in_progress";
-  workflow.timeline.push(existingJob ? `Architect review job already queued for ${issue.issueId}.` : `Architect review job queued for ${issue.issueId}.`);
+  workflow.timeline.push(existingJob ? `Reviewer job already queued for ${issue.issueId}.` : `Reviewer job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
 
-  const sessionKey = `${project.projectId}:architect`;
+  const sessionKey = `${issue.issueId}:reviewer`;
   const reviewInstruction = architectReviewInstruction(issue);
-  const existingArchitectSession = await getAgentSession(sessionKey);
-  if (!existingArchitectSession?.messages.some((message) => message.content === reviewInstruction)) {
+  const existingReviewerSession = await getAgentSession(sessionKey);
+  if (!existingReviewerSession?.messages.some((message) => message.content === reviewInstruction)) {
     const startedAt = new Date().toISOString();
     await appendAgentMessages({
       sessionKey,
       projectId: project.projectId,
-      role: "architect",
-      title: "Architect",
-      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      role: "reviewer",
+      title: "Reviewer",
+      sessionId: existingReviewerSession?.sessionId ?? null,
       workflowId: workflow.workflowId,
       issueId: issue.issueId,
       githubIssueNumber: issue.githubIssueNumber,
@@ -51,7 +51,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       prUrl: issue.prUrl,
       labels: issue.prLabels ?? issue.labels ?? [],
       status: "active",
-      currentStep: "code review requested",
+      currentStep: "review requested",
       startedAt,
       messages: [
         { role: "user", content: reviewInstruction, createdAt: startedAt }
@@ -74,11 +74,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     issue,
     job,
     sessionKey,
-    role: "architect",
-    title: "Architect",
-    label: "Architect",
-    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
-    currentStep: "code review requested",
+    role: "reviewer",
+    title: "Reviewer",
+    label: "Reviewer",
+    sessionId: existingReviewerSession?.sessionId ?? null,
+    currentStep: "review requested",
     prUrl: issue.prUrl,
     labels: issue.prLabels ?? issue.labels ?? []
   });

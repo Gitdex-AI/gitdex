@@ -63,7 +63,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
     return {
       title: "Start next QA validation",
       phase: "QA validation",
-      description: "Runs one QA validation job for a developer PR and records pass/fail before architect merge handling.",
+      description: "Runs one QA validation job for a developer PR and records pass/fail before review and merge handling.",
       buttonLabel: "Start Next QA Validation",
       disabledLabel: "Start Next QA Validation",
       tone: "ready",
@@ -78,11 +78,11 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
 
   if (planningPending) {
     return {
-      title: "Run architect planning",
+      title: "Run planner",
       phase: "Planning",
-      description: "The architect will split the requirement into GitHub issues. Developer work will not start until you run the next step.",
-      buttonLabel: "Run Architect Planning",
-      disabledLabel: "Run Architect Planning",
+      description: "The planner will split the requirement into GitHub issues. Developer work will not start until you run the next step.",
+      buttonLabel: "Run Planner",
+      disabledLabel: "Run Planner",
       tone: "ready",
       icon: "git-branch",
       planningPending,

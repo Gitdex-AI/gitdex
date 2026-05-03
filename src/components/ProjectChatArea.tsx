@@ -164,7 +164,7 @@ export function ProjectChatArea({
             <Textarea
               name="message"
               aria-label="Message project agents"
-              placeholder="@PM clarify scope, @architect review the plan, @devops check deployment..."
+              placeholder="@PM clarify scope, @devops check deployment..."
               autosize
               minRows={1}
               maxRows={7}
@@ -285,7 +285,7 @@ function messageJobElapsed(message: TimelineMessage, jobs: JobRecord[]): string 
 
 function findJobSession(job: JobRecord, sessions: AgentSessionRecord[]): AgentSessionRecord | null {
   if (!job.payload.issueId) {
-    if (job.type === "workflow_run") return sessions.find((session) => session.role === "architect" && session.workflowId === job.payload.workflowId) ?? null;
+    if (job.type === "workflow_run") return sessions.find((session) => session.role === "planner" && session.workflowId === job.payload.workflowId) ?? null;
     return null;
   }
   if (job.type === "architect_blocker_run") {
@@ -295,29 +295,37 @@ function findJobSession(job: JobRecord, sessions: AgentSessionRecord[]): AgentSe
   }
   const expectedRole = job.type === "qa_run" ? "qa" : "developer";
   if (job.type === "architect_review_run" || job.type === "merge_run") {
-    return sessions.find((session) => session.role === "architect" && session.workflowId === job.payload.workflowId) ?? null;
+    return sessions.find((session) => session.role === "reviewer" && session.issueId === job.payload.issueId) ?? null;
   }
   return sessions.find((session) => session.role === expectedRole && session.issueId === job.payload.issueId) ?? null;
 }
 
 function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): string {
-  if (job.type === "workflow_run" || job.type === "architect_blocker_run" || job.type === "architect_review_run" || job.type === "merge_run") return "Architect";
+  if (job.type === "workflow_run") return "Planner";
+  if (job.type === "architect_blocker_run") return "Architect";
+  if (job.type === "architect_review_run" || job.type === "merge_run") return "Reviewer";
   if (job.type === "qa_run") return "QA";
   if (job.type === "issue_run") return session?.developerRole ?? "Dev";
   if (session?.developerRole) return session.developerRole;
   if (session?.role === "developer") return "Dev";
   if (session?.role === "qa") return "QA";
   if (session?.role === "architect") return "Architect";
+  if (session?.role === "planner") return "Planner";
+  if (session?.role === "reviewer") return "Reviewer";
   return "Agent";
 }
 
 function runningAgentAvatar(job: JobRecord, session: AgentSessionRecord | null): string {
   if (job.type === "qa_run") return "QA";
   if (job.type === "issue_run") return "DV";
-  if (job.type === "workflow_run" || job.type === "architect_blocker_run" || job.type === "architect_review_run" || job.type === "merge_run") return "AR";
+  if (job.type === "workflow_run") return "PL";
+  if (job.type === "architect_blocker_run") return "AR";
+  if (job.type === "architect_review_run" || job.type === "merge_run") return "RV";
   if (session?.role === "qa") return "QA";
   if (session?.role === "developer") return "DV";
   if (session?.role === "architect") return "AR";
+  if (session?.role === "planner") return "PL";
+  if (session?.role === "reviewer") return "RV";
   if (session?.role === "devops") return "DO";
   if (session?.role === "product_manager") return "PM";
   return "A";
@@ -538,6 +546,8 @@ function chatAvatarText(message: TimelineMessage | TimelineExecutionLog): string
   if (message.kind === "message" && message.role === "user") return "U";
   if (message.sourceRole === "product_manager") return "PM";
   if (message.sourceRole === "architect") return "AR";
+  if (message.sourceRole === "planner") return "PL";
+  if (message.sourceRole === "reviewer") return "RV";
   if (message.sourceRole === "devops") return "DO";
   if (message.sourceRole === "developer") return "DV";
   if (message.sourceRole === "qa") return "QA";

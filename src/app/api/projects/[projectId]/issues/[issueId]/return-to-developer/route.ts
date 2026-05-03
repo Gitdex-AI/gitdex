@@ -34,7 +34,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const comment = [
     "This PR was returned to developer.",
     "",
-    "Reason: QA or architect merge handling found this PR needs developer rework before it can continue.",
+    "Reason: QA, reviewer, or merge handling found this PR needs developer rework before it can continue.",
     "",
     "Developer action:",
     "- Rebase or merge latest `main` into the PR branch if merge handling reported conflicts.",

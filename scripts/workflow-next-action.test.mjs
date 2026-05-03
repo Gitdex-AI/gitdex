@@ -42,8 +42,8 @@ describe("getWorkflowNextAction", () => {
   it("shows the planning action for pending workflow runs", () => {
     const action = getWorkflowNextAction([job("workflow_run", "pending")]);
 
-    assert.equal(action.title, "Run architect planning");
-    assert.equal(action.buttonLabel, "Run Architect Planning");
+    assert.equal(action.title, "Run planner");
+    assert.equal(action.buttonLabel, "Run Planner");
     assert.equal(action.icon, "git-branch");
   });
 

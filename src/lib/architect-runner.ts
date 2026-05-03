@@ -4,7 +4,7 @@ import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/g
 import { getActiveJobId } from "@/lib/job-runtime";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { getSettings } from "@/lib/settings";
-import { appendAgentMessages, getAgentSession, getProject, getWorkflow, saveProject, saveWorkflow } from "@/lib/store";
+import { appendAgentMessages, getAgentSession, getProject, getWorkflow, saveWorkflow } from "@/lib/store";
 import type { IssueRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
 
 const removeReviewLabels = ["taskix:architect-review", "taskix:ready-to-merge", "taskix:blocked"];
@@ -15,27 +15,27 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
   if (!workflow) throw new Error(`Workflow ${workflowId} not found`);
   const issue = workflow.issues.find((item) => item.issueId === issueId);
   if (!issue) throw new Error(`Issue ${issueId} not found in workflow ${workflowId}`);
-  if (!issue.githubIssueNumber || !issue.prUrl) throw new Error("Issue has no GitHub PR for architect review.");
-  if (issue.prState === "MERGED") throw new Error("Merged PRs do not need architect review.");
+  if (!issue.githubIssueNumber || !issue.prUrl) throw new Error("Issue has no GitHub PR for review.");
+  if (issue.prState === "MERGED") throw new Error("Merged PRs do not need review.");
 
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
   const qaPassed = labels.has("qa-passed") || labels.has("taskix:qa-passed");
-  if (!qaPassed) throw new Error("Architect review requires QA to pass first.");
+  if (!qaPassed) throw new Error("Reviewer requires QA to pass first.");
 
   const settings = await getSettings();
   const codex = new CodexClient(settings);
-  const sessionKey = `${project.projectId}:architect`;
-  const existingArchitectSession = await getAgentSession(sessionKey);
+  const sessionKey = `${issue.issueId}:reviewer`;
+  const existingReviewerSession = await getAgentSession(sessionKey);
   const reviewInstruction = architectReviewInstruction(issue);
   const reviewStartedAt = Date.now();
   const reviewStartedAtIso = new Date(reviewStartedAt).toISOString();
-  if (!existingArchitectSession?.messages.some((message) => message.content === reviewInstruction)) {
+  if (!existingReviewerSession?.messages.some((message) => message.content === reviewInstruction)) {
     await appendAgentMessages({
       sessionKey,
       projectId: project.projectId,
-      role: "architect",
-      title: "Architect",
-      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      role: "reviewer",
+      title: "Reviewer",
+      sessionId: existingReviewerSession?.sessionId ?? null,
       workflowId: workflow.workflowId,
       issueId: issue.issueId,
       githubIssueNumber: issue.githubIssueNumber,
@@ -43,7 +43,7 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
       prUrl: issue.prUrl,
       labels: issue.prLabels,
       status: "active",
-      currentStep: "code review requested",
+      currentStep: "review requested",
       startedAt: reviewStartedAtIso,
       messages: [
         { role: "user", content: reviewInstruction, createdAt: reviewStartedAtIso }
@@ -67,27 +67,27 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
   if (removedPrLabels.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, removedPrLabels);
   await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, appliedLabels);
   await addLabelsWithGh(project.githubRepo, issue.prUrl, appliedLabels);
-  await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Architect code review ${passed ? "passed" : "blocked"}.\n\n${review.summary}`);
+  await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Reviewer code review ${passed ? "passed" : "blocked"}.\n\n${review.summary}`);
 
   issue.labels = mergeLabels(issue.labels ?? [], removedIssueLabels, appliedLabels);
   issue.prLabels = mergeLabels(issue.prLabels ?? [], removedPrLabels, appliedLabels);
   workflow.status = passed ? "in_progress" : "blocked";
-  workflow.timeline.push(passed ? `Architect code review passed for ${issue.issueId}. Ready for merge.` : `Architect code review blocked ${issue.issueId}: ${review.summary}`);
+  workflow.timeline.push(passed ? `Reviewer code review passed for ${issue.issueId}. Ready for merge.` : `Reviewer code review blocked ${issue.issueId}: ${review.summary}`);
   await saveWorkflow(workflow);
   const activeJobId = getActiveJobId();
 
   await appendAgentMessages({
-    sessionKey: `${project.projectId}:architect`,
+    sessionKey,
     projectId: project.projectId,
-    role: "architect",
-    title: "Architect",
+    role: "reviewer",
+    title: "Reviewer",
     workflowId: workflow.workflowId,
     issueId: issue.issueId,
     githubIssueNumber: issue.githubIssueNumber,
     githubIssueUrl: issue.githubIssueUrl ?? null,
     prUrl: issue.prUrl,
     labels: issue.prLabels,
-    currentStep: passed ? "code review passed" : "code review blocked",
+    currentStep: passed ? "review passed" : "review blocked",
     status: passed ? "done" : "blocked",
     executionLogs: [],
     messages: [
@@ -98,7 +98,7 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
         status: passed ? "done" : "blocked",
         durationMs: reviewDurationMs,
         executionLogs: review.executionLog ? [{
-          title: `Architect code review for ${issue.title}`,
+          title: `Reviewer code review for ${issue.title}`,
           content: review.executionLog,
           createdAt: now,
           status: passed ? "ok" : "failed",
@@ -111,7 +111,7 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
     ]
   });
 
-  if (!passed) throw new Error(review.summary || "Architect review blocked this PR.");
+  if (!passed) throw new Error(review.summary || "Reviewer blocked this PR.");
 }
 
 export async function runWorkflowMerge(workflowId: string, issueId: string, project?: ProjectRecord | null): Promise<void> {
@@ -125,7 +125,7 @@ export async function runWorkflowMerge(workflowId: string, issueId: string, proj
 
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
   if (!labels.has("taskix:ready-to-merge")) {
-    throw new Error("Architect code review must pass before merge.");
+    throw new Error("Reviewer code review must pass before merge.");
   }
 
   await runArchitectMergeRequest(project, workflow, issue);
@@ -136,23 +136,23 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
   const now = new Date().toISOString();
   const content = architectMergeInstruction(project, issue);
 
-  workflow.timeline.push(`Requested architect merge handling for ${issue.issueId}.`);
+  workflow.timeline.push(`Requested reviewer merge handling for ${issue.issueId}.`);
   await saveWorkflow(workflow);
 
-  const sessionKey = `${project.projectId}:architect`;
-  const [settings, existingArchitectSession] = await Promise.all([
+  const sessionKey = `${issue.issueId}:reviewer`;
+  const [settings, existingReviewerSession] = await Promise.all([
     getSettings(),
     getAgentSession(sessionKey)
   ]);
   const codex = new CodexClient(settings);
   const mergeStartedAt = Date.now();
-  if (!existingArchitectSession?.messages.some((message) => message.content === content)) {
+  if (!existingReviewerSession?.messages.some((message) => message.content === content)) {
     await appendAgentMessages({
       sessionKey,
       projectId: project.projectId,
-      role: "architect",
-      title: "Architect",
-      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      role: "reviewer",
+      title: "Reviewer",
+      sessionId: existingReviewerSession?.sessionId ?? null,
       workflowId: workflow.workflowId,
       issueId: issue.issueId,
       prUrl: issue.prUrl ?? null,
@@ -165,27 +165,22 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
       ]
     });
   }
-  const result = await codex.architectChat({
+  const result = await codex.reviewerChat({
     projectName: project.name,
     githubRepo: project.githubRepo,
     message: content,
-    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null
+    sessionId: existingReviewerSession?.sessionId ?? null
   });
   const mergeDurationMs = Math.max(0, Date.now() - mergeStartedAt);
-
-  if (result.sessionId && result.sessionId !== project.architectSessionId) {
-    project.architectSessionId = result.sessionId;
-    await saveProject(project);
-  }
   const activeJobId = getActiveJobId();
   const finishedAt = new Date().toISOString();
 
   await appendAgentMessages({
     sessionKey,
     projectId: project.projectId,
-    role: "architect",
-    title: "Architect",
-    sessionId: result.sessionId ?? project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+    role: "reviewer",
+    title: "Reviewer",
+    sessionId: result.sessionId ?? existingReviewerSession?.sessionId ?? null,
     workflowId: workflow.workflowId,
     issueId: issue.issueId,
     prUrl: issue.prUrl ?? null,
@@ -200,7 +195,7 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
         status: "done",
         durationMs: mergeDurationMs,
         executionLogs: result.executionLog ? [{
-          title: "Architect merge handling",
+          title: "Reviewer merge handling",
           content: result.executionLog,
           createdAt: finishedAt,
           status: "ok",
@@ -226,7 +221,7 @@ export function architectReviewInstruction(issue: Pick<IssueRecord, "githubIssue
 
 export function architectMergeInstruction(project: ProjectRecord, issue: IssueRecord): string {
   return [
-    "You are architect merge owner.",
+    "You are reviewer merge owner.",
     "",
     `GitHub repo: ${project.githubRepo}`,
     `Issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}`,

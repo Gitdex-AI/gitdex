@@ -4,7 +4,7 @@ import { developerRoleIds } from "@/lib/developer-roles";
 import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh, updateIssueWithGh } from "@/lib/github-local";
 import { getActiveJobId } from "@/lib/job-runtime";
 import { getSettings } from "@/lib/settings";
-import { appendAgentMessages, createJob, getAgentSession, getWorkflow, listJobs, saveAgentSession, saveProject, saveWorkflow } from "@/lib/store";
+import { appendAgentMessages, createJob, getAgentSession, getWorkflow, listJobs, saveAgentSession, saveWorkflow } from "@/lib/store";
 import type { DeveloperRoleId } from "@/lib/developer-roles";
 import type { ProjectRecord } from "@/lib/types";
 
@@ -17,19 +17,15 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
   const startedAt = new Date().toISOString();
   const content = architectBlockerInstruction(session);
 
-  const existingArchitectSession = await getAgentSession(`${project.projectId}:architect`);
+  const architectSessionKey = `${session.issueId ?? session.sessionKey}:architect`;
+  const existingArchitectSession = await getAgentSession(architectSessionKey);
   const codex = new CodexClient(settings);
   const result = await codex.architectResolveBlocker({
     projectName: project.name,
     githubRepo: project.githubRepo,
     blockedContext: content,
-    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null
+    sessionId: existingArchitectSession?.sessionId ?? null
   });
-
-  if (result.sessionId && result.sessionId !== project.architectSessionId) {
-    project.architectSessionId = result.sessionId;
-    await saveProject(project);
-  }
 
   const workflow = session.workflowId ? await getWorkflow(session.workflowId) : null;
   const issue = workflow?.issues.find((item) => item.issueId === session.issueId);
@@ -109,11 +105,11 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
   }] : [];
 
   await appendAgentMessages({
-    sessionKey: `${project.projectId}:architect`,
+    sessionKey: architectSessionKey,
     projectId: project.projectId,
     role: "architect",
     title: "Architect",
-    sessionId: result.sessionId ?? project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+    sessionId: result.sessionId ?? existingArchitectSession?.sessionId ?? null,
     workflowId: session.workflowId ?? null,
     issueId: session.issueId ?? null,
     githubIssueNumber: session.githubIssueNumber ?? issue?.githubIssueNumber ?? null,

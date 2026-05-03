@@ -60,7 +60,7 @@ export default async function ProjectDetailPage({
   const roleSession = activeSession ?? await getAgentSession(`${project.projectId}:${activeRole}`);
   const isInspectingIssueSession = Boolean(query.session);
   const pmSession = sessions.find((session) => session.sessionKey === `${project.projectId}:product_manager`);
-  const allDynamicSessions = sessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops");
+  const allDynamicSessions = sessions.filter((session) => session.role !== "product_manager" && session.role !== "planner" && session.role !== "devops");
   const archivedSessions = allDynamicSessions.filter((session) => session.archivedAt);
   const dynamicSessions = allDynamicSessions.filter((session) => !session.archivedAt);
   const sortedWorkflows = sortWorkflowsLatestFirst(workflows);
@@ -82,8 +82,8 @@ export default async function ProjectDetailPage({
   const workflowPanelJobs = filterJobsForWorkflows(jobs, workflowPanelWorkflows);
   const workflowPanelSessions = filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
   const autoRunState = getAutoRunState(project.projectId);
-  const workflowPanelDynamicSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && !session.archivedAt);
-  const workflowPanelArchivedSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "architect" && session.role !== "devops" && session.archivedAt);
+  const workflowPanelDynamicSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "planner" && session.role !== "devops" && !session.archivedAt);
+  const workflowPanelArchivedSessions = workflowPanelSessions.filter((session) => session.role !== "product_manager" && session.role !== "planner" && session.role !== "devops" && session.archivedAt);
   const workflowProgress = getWorkflowProgress({ workflows: workflowPanelWorkflows, jobs: workflowPanelJobs });
   const workflowStepDetails = buildWorkflowStepDetails({
     projectId: project.projectId,
@@ -218,7 +218,6 @@ export default async function ProjectDetailPage({
               <Stack p="md" gap="xs">
                 <Text size="sm">Slug: <Code>{project.slug}</Code></Text>
                 <Text size="sm">PM: <Code>{project.projectManagerSessionId ?? "new"}</Code></Text>
-                <Text size="sm">Architect: <Code>{project.architectSessionId ?? "new"}</Code></Text>
                 <Text size="sm">DevOps: <Code>{project.devopsSessionId ?? "new"}</Code></Text>
                 <Text size="sm">Agents: <Code>{project.agentsFilePath}</Code></Text>
                 <Text size="sm">Agents update: <Code>{project.updateAgentsFile ? "enabled" : "skipped"}</Code></Text>
@@ -297,7 +296,7 @@ function ThreePhaseWorkflowPanel(input: {
     return (
       <section className="phase-panel">
         <Stack gap="xs">
-          <Text size="xs" c="dimmed">PM confirms scope, then architect creates GitHub issues.</Text>
+          <Text size="xs" c="dimmed">PM confirms scope, then planner creates GitHub issues.</Text>
           {!input.isInspectingIssueSession && input.readyForArchitectPayload ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} /> : null}
           {renderRequirementRows(input.projectId, input.requirementWorkflows, input.jobs)}
         </Stack>
@@ -314,7 +313,7 @@ function ThreePhaseWorkflowPanel(input: {
     return (
       <section className="phase-panel">
         <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
-          <Text size="xs" c="dimmed" style={{ minWidth: 0 }}>GitHub issues drive development, QA, architect review, and merge.</Text>
+          <Text size="xs" c="dimmed" style={{ minWidth: 0 }}>GitHub issues drive development, QA, review, and merge.</Text>
           <ProjectAutoRunIssuesButton
             projectId={input.projectId}
             workflowIds={input.workflows.map((workflow) => workflow.workflowId)}
@@ -362,10 +361,10 @@ function filterSessionsForWorkflows(sessions: AgentSessionRecord[], workflows: W
   const issueSessionIds = new Set(
     workflows.flatMap((workflow) => workflow.issues.flatMap((issue) => [issue.issueId, issue.developerSessionId, issue.qaSessionId].filter(Boolean) as string[]))
   );
-  if (!workflowIds.size) return sessions.filter((session) => session.role === "product_manager" || session.role === "architect" || session.role === "devops");
+  if (!workflowIds.size) return sessions.filter((session) => session.role === "product_manager" || session.role === "planner" || session.role === "devops");
 
   return sessions.filter((session) => {
-    if (session.role === "product_manager" || session.role === "architect" || session.role === "devops") return true;
+    if (session.role === "product_manager" || session.role === "planner" || session.role === "devops") return true;
     if (session.workflowId && workflowIds.has(session.workflowId)) return true;
     if (session.issueId && issueSessionIds.has(session.issueId)) return true;
     return issueSessionIds.has(session.sessionKey);
@@ -412,24 +411,24 @@ function buildWorkflowStepDetails(input: {
       <Stack gap="xs">
         {renderStepRecovery({
           projectId: input.projectId,
-          title: "Recover architect planning",
+          title: "Recover planner job",
           reason: recoveryReasonForJobs(planningJobs),
           jobs: planningJobs,
-          sessions: input.sessions.filter((session) => session.role === "architect"),
+          sessions: input.sessions.filter((session) => session.role === "planner"),
           syncLabel: "Sync planning state"
         })}
         {input.queuedWorkflow ? (
           <Alert icon={<GitBranch size={16} />} color="blue" variant="light">
-            <Text size="sm" fw={700}>Workflow queued for architect planning</Text>
+            <Text size="sm" fw={700}>Workflow queued for planner</Text>
             <Text size="xs" c="dimmed">
               {input.queuedWorkflow.trackingCode ?? input.queuedWorkflow.workflowId} is waiting for the planning step.
               {input.queuedJob ? ` Pending job: ${input.queuedJob.type} (${input.queuedJob.status}).` : ""}
             </Text>
           </Alert>
         ) : null}
-        {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Architect Planning")}
+        {renderStepRunAction(input.projectId, input.jobs, "workflow_run", "Run Planner")}
         {renderJobRows(input.projectId, planningJobs, input.queuedJobId)}
-        {renderSessionRows(input.sessions.filter((session) => session.role === "architect"))}
+        {renderSessionRows(input.sessions.filter((session) => session.role === "planner"))}
       </Stack>
     ),
     developer: (

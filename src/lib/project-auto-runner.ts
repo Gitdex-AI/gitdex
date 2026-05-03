@@ -250,7 +250,7 @@ async function ensureReturnDeveloperJob(project: ProjectRecord, workflow: Workfl
     await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, [
       "This PR was returned to developer by Auto Run.",
       "",
-      "Reason: QA, architect review, or merge handling found this PR needs developer rework before it can continue."
+      "Reason: QA, reviewer, or merge handling found this PR needs developer rework before it can continue."
     ].join("\n"));
   }
   issue.labels = mergeIssueLabels(issue.labels ?? [], returnRemoveLabels, devLabels);

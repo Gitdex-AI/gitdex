@@ -96,13 +96,17 @@ export type ArchitectBlockerResolution = {
 
 const rolePrompts = {
   product_manager:
-    "You are a Codex product manager. Stay available for user conversation, clarify requirements, and only hand confirmed requirements to the architect. Do not perform long-running implementation work.",
+    "You are a Codex product manager. Stay available for user conversation, clarify requirements, and only hand confirmed requirements to the planner. Do not perform long-running implementation work.",
+  planner:
+    "You are a Codex planner. Turn confirmed product requirements into GitHub-tracked implementation issues, define dependencies, assign developer roles, and set ownedPaths. Do not implement, QA, review PRs, merge, or deploy.",
   developer:
-    "You are a Codex developer. Work only within the directories assigned by the architect, keep ownership boundaries clear, and avoid touching files owned by other parallel developers.",
+    "You are a Codex developer. Work only within the directories assigned by the planner or issue architect, keep ownership boundaries clear, and avoid touching files owned by other parallel developers.",
   qa:
     "You are a Codex QA engineer. Validate implementation against acceptance criteria, identify defects and regressions, and create follow-up issues for fixes. Do not decide merge or deployment.",
   architect:
-    "You are a Codex architect. Turn confirmed requirements into implementation issues, coordinate developer roles, review code/PRs after QA, and decide merge readiness. Do not own deployment setup.",
+    "You are a Codex issue architect. Resolve unclear, contradictory, or technically non-executable issue specifications so developer work can continue. Do not implement, QA, merge, or deploy.",
+  reviewer:
+    "You are a Codex reviewer. Review QA-passed PRs for merge readiness and handle the dedicated merge step. Do not plan requirements, implement developer work, QA, or deploy.",
   devops:
     "You are a Codex DevOps engineer. Own deployment setup, GitHub Actions/CD pipelines, environment/secrets guidance, release automation, observability, and rollback planning. Do not decompose product features."
 } as const;
@@ -140,7 +144,7 @@ ${input.message}`;
     const result = await this.runText(prompt, input.sessionId);
     return (
       result ?? {
-        text: "PM mock response: I captured the requirement. Use /confirm <requirement> when the scope is ready for architect planning.",
+        text: "PM mock response: I captured the requirement. Use /confirm <requirement> when the scope is ready for planner handoff.",
         sessionId: input.sessionId
       }
     );
@@ -170,6 +174,35 @@ ${input.message}`;
     return (
       result ?? {
         text: "Architect mock response: I captured this project context and can review architecture, issue ownership, merge readiness, and deployment strategy.",
+        sessionId: input.sessionId
+      }
+    );
+  }
+
+  async reviewerChat(input: {
+    projectName: string;
+    githubRepo: string;
+    message: string;
+    sessionId?: string | null;
+  }): Promise<CodexTextResult> {
+    const workspaceDir = await this.prepareArchitectWorkspace(input.githubRepo, `reviewer-${input.projectName}`);
+    const prompt = `${rolePrompts.reviewer}
+
+Project: ${input.projectName}
+GitHub repo: ${input.githubRepo}
+Workspace: ${workspaceDir}
+
+Hard rules:
+- Do not modify the current Taskix app checkout or its .git directory.
+- The current working directory is the isolated reviewer clone: ${workspaceDir}.
+- Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
+
+User message:
+${input.message}`;
+    const result = await this.runText(prompt, input.sessionId, { cwd: workspaceDir });
+    return (
+      result ?? {
+        text: "Reviewer mock response: I checked merge readiness and recorded the requested merge handling.",
         sessionId: input.sessionId
       }
     );
@@ -299,7 +332,7 @@ ${input.message}`;
       required: ["issues"],
       additionalProperties: false
     };
-    const prompt = `${rolePrompts.architect}
+    const prompt = `${rolePrompts.planner}
 
 Confirmed requirement from PM:
 ${requirement}
@@ -483,7 +516,7 @@ Return JSON with summary, blockedType, branch, prUrl, changedFiles, testsRun.`;
       labelsApplied: { type: "array", items: { type: "string" } },
       comments: { type: "array", items: { type: "string" } }
     });
-    const prompt = `${rolePrompts.architect}
+    const prompt = `${rolePrompts.reviewer}
 
 GitHub repo: ${input.repo}
 Issue: #${input.issueNumber}
@@ -527,7 +560,7 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
       labelsApplied: { type: "array", items: { type: "string" } },
       comments: { type: "array", items: { type: "string" } }
     });
-    const prompt = `${rolePrompts.architect}
+    const prompt = `${rolePrompts.reviewer}
 
 GitHub repo: ${input.repo}
 Issue: #${input.issueNumber}
@@ -537,7 +570,7 @@ Project deployment policy: manual deployment. This review stage must not merge, 
 
 Task:
 - Read the issue, PR diff, labels, comments, and QA evidence with gh. Treat GitHub as the source of truth.
-- Perform architect code review and merge-readiness review after QA has passed.
+- Perform code review and merge-readiness review after QA has passed.
 
 Hard rules:
 - Do not merge the PR during this review stage.
@@ -733,7 +766,7 @@ Results:
 ${JSON.stringify(results, null, 2)}
 
 Summarize code review outcome, merge readiness, and deployment status according to the deployment policy.`)
-    )?.text ?? (autoDeploy ? "Architect review complete. All approved issues are ready for merge and automatic deployment in mock mode." : "Architect review complete. All approved issues are merge-ready; automatic deployment is disabled.");
+    )?.text ?? (autoDeploy ? "Reviewer completed. All approved issues are ready for merge and automatic deployment in mock mode." : "Reviewer completed. All approved issues are merge-ready; automatic deployment is disabled.");
   }
 
   private async runJson<T>(prompt: string, schema: object): Promise<T | null> {
@@ -1013,7 +1046,7 @@ function mockIssues(): IssueSpec[] {
     },
     {
       title: "Add role orchestration for confirmed requirements",
-      description: "Run architect planning, developer implementation, and architect review after PM confirms scope.",
+      description: "Run planner issue breakdown, developer implementation, QA, review, and merge after PM confirms scope.",
       assigneeRole: "developer",
       developerRole: "backend_developer",
       ownedPaths: ["src/lib"],

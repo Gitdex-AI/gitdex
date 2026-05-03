@@ -2,9 +2,11 @@ import type { DeveloperRoleId } from "@/lib/developer-roles";
 
 export type Role =
   | "product_manager"
+  | "planner"
   | "developer"
   | "qa"
   | "architect"
+  | "reviewer"
   | "devops";
 
 export type WorkflowStatus =

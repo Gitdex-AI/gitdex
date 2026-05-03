@@ -61,14 +61,14 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
   const issues = await codex.architectPlanIssues(workflow.userRequirement);
   workflow.issues = [];
   workflow.status = "transferred_to_github";
-  workflow.timeline.push("PM confirmed scope and handed requirement to architect.");
-  workflow.timeline.push("Architect generated implementation issue breakdown.");
+  workflow.timeline.push("PM confirmed scope and handed requirement to planner.");
+  workflow.timeline.push("Planner generated implementation issue breakdown.");
   if (project?.projectId) {
     await appendAgentMessages({
-      sessionKey: `${project.projectId}:architect`,
+      sessionKey: `${workflow.workflowId}:planner`,
       projectId: project.projectId,
-      role: "architect",
-      title: "Architect",
+      role: "planner",
+      title: "Planner",
       workflowId: workflow.workflowId,
       messages: [
         {
@@ -78,7 +78,7 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
         },
         {
           role: "assistant",
-          content: `Architect planned ${issues.length} implementation issue(s):\n\n${issues.map((issue, index) => {
+          content: `Planner created ${issues.length} implementation issue(s):\n\n${issues.map((issue, index) => {
             const ownedPaths = issue.ownedPaths.length ? issue.ownedPaths.join(", ") : "unspecified";
             return `${index + 1}. ${issue.title}\nDeveloper role: ${issue.developerRole ?? issue.assigneeRole}\nOwned paths: ${ownedPaths}\nAcceptance criteria:\n${issue.acceptanceCriteria.map((item) => `- ${item}`).join("\n")}`;
           }).join("\n\n")}`,
@@ -255,7 +255,7 @@ export async function runWorkflowQa(workflowId: string, issueId: string, project
   }
 
   workflow.timeline.push(qaResult.passed
-    ? `QA passed PR for issue ${issue.issueId}. Awaiting architect merge handoff.`
+    ? `QA passed PR for issue ${issue.issueId}. Awaiting review and merge handoff.`
     : qaFailureType === "spec"
       ? `QA marked ${issue.issueId} spec-blocked for architect clarification: ${qaResult.summary}`
       : `QA failed PR for issue ${issue.issueId}: ${qaResult.summary}`);

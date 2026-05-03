@@ -89,6 +89,23 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
 
 async function ensureRunningPlaceholder(project: ProjectRecord, workflow: WorkflowRecord, job: JobRecord): Promise<void> {
   const issue = job.payload.issueId ? workflow.issues.find((item) => item.issueId === job.payload.issueId) ?? null : null;
+  if (job.type === "workflow_run") {
+    const sessionKey = `${workflow.workflowId}:planner`;
+    const existing = await getAgentSession(sessionKey);
+    await appendAgentRunPlaceholder({
+      project,
+      workflow,
+      job,
+      sessionKey,
+      role: "planner",
+      title: "Planner",
+      label: "Planner",
+      sessionId: existing?.sessionId ?? null,
+      currentStep: "planning GitHub issues",
+      labels: []
+    });
+    return;
+  }
   if (job.type === "issue_run" && issue) {
     await appendAgentRunPlaceholder({
       project,
@@ -122,7 +139,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
     return;
   }
   if ((job.type === "architect_review_run" || job.type === "merge_run") && issue) {
-    const sessionKey = `${project.projectId}:architect`;
+    const sessionKey = `${issue.issueId}:reviewer`;
     const existing = await getAgentSession(sessionKey);
     await appendAgentRunPlaceholder({
       project,
@@ -130,11 +147,11 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       issue,
       job,
       sessionKey,
-      role: "architect",
-      title: "Architect",
-      label: "Architect",
-      sessionId: project.architectSessionId ?? existing?.sessionId ?? null,
-      currentStep: job.type === "merge_run" ? "merge requested" : "code review requested",
+      role: "reviewer",
+      title: "Reviewer",
+      label: "Reviewer",
+      sessionId: existing?.sessionId ?? null,
+      currentStep: job.type === "merge_run" ? "merge requested" : "review requested",
       prUrl: job.payload.prUrl ?? issue.prUrl ?? null,
       labels: issue.labels ?? []
     });
@@ -142,7 +159,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
   }
   if (job.type === "architect_blocker_run" && job.payload.sessionKey) {
     const blockedSession = await getAgentSession(job.payload.sessionKey);
-    const sessionKey = `${project.projectId}:architect`;
+    const sessionKey = `${blockedSession?.issueId ?? job.payload.issueId ?? job.payload.sessionKey}:architect`;
     const existing = await getAgentSession(sessionKey);
     await appendAgentRunPlaceholder({
       project,
@@ -159,7 +176,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       role: "architect",
       title: "Architect",
       label: "Architect",
-      sessionId: project.architectSessionId ?? existing?.sessionId ?? null,
+      sessionId: existing?.sessionId ?? null,
       currentStep: "resolving blocker",
       githubIssueNumber: blockedSession?.githubIssueNumber ?? null,
       githubIssueUrl: blockedSession?.githubIssueUrl ?? null,

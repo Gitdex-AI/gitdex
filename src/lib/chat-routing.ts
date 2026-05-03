@@ -27,7 +27,9 @@ export function parseChatTarget(input: string): { role: ChatTargetRole; message:
 
 export function chatRoleLabel(role: Role, title?: string | null, developerRole?: string | null): string {
   if (role === "product_manager") return "PM";
+  if (role === "planner") return "Planner";
   if (role === "architect") return "Architect";
+  if (role === "reviewer") return "Reviewer";
   if (role === "devops") return "DevOps";
   if (role === "qa") return title && title !== "QA" ? (title.toLowerCase().startsWith("qa") ? title : `QA: ${title}`) : "QA";
   if (role === "developer") return developerRole ? `Developer: ${developerRole}` : title ? `Developer: ${title}` : "Developer";

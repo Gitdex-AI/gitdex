@@ -22,7 +22,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.issueId === session.issueId
     && job.payload.sessionKey === session.sessionKey
   ));
-  const architectSessionKey = `${project.projectId}:architect`;
+  const architectSessionKey = `${session.issueId}:architect`;
   const architectInstruction = architectBlockerInstruction(session);
   const existingArchitectSession = await getAgentSession(architectSessionKey);
   if (!existingArchitectSession?.messages.some((message) => message.content === architectInstruction)) {
@@ -32,7 +32,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       projectId: project.projectId,
       role: "architect",
       title: "Architect",
-      sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+      sessionId: existingArchitectSession?.sessionId ?? null,
       workflowId: session.workflowId,
       issueId: session.issueId,
       githubIssueNumber: session.githubIssueNumber ?? null,
@@ -63,7 +63,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     role: "architect",
     title: "Architect",
     label: "Architect",
-    sessionId: project.architectSessionId ?? existingArchitectSession?.sessionId ?? null,
+    sessionId: existingArchitectSession?.sessionId ?? null,
     currentStep: "resolving blocker",
     workflow: session.workflowId ? { workflowId: session.workflowId } : null,
     issue: session.issueId ? {

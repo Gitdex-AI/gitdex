@@ -94,7 +94,7 @@ export async function createProject(input: {
     architectSessionId: null,
     devopsSessionId: null,
     createdAt: new Date().toISOString(),
-    teamRoles: ["developer", "qa", "architect", "devops"]
+    teamRoles: ["planner", "developer", "qa", "architect", "reviewer", "devops"]
   };
   await saveProject(project);
   return project;
@@ -454,6 +454,6 @@ function normalizeProject(project: ProjectRecord): ProjectRecord {
     updateAgentsFile: project.updateAgentsFile ?? true,
     architectSessionId: project.architectSessionId ?? null,
     devopsSessionId: project.devopsSessionId ?? null,
-    teamRoles: project.teamRoles ?? ["developer", "qa", "architect", "devops"]
+    teamRoles: project.teamRoles ?? ["planner", "developer", "qa", "architect", "reviewer", "devops"]
   };
 }

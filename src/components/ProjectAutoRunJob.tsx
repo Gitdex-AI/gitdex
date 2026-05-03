@@ -27,7 +27,7 @@ export function ProjectAutoRunJob({
     fetch(`/api/projects/${projectId}/jobs/run`, { method: "POST" })
       .then(async (response) => {
         if (!response.ok) throw new Error(await response.text());
-        router.replace(redirectTo ?? `/projects/${projectId}?role=architect`);
+        router.replace(redirectTo ?? `/projects/${projectId}`);
         router.refresh();
       })
       .catch((caught: unknown) => {
@@ -49,7 +49,7 @@ export function ProjectAutoRunJob({
   return (
     <Alert icon={<LoaderCircle size={16} className="chat-composer-spinner" />} mb="sm">
       <Text size="sm" fw={700}>Workflow job is running</Text>
-      <Text size="xs" c="dimmed">Architect planning, GitHub issue creation, and agent execution may take a while.</Text>
+      <Text size="xs" c="dimmed">Planner issue creation and agent execution may take a while.</Text>
     </Alert>
   );
 }

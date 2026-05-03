@@ -15,10 +15,10 @@ const stepOrder: WorkflowProgressStepId[] = ["requirement", "planning", "develop
 const stepCopy: Record<WorkflowProgressStepId, { label: string; detail: string }> = {
   requirement: {
     label: "1. PM requirement",
-    detail: "Capture the request in chat, then queue it for architect planning."
+    detail: "Capture the request in chat, then queue it for planner issue breakdown."
   },
   planning: {
-    label: "2. Architect planning",
+    label: "2. Planner",
     detail: "Split the request into GitHub issues and developer-owned work."
   },
   developer: {
@@ -30,8 +30,8 @@ const stepCopy: Record<WorkflowProgressStepId, { label: string; detail: string }
     detail: "Run automated tests first, then verify the targeted browser flow."
   },
   merge: {
-    label: "5. Architect review / merge",
-    detail: "Architect reviews code after QA passes, then handles merge readiness."
+    label: "5. Review / merge",
+    detail: "Reviewer checks code after QA passes, then handles merge readiness."
   },
   done: {
     label: "6. Done",
