@@ -36,28 +36,26 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const sessionKey = `${issue.issueId}:reviewer`;
   const reviewInstruction = architectReviewInstruction(issue);
   const existingReviewerSession = await getAgentSession(sessionKey);
-  if (!existingReviewerSession?.messages.some((message) => message.content === reviewInstruction)) {
-    const startedAt = new Date().toISOString();
-    await appendAgentMessages({
-      sessionKey,
-      projectId: project.projectId,
-      role: "reviewer",
-      title: "Reviewer",
-      sessionId: existingReviewerSession?.sessionId ?? null,
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      githubIssueNumber: issue.githubIssueNumber,
-      githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: issue.prUrl,
-      labels: issue.prLabels ?? issue.labels ?? [],
-      status: "active",
-      currentStep: "review requested",
-      startedAt,
-      messages: [
-        { role: "user", content: reviewInstruction, createdAt: startedAt }
-      ]
-    });
-  }
+  const startedAt = new Date().toISOString();
+  await appendAgentMessages({
+    sessionKey,
+    projectId: project.projectId,
+    role: "reviewer",
+    title: "Reviewer",
+    sessionId: existingReviewerSession?.sessionId ?? null,
+    workflowId: workflow.workflowId,
+    issueId: issue.issueId,
+    githubIssueNumber: issue.githubIssueNumber,
+    githubIssueUrl: issue.githubIssueUrl ?? null,
+    prUrl: issue.prUrl,
+    labels: issue.prLabels ?? issue.labels ?? [],
+    status: "active",
+    currentStep: "review requested",
+    startedAt,
+    messages: [
+      { role: "user", content: reviewInstruction, createdAt: startedAt }
+    ]
+  });
 
   const job = existingJob ?? await createJob({
     projectId: project.projectId,

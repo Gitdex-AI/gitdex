@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { appendAgentRunPlaceholder } from "@/lib/agent-run-messages";
 import { addLabelsWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
 import { qaValidationInstruction } from "@/lib/orchestrator";
-import { appendAgentMessages, cancelPendingJobs, createJob, getAgentSession, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
+import { appendAgentMessages, cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 
 const removeQaTerminalLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:env-blocked", "taskix:ready-to-merge"];
@@ -67,29 +67,26 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
 
   const sessionKey = issue.qaSessionId ?? `${issue.issueId}:qa`;
   const qaInstruction = qaValidationInstruction(issue.prUrl, issue, headSha);
-  const existingQaSession = await getAgentSession(sessionKey);
-  if (!existingQaSession?.messages.some((message) => message.content === qaInstruction)) {
-    const startedAt = new Date().toISOString();
-    await appendAgentMessages({
-      sessionKey,
-      projectId: project.projectId,
-      role: "qa",
-      title: `QA: ${issue.title}`,
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      ownedPaths: issue.ownedPaths ?? [],
-      status: "active",
-      currentStep: "QA validating PR",
-      startedAt,
-      githubIssueNumber: issue.githubIssueNumber,
-      githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: issue.prUrl,
-      labels: addQaLabels,
-      messages: [
-        { role: "user", content: qaInstruction, createdAt: startedAt }
-      ]
-    });
-  }
+  const startedAt = new Date().toISOString();
+  await appendAgentMessages({
+    sessionKey,
+    projectId: project.projectId,
+    role: "qa",
+    title: `QA: ${issue.title}`,
+    workflowId: workflow.workflowId,
+    issueId: issue.issueId,
+    ownedPaths: issue.ownedPaths ?? [],
+    status: "active",
+    currentStep: "QA validating PR",
+    startedAt,
+    githubIssueNumber: issue.githubIssueNumber,
+    githubIssueUrl: issue.githubIssueUrl ?? null,
+    prUrl: issue.prUrl,
+    labels: addQaLabels,
+    messages: [
+      { role: "user", content: qaInstruction, createdAt: startedAt }
+    ]
+  });
 
   await cancelPendingJobs({
     projectId: project.projectId,

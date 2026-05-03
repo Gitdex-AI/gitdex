@@ -40,28 +40,26 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const sessionKey = `${issue.issueId}:reviewer`;
   const mergeInstruction = architectMergeInstruction(project, issue);
   const existingReviewerSession = await getAgentSession(sessionKey);
-  if (!existingReviewerSession?.messages.some((message) => message.content === mergeInstruction)) {
-    const startedAt = new Date().toISOString();
-    await appendAgentMessages({
-      sessionKey,
-      projectId: project.projectId,
-      role: "reviewer",
-      title: "Reviewer",
-      sessionId: existingReviewerSession?.sessionId ?? null,
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      githubIssueNumber: issue.githubIssueNumber,
-      githubIssueUrl: issue.githubIssueUrl ?? null,
-      prUrl: issue.prUrl,
-      labels: issue.labels ?? [],
-      status: "active",
-      currentStep: "merge requested",
-      startedAt,
-      messages: [
-        { role: "user", content: mergeInstruction, createdAt: startedAt }
-      ]
-    });
-  }
+  const startedAt = new Date().toISOString();
+  await appendAgentMessages({
+    sessionKey,
+    projectId: project.projectId,
+    role: "reviewer",
+    title: "Reviewer",
+    sessionId: existingReviewerSession?.sessionId ?? null,
+    workflowId: workflow.workflowId,
+    issueId: issue.issueId,
+    githubIssueNumber: issue.githubIssueNumber,
+    githubIssueUrl: issue.githubIssueUrl ?? null,
+    prUrl: issue.prUrl,
+    labels: issue.labels ?? [],
+    status: "active",
+    currentStep: "merge requested",
+    startedAt,
+    messages: [
+      { role: "user", content: mergeInstruction, createdAt: startedAt }
+    ]
+  });
 
   const job = existingJob ?? await createJob({
     projectId: project.projectId,
