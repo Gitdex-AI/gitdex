@@ -1312,23 +1312,31 @@ pre,
 
 @media (max-width: 720px) {
   .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     min-height: 48px;
     padding: 8px 12px;
     gap: 8px;
   }
 
+  .topbar-brand {
+    min-width: 0;
+  }
+
   .topbar-title {
     font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .mark {
+    flex: 0 0 auto;
     width: 28px;
     height: 28px;
   }
 
   .top-nav {
-    flex: 0 0 auto;
-    margin-left: auto;
+    justify-self: end;
   }
 
   .top-nav-links {
@@ -1337,6 +1345,11 @@ pre,
 
   .top-nav-menu-trigger {
     display: grid;
+  }
+
+  .topbar-actions {
+    justify-self: end;
+    overflow: visible;
   }
 
   .topbar-menu-trigger {
