@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Providers>
           <header className="topbar">
             <Group className="topbar-brand" gap="xs" wrap="nowrap">
-              <div className="mark">TB</div>
+              <div className="mark">GD</div>
               <Text className="topbar-title" fw={800} c="white">
                 Gitdex
               </Text>
