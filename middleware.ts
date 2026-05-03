@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server.js";
 
 const adminSessionCookieName = "taskix_admin_session";
 const publicConsoleApiPaths = new Set([
