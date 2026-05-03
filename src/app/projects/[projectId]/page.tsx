@@ -585,9 +585,9 @@ function renderRequirementRows(projectId: string, workflows: WorkflowRecord[], j
 }
 
 function renderRequirementRunAction(projectId: string, planningJob: JobRecord | null): ReactNode {
-  if (planningJob?.status === "pending") return <ProjectRunJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
+  if (planningJob?.status === "pending") return <ProjectRunJobButton projectId={projectId} jobId={planningJob.jobId} label="Run Planner" />;
   if (planningJob?.status === "running") return <RunningActionButton label="Planning running" />;
-  if (planningJob?.status === "failed") return <ProjectRetryJobButton projectId={projectId} jobId={planningJob.jobId} label="Run" />;
+  if (planningJob?.status === "failed") return <ProjectRetryJobButton projectId={projectId} jobId={planningJob.jobId} label="Retry Planner" />;
   return null;
 }
 
@@ -599,7 +599,7 @@ function latestWorkflowJob(workflowId: string, jobs: JobRecord[], type: JobRecor
 
 function requirementStatus(workflow: WorkflowRecord, planningJob: JobRecord | null): { label: string; color: string } {
   if (planningJob?.status === "running") return { label: "Planning running", color: "blue" };
-  if (planningJob?.status === "pending") return { label: "Planning queued", color: "blue" };
+  if (planningJob?.status === "pending") return { label: "Ready for planning", color: "blue" };
   if (planningJob?.status === "failed") return { label: "Planning failed", color: "red" };
   switch (workflow.status) {
     case "created":

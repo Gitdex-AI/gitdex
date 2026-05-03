@@ -29,7 +29,7 @@ function DirectRequirementFields() {
     <div className="handoff-box muted">
       <Text size="sm" fw={700}>Confirm Requirement</Text>
       <Text size="xs" c="dimmed">
-        Paste one confirmed requirement to assign a requirement number and send it to planner.
+        Paste one confirmed requirement to assign a requirement number.
       </Text>
       <Textarea
         name="requirement"
@@ -54,7 +54,7 @@ function DirectRequirementFields() {
         {pending ? "Confirming..." : "Confirm Requirement"}
       </Button>
       <Text size="xs" c="dimmed" mt="xs">
-        After submit, Taskix assigns a requirement number and queues planner work.
+        After submit, run the planner from the requirement row.
       </Text>
     </div>
   );
@@ -67,7 +67,7 @@ function HandoffButton({ payload }: { payload: PmHandoffPayload }) {
     <div className="handoff-box">
       <Text size="sm" fw={700}>Confirm Requirement</Text>
       <Text size="xs" c="dimmed">
-        PM marked this requirement ready. Confirm it to assign a requirement number and hand it to the planner.
+        PM marked this requirement ready. Confirm it to assign a requirement number.
       </Text>
       <Text size="sm" fw={720} mt="xs" lineClamp={2}>{payload.requirement}</Text>
       <Button

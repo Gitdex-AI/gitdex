@@ -29,7 +29,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       payload: { workflowId: workflow.workflowId }
     });
     const next = new URL(`/projects/${project.projectId}`, request.url);
-    next.searchParams.set("role", "architect");
+    next.searchParams.set("role", "product_manager");
+    next.searchParams.set("phase", "requirements");
     next.searchParams.set("queued", "1");
     next.searchParams.set("workflow", workflow.workflowId);
     next.searchParams.set("job", job.jobId);
