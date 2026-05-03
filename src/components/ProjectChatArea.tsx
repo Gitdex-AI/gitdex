@@ -416,23 +416,12 @@ function pairExecutionLogsWithAssistantMessages(messages: AgentMessage[], logs: 
     const match = assistantIndexes.find((item) => {
       if (usedAssistantIndexes.has(item.index)) return false;
       return new Date(item.message.createdAt).getTime() >= logTime;
-    }) ?? findLastUnusedAssistantIndex(assistantIndexes, usedAssistantIndexes);
+    });
     if (!match) continue;
     usedAssistantIndexes.add(match.index);
     logsByMessageIndex.set(match.index, [...(logsByMessageIndex.get(match.index) ?? []), log]);
   }
   return logsByMessageIndex;
-}
-
-function findLastUnusedAssistantIndex(
-  assistantIndexes: Array<{ message: AgentMessage; index: number }>,
-  usedAssistantIndexes: Set<number>
-): { message: AgentMessage; index: number } | undefined {
-  for (let index = assistantIndexes.length - 1; index >= 0; index -= 1) {
-    const item = assistantIndexes[index];
-    if (!usedAssistantIndexes.has(item.index)) return item;
-  }
-  return undefined;
 }
 
 function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {

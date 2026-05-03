@@ -143,7 +143,6 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
     ]
   });
 
-  session.executionLogs = [...(session.executionLogs ?? []), ...executionLogs];
   session.finishedAt = finishedAt;
   session.durationMs = durationMs;
   session.updatedAt = finishedAt;
