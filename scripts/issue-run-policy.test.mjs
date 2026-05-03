@@ -47,8 +47,8 @@ const ready = manualDeployFinalLabelPlan({
 });
 
 assert.equal(ready.decision, "ready_to_merge");
-assert.deepEqual(ready.labelsApplied, ["taskix:ready-to-merge"]);
-assert.deepEqual(ready.labelsRemoved, ["taskix:need-qa", "taskix:qa-running", "taskix:blocked"]);
+assert.deepEqual(ready.labelsApplied, ["gd:merge"]);
+assert.deepEqual(ready.labelsRemoved, ["gd:qa", "gd:review", "gd:blocked"]);
 assert.match(ready.summary, /ready for the dedicated merge step/);
 assert.match(ready.summary, /does not block merging/);
 
@@ -63,8 +63,8 @@ const blocked = manualDeployFinalLabelPlan({
 });
 
 assert.equal(blocked.decision, "blocked");
-assert.deepEqual(blocked.labelsApplied, ["taskix:blocked"]);
-assert.deepEqual(blocked.labelsRemoved, ["taskix:qa-running", "taskix:ready-to-merge"]);
+assert.deepEqual(blocked.labelsApplied, ["gd:fix"]);
+assert.deepEqual(blocked.labelsRemoved, ["gd:review", "gd:merge"]);
 assert.match(blocked.summary, /QA has not passed/);
 
 const mergedBlocked = manualDeployArchitectPolicyDecision({

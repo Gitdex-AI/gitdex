@@ -135,7 +135,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       developerRole: issue.developerRole ?? "general_developer",
       ownedPaths: issue.ownedPaths ?? [],
       currentStep: "developer handling GitHub issue",
-      labels: ["taskix:dev-running"]
+      labels: ["gd:dev"]
     });
     await appendAgentRunPlaceholder({
       project,
@@ -148,7 +148,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       label: issue.developerRole ?? "Dev",
       developerRole: issue.developerRole ?? "general_developer",
       currentStep: "developer handling GitHub issue",
-      labels: ["taskix:dev-running"]
+      labels: ["gd:dev"]
     });
     return;
   }
@@ -166,7 +166,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       content: instruction,
       currentStep: "QA validating PR",
       prUrl,
-      labels: ["taskix:need-qa", "taskix:qa-running"]
+      labels: ["gd:qa"]
     });
     await appendAgentRunPlaceholder({
       project,
@@ -179,7 +179,7 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       label: "QA",
       currentStep: "QA validating PR",
       prUrl: job.payload.prUrl ?? issue.prUrl ?? null,
-      labels: ["taskix:need-qa", "taskix:qa-running"]
+      labels: ["gd:qa"]
     });
     return;
   }

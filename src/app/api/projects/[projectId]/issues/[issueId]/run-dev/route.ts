@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
+import { getIssueStage } from "@/lib/issue-stage";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -14,6 +15,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const issue = workflow?.issues.find((item) => item.issueId === issueId);
   if (!workflow || !issue) return NextResponse.json({ error: "Issue not found." }, { status: 404 });
   if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged issues cannot run developer work." }, { status: 409 });
+  const stage = getIssueStage(issue);
+  if (!["gd:dev", "gd:fix", "gd:rebase"].includes(stage)) return NextResponse.json({ error: `Issue is ${stage}; developer work is not the next action.` }, { status: 409 });
 
   const jobs = await listJobs(project.projectId);
   const existingJob = jobs.find((job) => (

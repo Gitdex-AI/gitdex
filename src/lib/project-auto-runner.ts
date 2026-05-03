@@ -1,7 +1,8 @@
 import { runJobById } from "@/lib/job-runner";
 import { shouldCancelAutoRun, shouldPauseAutoRun, startAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
 import { canAutoRunDeveloper, canAutoRunQa, isClosedIssue } from "@/lib/auto-run-policy";
-import { addLabelsWithGh, commentIssueWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { commentIssueWithGh, getPullRequestHeadShaWithGh } from "@/lib/github-local";
+import { getIssueStage, transitionIssueStage } from "@/lib/issue-stage";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { allocateQaPreviewPort, qaPreviewUrl } from "@/lib/qa-preview-port";
@@ -9,11 +10,6 @@ import { cancelPendingJobs, createJob, listAgentSessions, listJobs, listProjectW
 import type { AgentSessionRecord, IssueRecord, JobRecord, JobType, ProjectRecord, WorkflowRecord } from "@/lib/types";
 
 const autoRunnableJobTypes: JobType[] = ["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"];
-const returnRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:env-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked", "taskix:needs-rebase"];
-const qaRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:env-blocked", "taskix:ready-to-merge"];
-const devLabels = ["taskix:dev-running"];
-const qaLabels = ["taskix:need-qa", "taskix:qa-running"];
-
 type AutoRunStep = {
   action: string;
   jobIds: string[];
@@ -159,16 +155,17 @@ async function findOrCreateNextBatch(
   const returnedIssueIds = new Set(returnRows.map(({ issue }) => issue.issueId));
   for (const { workflow, issue } of issueRows) {
     if (returnedIssueIds.has(issue.issueId)) continue;
-    if (hasAnyIssueLabel(issue, ["taskix:spec-blocked"])) {
+    const stage = getIssueStage(issue);
+    if (stage === "gd:architect") {
       const job = await ensureArchitectBlockerJob(project, workflow, issue, sessions);
       if (job) jobsToRun.push(job);
-    } else if (canRunDeveloperIssue(issue, workflow.issues)) {
+    } else if (stage === "gd:dev" && canRunDeveloperIssue(issue, workflow.issues)) {
       jobsToRun.push(await ensureDeveloperJob(project, workflow, issue));
-    } else if (canRunQa(issue)) {
+    } else if (stage === "gd:qa" && canRunQa(issue)) {
       jobsToRun.push(await ensureQaJob(project, workflow, issue));
-    } else if (canRunArchitectReview(issue)) {
+    } else if (stage === "gd:review" && canRunArchitectReview(issue)) {
       jobsToRun.push(await ensureArchitectReviewJob(project, workflow, issue));
-    } else if (canRunMerge(issue)) {
+    } else if (stage === "gd:merge" && canRunMerge(issue)) {
       jobsToRun.push(await ensureMergeJob(project, workflow, issue));
     }
   }
@@ -208,7 +205,7 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
 function findEnvironmentBlockedIssue(workflows: WorkflowRecord[], issueScope: Set<string>): IssueRecord | null {
   return workflows
     .flatMap((workflow) => workflow.issues)
-    .find((issue) => (!issueScope.size || issueScope.has(issue.issueId)) && hasAnyIssueLabel(issue, ["taskix:env-blocked"])) ?? null;
+    .find((issue) => (!issueScope.size || issueScope.has(issue.issueId)) && getIssueStage(issue) === "gd:blocked") ?? null;
 }
 
 function canRunQa(issue: IssueRecord): boolean {
@@ -219,27 +216,25 @@ function canRunArchitectReview(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
     && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
-    && hasAnyIssueLabel(issue, ["qa-passed", "taskix:qa-passed"])
-    && !hasAnyIssueLabel(issue, ["taskix:ready-to-merge", "taskix:merged"]);
+    && getIssueStage(issue) === "gd:review";
 }
 
 function canRunMerge(issue: IssueRecord): boolean {
-  return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && hasAnyIssueLabel(issue, ["taskix:ready-to-merge"]);
+  return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && getIssueStage(issue) === "gd:merge";
 }
 
 function shouldReturnQaFailureToDeveloper(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
     && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
-    && hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"])
-    && !hasAnyIssueLabel(issue, ["taskix:spec-blocked"]);
+    && getIssueStage(issue) === "gd:fix";
 }
 
 function shouldReturnRebaseToDeveloper(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
     && !isClosedIssue(issue)
     && issue.prState !== "MERGED"
-    && hasAnyIssueLabel(issue, ["taskix:needs-rebase"]);
+    && getIssueStage(issue) === "gd:rebase";
 }
 
 function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[]): boolean {
@@ -247,11 +242,6 @@ function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: Workflow
     .filter((job) => job.payload.workflowId === workflow.workflowId && job.payload.issueId === issue.issueId && (job.type === "architect_review_run" || job.type === "merge_run"))
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
   return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && latest?.status === "failed";
-}
-
-function hasAnyIssueLabel(issue: IssueRecord, labels: string[]): boolean {
-  const lowerLabels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  return labels.some((label) => lowerLabels.has(label.toLowerCase()));
 }
 
 async function ensureDeveloperJob(project: ProjectRecord, workflow: WorkflowRecord, issue: IssueRecord): Promise<JobRecord> {
@@ -275,9 +265,7 @@ async function ensureQaJob(project: ProjectRecord, workflow: WorkflowRecord, iss
     .filter((job) => job.type === "qa_run" && job.payload.workflowId === workflow.workflowId && job.payload.issueId === issue.issueId)
     .map((job) => job.payload.qaAttempt ?? 0)
     .reduce((max, value) => Math.max(max, value), 0) + 1;
-  await updateGitHubLabels(project, issue, qaRemoveLabels, qaLabels);
-  issue.labels = mergeIssueLabels(issue.labels ?? [], qaRemoveLabels, qaLabels);
-  issue.prLabels = mergeIssueLabels(issue.prLabels ?? [], qaRemoveLabels, qaLabels);
+  await transitionIssueStage({ repo: project.githubRepo, issue, stage: "gd:qa", prUrl: issue.prUrl });
   workflow.status = "in_progress";
   workflow.timeline.push(`Auto Run handed ${issue.issueId} to QA.`);
   await saveWorkflow(workflow);
@@ -293,7 +281,7 @@ async function ensureReturnDeveloperJob(project: ProjectRecord, workflow: Workfl
   if (!issue.prUrl) throw new Error(`Issue ${issue.issueId} has no pull request to return to developer.`);
   const existing = await findRunnableJob(project.projectId, workflow.workflowId, issue.issueId, "issue_run");
   if (existing) return existing;
-  await updateGitHubLabels(project, issue, returnRemoveLabels, devLabels);
+  await transitionIssueStage({ repo: project.githubRepo, issue, stage: getIssueStage(issue) === "gd:rebase" ? "gd:rebase" : "gd:fix", prUrl: issue.prUrl });
   if (issue.githubIssueNumber) {
     await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, [
       "This PR was returned to developer by Auto Run.",
@@ -301,8 +289,6 @@ async function ensureReturnDeveloperJob(project: ProjectRecord, workflow: Workfl
       "Reason: QA, reviewer, or merge handling found this PR needs developer rework before it can continue."
     ].join("\n"));
   }
-  issue.labels = mergeIssueLabels(issue.labels ?? [], returnRemoveLabels, devLabels);
-  issue.prLabels = mergeIssueLabels(issue.prLabels ?? [], returnRemoveLabels, devLabels);
   workflow.status = "in_progress";
   workflow.timeline.push(`Auto Run returned ${issue.issueId} to developer.`);
   await saveWorkflow(workflow);
@@ -350,29 +336,6 @@ async function findRunnableJob(projectId: string, workflowId: string, issueId: s
     && job.payload.workflowId === workflowId
     && job.payload.issueId === issueId
   )) ?? null;
-}
-
-async function updateGitHubLabels(project: ProjectRecord, issue: IssueRecord, removeLabels: string[], addLabels: string[]): Promise<void> {
-  const issueLabelsToRemove = labelsToRemove(issue.labels ?? [], removeLabels);
-  const prLabelsToRemove = labelsToRemove(issue.prLabels ?? [], removeLabels);
-  if (issue.githubIssueNumber) {
-    if (issueLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, issueLabelsToRemove);
-    await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, addLabels);
-  }
-  if (issue.prUrl) {
-    if (prLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, prLabelsToRemove);
-    await addLabelsWithGh(project.githubRepo, issue.prUrl, addLabels);
-  }
-}
-
-function labelsToRemove(labels: string[], removeLabels: string[]): string[] {
-  const lowerLabels = new Set(labels.map((label) => label.toLowerCase()));
-  return removeLabels.filter((label) => lowerLabels.has(label));
-}
-
-function mergeIssueLabels(existing: string[], removeLabels: string[], addLabels: string[]): string[] {
-  const removeSet = new Set(removeLabels.map((label) => label.toLowerCase()));
-  return [...new Set([...existing.filter((label) => !removeSet.has(label.toLowerCase())), ...addLabels])];
 }
 
 function uniqueJobsById(jobs: JobRecord[]): JobRecord[] {

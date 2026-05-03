@@ -241,7 +241,7 @@ Workspace: ${workspaceDir}
 
 Task:
 - Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat GitHub as the source of truth.
-- Merge only if taskix:ready-to-merge is present and no blocker exists.
+- Merge only if gd:merge is present on the issue and no blocker exists.
 
 Hard rules:
 - If merged successfully, return decision "merged".
@@ -591,7 +591,7 @@ Hard rules:
 - If changes are required from developer, return decision "changes_requested" and include the required changes in comments.
 - If QA is already passed or QA is not needed and the PR is acceptable, return decision "ready_to_merge".
 - Never merge the PR and never return a merged state during review.
-- If auto deploy is disabled, stop at taskix:ready-to-merge.
+- If auto deploy is disabled, stop at decision "ready_to_merge"; Taskix will move the issue to gd:merge.
 - If auto deploy is enabled and QA has passed, verify repository checks and branch state, then still stop at decision "ready_to_merge" without merging.
 
 Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied to an empty array.`;
@@ -709,11 +709,11 @@ Hard rules:
   - "spec" when acceptance criteria are missing, contradictory, mutually unsatisfiable, or not executable in this stack without an architect decision. These go back to architect, not developer.
   - "environment" when validation is blocked by local tooling/runtime constraints unrelated to the PR.
   - "stale" when the expected PR head SHA no longer matches.
-- Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. In that case, labelsApplied must include "taskix:spec-blocked" and "taskix:blocked", and must not include "taskix:qa-failed".
-- Use "environment" when local validation cannot proceed because of port binding, sandbox permissions, local tool failures, workspace preparation, or other runtime constraints unrelated to the PR. In that case, labelsApplied must include "taskix:env-blocked" and "taskix:blocked", and must not include "taskix:qa-failed".
+- Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. Taskix will move the issue to gd:architect.
+- Use "environment" when local validation cannot proceed because of port binding, sandbox permissions, local tool failures, workspace preparation, or other runtime constraints unrelated to the PR. Taskix will move the issue to gd:blocked.
 - Use "spec" when the PR alternates between passing one requirement and failing another because the issue does not define the trusted signal, policy, dependency, interface, or ownership boundary needed to satisfy both. This is an architecture/specification problem even if a concrete probe can reproduce the current failure.
 - Use "spec" when the issue has already cycled through multiple developer fixes and QA/architect findings show mutually incompatible expectations under the current issue text.
-- Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. In that case, labelsApplied should include "taskix:qa-failed".
+- Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. Taskix will move the issue to gd:fix.
 - When failing QA, include actionable findings and reproduction notes. For spec failures, explain the architectural decision that is missing and do not prescribe code changes as if the developer can choose the policy alone.
 - If a required baseline command fails for a repo-level reason that is clearly unrelated to the PR diff, report it as an environment or repository blocker in findings, but do not mark the PR implementation failed solely for that unrelated baseline failure when the acceptance criteria and PR-scoped automated tests pass.
 - The Taskix server normally occupies 127.0.0.1:8000. For browser validation, do not run \`npm run dev\` because it binds to 8000. Use the assigned preview URL ${previewUrl}. Start the PR worktree server on that port, for example \`DATA_DIR=/private/tmp/taskix-qa-${input.issueNumber}-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p ${previewPort}\`, then validate against \`${previewUrl}\`.

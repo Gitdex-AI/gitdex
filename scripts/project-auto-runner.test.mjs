@@ -17,12 +17,12 @@ const issue = (overrides = {}) => ({
 });
 
 describe("canAutoRunQa", () => {
-  it("allows need-qa issues to start QA", () => {
-    assert.equal(canAutoRunQa(issue({ labels: ["taskix:need-qa"] })), true);
+  it("allows QA-stage issues to start QA", () => {
+    assert.equal(canAutoRunQa(issue({ labels: ["gd:qa"] })), true);
   });
 
   it("does not start QA while QA is already running", () => {
-    assert.equal(canAutoRunQa(issue({ labels: ["taskix:qa-running"] })), false);
+    assert.equal(canAutoRunQa(issue({ labels: ["gd:blocked"] })), false);
   });
 
   it("does not start QA for closed PRs", () => {
@@ -30,32 +30,32 @@ describe("canAutoRunQa", () => {
   });
 
   it("does not restart QA for environment-blocked issues", () => {
-    assert.equal(canAutoRunQa(issue({ labels: ["taskix:env-blocked"] })), false);
+    assert.equal(canAutoRunQa(issue({ labels: ["gd:blocked"] })), false);
   });
 
   it("does not start QA for PRs returned for rebase", () => {
-    assert.equal(canAutoRunQa(issue({ labels: ["taskix:needs-rebase"] })), false);
+    assert.equal(canAutoRunQa(issue({ labels: ["gd:rebase"] })), false);
   });
 });
 
 describe("canAutoRunDeveloper", () => {
-  it("allows open issues without a PR or blocking labels", () => {
-    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null })), true);
+  it("allows open dev-stage issues without a PR", () => {
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:dev"] })), true);
   });
 
   it("does not start developer work for blocked issues", () => {
-    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:blocked"] })), false);
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:blocked"] })), false);
   });
 
   it("does not start developer work for spec-blocked issues", () => {
-    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:spec-blocked"] })), false);
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:architect"] })), false);
   });
 
   it("does not start developer work for environment-blocked issues", () => {
-    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:env-blocked"] })), false);
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:blocked"] })), false);
   });
 
   it("does not treat rebase-required PRs as fresh developer work", () => {
-    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:needs-rebase"] })), false);
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:rebase"] })), false);
   });
 });

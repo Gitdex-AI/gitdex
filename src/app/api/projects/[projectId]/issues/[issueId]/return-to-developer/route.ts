@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { commentIssueWithGh } from "@/lib/github-local";
+import { getIssueStage, transitionIssueStage } from "@/lib/issue-stage";
 import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
-
-const removeReadyLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:env-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked", "taskix:needs-rebase"];
-const addDeveloperLabels = ["taskix:dev-running"];
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -21,17 +19,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   if (!issue.prUrl) return NextResponse.json({ error: "Issue has no pull request to return to developer." }, { status: 400 });
   if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged issues cannot be returned to developer." }, { status: 409 });
 
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  const canReturnToDeveloper = labels.has("qa-passed")
-    || labels.has("taskix:qa-passed")
-    || labels.has("taskix:ready-to-merge")
-    || labels.has("taskix:needs-rebase")
-    || labels.has("qa-failed")
-    || labels.has("taskix:qa-failed");
-  if (!canReturnToDeveloper) return NextResponse.json({ error: "Issue is not ready to return to developer." }, { status: 409 });
+  const stage = getIssueStage(issue);
+  if (!["gd:review", "gd:merge", "gd:fix", "gd:rebase"].includes(stage)) return NextResponse.json({ error: "Issue is not ready to return to developer." }, { status: 409 });
 
-  const issueLabelsToRemove = labelsToRemove(issue.labels ?? []);
-  const prLabelsToRemove = labelsToRemove(issue.prLabels ?? []);
   const comment = [
     "This PR was returned to developer.",
     "",
@@ -46,12 +36,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
 
   try {
     if (issue.githubIssueNumber) {
-      if (issueLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, issueLabelsToRemove);
-      await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, addDeveloperLabels);
+      await transitionIssueStage({ repo: project.githubRepo, issue, stage: stage === "gd:rebase" ? "gd:rebase" : "gd:fix", prUrl: issue.prUrl });
       await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, comment);
     }
-    if (prLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, prLabelsToRemove);
-    await addLabelsWithGh(project.githubRepo, issue.prUrl, addDeveloperLabels);
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : "Failed to return issue to developer.",
@@ -59,18 +46,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     }, { status: 502 });
   }
 
-  issue.labels = [
-    ...new Set([
-      ...(issue.labels ?? []).filter((label) => !removeReadyLabels.includes(label.toLowerCase())),
-      ...addDeveloperLabels
-    ])
-  ];
-  issue.prLabels = [
-    ...new Set([
-      ...(issue.prLabels ?? []).filter((label) => !removeReadyLabels.includes(label.toLowerCase())),
-      ...addDeveloperLabels
-    ])
-  ];
   workflow.status = "in_progress";
   workflow.timeline.push(`Returned ${issue.issueId} to developer for branch update/rebase before merge.`);
   await saveWorkflow(workflow);
@@ -102,9 +77,4 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   });
 
   return NextResponse.json({ ok: true, jobId: job.jobId, redirectTo: `/projects/${project.projectId}/workflows/${workflow.workflowId}?autorun=1` });
-}
-
-function labelsToRemove(labels: string[]): string[] {
-  const lowerLabels = new Set(labels.map((label) => label.toLowerCase()));
-  return removeReadyLabels.filter((label) => lowerLabels.has(label));
 }

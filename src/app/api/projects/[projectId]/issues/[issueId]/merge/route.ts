@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
+import { getIssueStage } from "@/lib/issue-stage";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -16,12 +17,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   if (!issue.prUrl) return NextResponse.json({ error: "Issue has no pull request to merge." }, { status: 400 });
   if (issue.prState === "MERGED") return NextResponse.json({ ok: true, merged: true, issueId, prUrl: issue.prUrl });
 
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  const isReady = labels.has("taskix:ready-to-merge");
-  if (!isReady) {
+  if (getIssueStage(issue) !== "gd:merge") {
     return NextResponse.json({
       error: "Reviewer code review must pass before merge.",
-      action: "Run Review after QA passes. Merge is only enabled after taskix:ready-to-merge is applied."
+      action: "Run Review after QA passes. Merge is only enabled after gd:merge is applied."
     }, { status: 409 });
   }
 

@@ -1,6 +1,15 @@
 import { developerRoleCatalog, type DeveloperRoleId } from "@/lib/developer-roles";
 
 export const taskixLabels = [
+  { name: "gd:dev", color: "1d76db", description: "Gitdex issue stage: developer implementation" },
+  { name: "gd:fix", color: "d93f0b", description: "Gitdex issue stage: developer fix required" },
+  { name: "gd:rebase", color: "d93f0b", description: "Gitdex issue stage: developer rebase required" },
+  { name: "gd:qa", color: "006b75", description: "Gitdex issue stage: QA validation" },
+  { name: "gd:review", color: "fbca04", description: "Gitdex issue stage: code review" },
+  { name: "gd:merge", color: "0e8a16", description: "Gitdex issue stage: merge" },
+  { name: "gd:architect", color: "b60205", description: "Gitdex issue stage: architect clarification" },
+  { name: "gd:blocked", color: "5319e7", description: "Gitdex issue stage: blocked by environment or external condition" },
+  { name: "gd:done", color: "5319e7", description: "Gitdex issue stage: done" },
   { name: "taskix:dev-running", color: "1d76db", description: "Taskix developer is working" },
   { name: "taskix:architect-review", color: "fbca04", description: "Taskix architect review required" },
   { name: "taskix:need-qa", color: "d93f0b", description: "Taskix QA validation required" },

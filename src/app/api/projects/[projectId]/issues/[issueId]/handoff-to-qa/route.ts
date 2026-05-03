@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { addLabelsWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { getPullRequestHeadShaWithGh } from "@/lib/github-local";
+import { getIssueStage, transitionIssueStage } from "@/lib/issue-stage";
 import { allocateQaPreviewPort, qaPreviewUrl } from "@/lib/qa-preview-port";
 import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
-
-const removeQaTerminalLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:env-blocked", "taskix:ready-to-merge"];
-const addQaLabels = ["taskix:need-qa", "taskix:qa-running"];
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -21,6 +19,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   if (!workflow || !issue) return NextResponse.json({ error: "Issue not found." }, { status: 404 });
   if (!issue.prUrl) return NextResponse.json({ error: "Issue has no pull request for QA." }, { status: 400 });
   if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged issues cannot be sent to QA." }, { status: 409 });
+  if (getIssueStage(issue) !== "gd:qa" && getIssueStage(issue) !== "gd:blocked") return NextResponse.json({ error: "Issue is not in QA stage." }, { status: 409 });
 
   let headSha: string | null = null;
   try {
@@ -35,15 +34,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const qaAttempt = nextQaAttempt(jobs, workflow.workflowId, issue.issueId);
   const previewPort = allocateQaPreviewPort(jobs);
   const previewUrl = qaPreviewUrl(previewPort);
-  const issueLabelsToRemove = labelsToRemove(issue.labels ?? []);
-  const prLabelsToRemove = labelsToRemove(issue.prLabels ?? []);
   try {
-    if (issue.githubIssueNumber) {
-      if (issueLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, issueLabelsToRemove);
-      await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, addQaLabels);
-    }
-    if (prLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, prLabelsToRemove);
-    await addLabelsWithGh(project.githubRepo, issue.prUrl, addQaLabels);
+    await transitionIssueStage({ repo: project.githubRepo, issue, stage: "gd:qa", prUrl: issue.prUrl });
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : "Failed to hand off issue to QA.",
@@ -51,18 +43,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     }, { status: 502 });
   }
 
-  issue.labels = [
-    ...new Set([
-      ...(issue.labels ?? []).filter((label) => !removeQaTerminalLabels.includes(label.toLowerCase())),
-      ...addQaLabels
-    ])
-  ];
-  issue.prLabels = [
-    ...new Set([
-      ...(issue.prLabels ?? []).filter((label) => !removeQaTerminalLabels.includes(label.toLowerCase())),
-      ...addQaLabels
-    ])
-  ];
   workflow.status = "in_progress";
   workflow.timeline.push(`Handed ${issue.issueId} to QA.`);
   await saveWorkflow(workflow);
@@ -87,11 +67,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   });
 
   return NextResponse.json({ ok: true, jobId: job.jobId, redirectTo: `/projects/${project.projectId}/workflows/${workflow.workflowId}?autorun=1` });
-}
-
-function labelsToRemove(labels: string[]): string[] {
-  const lowerLabels = new Set(labels.map((label) => label.toLowerCase()));
-  return removeQaTerminalLabels.filter((label) => lowerLabels.has(label));
 }
 
 function nextQaAttempt(jobs: Awaited<ReturnType<typeof listJobs>>, workflowId: string, issueId: string): number {

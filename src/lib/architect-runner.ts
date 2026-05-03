@@ -1,15 +1,12 @@
 import { CodexClient } from "@/lib/codex";
 import { agentJobMessageId } from "@/lib/agent-run-messages";
-import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh } from "@/lib/github-local";
+import { commentIssueWithGh } from "@/lib/github-local";
+import { getIssueStage, transitionIssueStage } from "@/lib/issue-stage";
 import { getActiveJobId } from "@/lib/job-runtime";
 import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, getAgentSession, getProject, getWorkflow, listJobs, saveWorkflow } from "@/lib/store";
 import type { IssueRecord, ProjectRecord, ReviewerMergeResult, WorkflowRecord } from "@/lib/types";
-
-const removeReviewLabels = ["taskix:architect-review", "taskix:ready-to-merge", "taskix:blocked"];
-const removeMergeReturnLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked", "taskix:needs-rebase"];
-const developerRebaseLabels = ["taskix:needs-rebase", "taskix:dev-running"];
 
 export async function runWorkflowArchitectReview(workflowId: string, issueId: string, project?: ProjectRecord | null): Promise<void> {
   if (!project?.githubRepo) throw new Error("Project has no GitHub repo configured.");
@@ -20,9 +17,7 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
   if (!issue.githubIssueNumber || !issue.prUrl) throw new Error("Issue has no GitHub PR for review.");
   if (issue.prState === "MERGED") throw new Error("Merged PRs do not need review.");
 
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  const qaPassed = labels.has("qa-passed") || labels.has("taskix:qa-passed");
-  if (!qaPassed) throw new Error("Reviewer requires QA to pass first.");
+  if (getIssueStage(issue) !== "gd:review") throw new Error("Reviewer requires QA to pass first.");
 
   const settings = await getSettings();
   const codex = new CodexClient(settings);
@@ -61,18 +56,10 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
 
   const now = new Date().toISOString();
   const passed = review.decision === "ready_to_merge";
-  const appliedLabels = passed ? ["taskix:ready-to-merge"] : ["taskix:blocked"];
-  const removedIssueLabels = labelsToRemove(issue.labels ?? []);
-  const removedPrLabels = labelsToRemove(issue.prLabels ?? []);
 
-  if (removedIssueLabels.length) await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, removedIssueLabels);
-  if (removedPrLabels.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, removedPrLabels);
-  await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, appliedLabels);
-  await addLabelsWithGh(project.githubRepo, issue.prUrl, appliedLabels);
+  await transitionIssueStage({ repo: project.githubRepo, issue, stage: passed ? "gd:merge" : "gd:fix", prUrl: issue.prUrl });
   await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Reviewer code review ${passed ? "passed" : "blocked"}.\n\n${review.summary}`);
 
-  issue.labels = mergeLabels(issue.labels ?? [], removedIssueLabels, appliedLabels);
-  issue.prLabels = mergeLabels(issue.prLabels ?? [], removedPrLabels, appliedLabels);
   workflow.status = passed ? "in_progress" : "blocked";
   workflow.timeline.push(passed ? `Reviewer code review passed for ${issue.issueId}. Ready for merge.` : `Reviewer code review blocked ${issue.issueId}: ${review.summary}`);
   await saveWorkflow(workflow);
@@ -125,8 +112,7 @@ export async function runWorkflowMerge(workflowId: string, issueId: string, proj
   if (!issue.prUrl) throw new Error("Issue has no pull request to merge.");
   if (issue.prState === "MERGED") return;
 
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  if (!labels.has("taskix:ready-to-merge")) {
+  if (getIssueStage(issue) !== "gd:merge") {
     throw new Error("Reviewer code review must pass before merge.");
   }
 
@@ -227,8 +213,6 @@ async function runArchitectMergeRequest(project: ProjectRecord, workflow: Workfl
 
 async function returnMergeConflictToDeveloper(project: ProjectRecord, workflow: WorkflowRecord, issue: IssueRecord, result: ReviewerMergeResult): Promise<void> {
   if (!issue.prUrl) throw new Error("Issue has no pull request to return to developer.");
-  const issueLabelsToRemove = labelsToRemoveForMergeReturn(issue.labels ?? []);
-  const prLabelsToRemove = labelsToRemoveForMergeReturn(issue.prLabels ?? []);
   const comment = [
     "This PR was returned to developer for rebase or branch update.",
     "",
@@ -241,15 +225,9 @@ async function returnMergeConflictToDeveloper(project: ProjectRecord, workflow: 
   ].join("\n");
 
   if (issue.githubIssueNumber) {
-    if (issueLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, issueLabelsToRemove);
-    await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, developerRebaseLabels);
+    await transitionIssueStage({ repo: project.githubRepo, issue, stage: "gd:rebase", prUrl: issue.prUrl });
     await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, comment);
   }
-  if (prLabelsToRemove.length) await removeLabelsWithGh(project.githubRepo, issue.prUrl, prLabelsToRemove);
-  await addLabelsWithGh(project.githubRepo, issue.prUrl, developerRebaseLabels);
-
-  issue.labels = mergeLabels(issue.labels ?? [], issueLabelsToRemove, developerRebaseLabels);
-  issue.prLabels = mergeLabels(issue.prLabels ?? [], prLabelsToRemove, developerRebaseLabels);
   workflow.status = "in_progress";
   workflow.timeline.push(`Returned ${issue.issueId} to developer for rebase after merge blocker: ${result.blocker || result.summary}`);
 
@@ -294,27 +272,12 @@ export function architectMergeInstruction(project: ProjectRecord, issue: IssueRe
     `Issue: ${issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}`,
     `PR: ${issue.prUrl ?? "none"}`,
     "",
-    "Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat GitHub as the source of truth.",
-    "Only merge if taskix:ready-to-merge is present and no blocker exists.",
-    "If merged, apply taskix:merged and close the issue.",
+    "Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat the issue gd:merge label as the workflow source of truth.",
+    "Only merge if gd:merge is present on the issue and no blocker exists.",
+    "If merged, close the issue. Taskix will apply gd:done.",
     "If merge is blocked by conflicts, non-fast-forward state, branch out of date, or any rebase-required condition, do not edit code or resolve conflicts as reviewer. Report that the PR must return to developer for rebase/branch update, and include the exact blocker from GitHub.",
     "If blocked by checks or policy, report the blocker so Taskix can route it to the correct next role."
   ].join("\n");
-}
-
-function labelsToRemove(labels: string[]): string[] {
-  const lowerLabels = new Set(labels.map((label) => label.toLowerCase()));
-  return removeReviewLabels.filter((label) => lowerLabels.has(label));
-}
-
-function labelsToRemoveForMergeReturn(labels: string[]): string[] {
-  const lowerLabels = new Set(labels.map((label) => label.toLowerCase()));
-  return removeMergeReturnLabels.filter((label) => lowerLabels.has(label));
-}
-
-function mergeLabels(existing: string[], removed: string[], applied: string[]): string[] {
-  const removedSet = new Set(removed.map((label) => label.toLowerCase()));
-  return [...new Set([...existing.filter((label) => !removedSet.has(label.toLowerCase())), ...applied])];
 }
 
 async function syncWorkflowUntilMerged(project: ProjectRecord, workflowId: string, issueId: string): Promise<void> {

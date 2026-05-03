@@ -21,6 +21,11 @@ const qaStatuses: Record<QaStatusId, QaStatus> = {
 export function getIssueQaStatus(issue: IssueRecord, qaSession?: AgentSessionRecord | null): QaStatus {
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
 
+  if (labels.has("gd:architect")) return qaStatuses.spec_blocked;
+  if (labels.has("gd:blocked")) return qaStatuses.env_blocked;
+  if (labels.has("gd:fix")) return qaStatuses.failed;
+  if (labels.has("gd:review") || labels.has("gd:merge") || labels.has("gd:done")) return qaStatuses.passed;
+  if (labels.has("gd:qa")) return qaStatuses.needed;
   if (labels.has("taskix:spec-blocked")) return qaStatuses.spec_blocked;
   if (labels.has("taskix:env-blocked")) return qaStatuses.env_blocked;
   if (labels.has("taskix:qa-failed") || labels.has("qa-failed")) return qaStatuses.failed;

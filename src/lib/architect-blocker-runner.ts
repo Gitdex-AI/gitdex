@@ -1,14 +1,13 @@
 import { CodexClient } from "@/lib/codex";
 import { agentJobMessageId } from "@/lib/agent-run-messages";
 import { developerRoleIds } from "@/lib/developer-roles";
-import { addLabelsWithGh, commentIssueWithGh, removeLabelsWithGh, updateIssueWithGh } from "@/lib/github-local";
+import { commentIssueWithGh, updateIssueWithGh } from "@/lib/github-local";
+import { transitionIssueStage } from "@/lib/issue-stage";
 import { getActiveJobId } from "@/lib/job-runtime";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, createJob, getAgentSession, getWorkflow, listJobs, saveAgentSession, saveWorkflow } from "@/lib/store";
 import type { DeveloperRoleId } from "@/lib/developer-roles";
 import type { ProjectRecord } from "@/lib/types";
-
-const resolvedBlockerLabels = ["taskix:blocked", "taskix:spec-blocked", "taskix:qa-failed", "qa-failed", "taskix:planned"];
 
 export async function runArchitectBlockerResolution(project: ProjectRecord, sessionKey: string): Promise<void> {
   const [session, settings] = await Promise.all([getAgentSession(sessionKey), getSettings()]);
@@ -51,17 +50,14 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
     issue.developerRole = developerRole;
     issue.ownedPaths = result.resolution.ownedPaths.length ? result.resolution.ownedPaths : issue.ownedPaths;
     issue.acceptanceCriteria = result.resolution.acceptanceCriteria.length ? result.resolution.acceptanceCriteria : issue.acceptanceCriteria;
-    issue.labels = removeResolvedBlockerLabels(issue.labels ?? []);
-    issue.prLabels = removeResolvedBlockerLabels(issue.prLabels ?? []);
     workflow.status = "in_progress";
     workflow.timeline.push(`Architect resolved blocker for ${issue.issueId}; queued developer retry.`);
 
     if (issue.githubIssueNumber) {
       await updateIssueWithGh(project.githubRepo, issue.githubIssueNumber, issue);
+      await transitionIssueStage({ repo: project.githubRepo, issue, stage: "gd:fix", prUrl: issue.prUrl ?? null });
       await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, result.resolution.comment || result.resolution.summary);
-      await removeLabelsWithGh(project.githubRepo, issue.githubIssueNumber, resolvedBlockerLabels);
     }
-    if (issue.prUrl) await removeLabelsWithGh(project.githubRepo, issue.prUrl, resolvedBlockerLabels);
 
     await saveWorkflow(workflow);
     const existingJob = (await listJobs(project.projectId)).find((job) => (
@@ -83,8 +79,8 @@ export async function runArchitectBlockerResolution(project: ProjectRecord, sess
     workflow.status = "blocked";
     workflow.timeline.push(`Architect marked ${issue.issueId} blocked: ${result.resolution.summary}`);
     if (issue.githubIssueNumber) {
+      await transitionIssueStage({ repo: project.githubRepo, issue, stage: "gd:blocked", prUrl: issue.prUrl ?? null });
       await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, result.resolution.comment || result.resolution.summary);
-      await addLabelsWithGh(project.githubRepo, issue.githubIssueNumber, ["taskix:blocked"]);
     }
     await saveWorkflow(workflow);
     session.status = "blocked";
@@ -170,10 +166,6 @@ export function architectBlockerInstruction(session: {
     "",
     "Resolve this blocker so the workflow can continue. If safe, correct the issue scope and return retry_developer."
   ].join("\n");
-}
-
-function removeResolvedBlockerLabels(labels: string[]): string[] {
-  return [...new Set(labels.filter((label) => !resolvedBlockerLabels.includes(label.toLowerCase())))];
 }
 
 function formatResolutionText(resolution: {

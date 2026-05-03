@@ -126,7 +126,7 @@ export async function ensureTaskixLabels(repo: string): Promise<void> {
 export async function createIssueWithGh(repo: string, issue: IssueSpec): Promise<{ number: number | null; htmlUrl: string | null; mock: false }> {
   await ensureTaskixLabels(repo);
   const body = buildIssueBody(issue);
-  const labels = [roleLabel(issue.developerRole)];
+  const labels = [roleLabel(issue.developerRole), "gd:dev"];
   const { stdout } = await execFileAsync("gh", ["issue", "create", "--repo", repo, "--title", issue.title, "--body", body, "--label", labels.join(",")]);
   const htmlUrl = stdout.trim() || null;
   return { number: extractIssueNumber(htmlUrl), htmlUrl, mock: false };

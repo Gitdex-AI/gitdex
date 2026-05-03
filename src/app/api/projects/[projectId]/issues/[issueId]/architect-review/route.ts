@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
+import { getIssueStage } from "@/lib/issue-stage";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -17,9 +18,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   if (!issue.githubIssueNumber || !issue.prUrl) return NextResponse.json({ error: "Issue has no GitHub PR for review." }, { status: 400 });
   if (issue.prState === "MERGED") return NextResponse.json({ error: "Merged PRs do not need review." }, { status: 409 });
 
-  const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
-  const qaPassed = labels.has("qa-passed") || labels.has("taskix:qa-passed");
-  if (!qaPassed) return NextResponse.json({ error: "Reviewer requires QA to pass first." }, { status: 409 });
+  if (getIssueStage(issue) !== "gd:review") return NextResponse.json({ error: "Reviewer requires QA to pass first." }, { status: 409 });
 
   const existingJob = (await listJobs(project.projectId)).find((job) => (
     job.type === "architect_review_run"

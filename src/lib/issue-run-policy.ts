@@ -39,8 +39,8 @@ export function manualDeployFinalLabelPlan(input: {
     return {
       decision: input.architectDecision.decision === "changes_requested" ? "changes_requested" : "blocked",
       summary: input.architectDecision.summary,
-      labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "taskix:blocked"])],
-      labelsRemoved: ["taskix:qa-running", "taskix:ready-to-merge"],
+      labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "gd:fix"])],
+      labelsRemoved: ["gd:review", "gd:merge"],
       comments: input.architectDecision.comments
     };
   }
@@ -48,8 +48,8 @@ export function manualDeployFinalLabelPlan(input: {
   return {
     decision: "ready_to_merge",
     summary: `${input.architectDecision.summary}\n\nReviewer passed this PR. It is ready for the dedicated merge step. Manual deployment only controls post-merge deployment and does not block merging.`,
-    labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "taskix:ready-to-merge"])],
-    labelsRemoved: ["taskix:need-qa", "taskix:qa-running", "taskix:blocked"],
+    labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "gd:merge"])],
+    labelsRemoved: ["gd:qa", "gd:review", "gd:blocked"],
     comments: input.architectDecision.comments
   };
 }

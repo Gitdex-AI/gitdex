@@ -26,6 +26,7 @@ import { canAutoRunDeveloper } from "@/lib/auto-run-policy";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
+import { getIssueStage, type IssueStage } from "@/lib/issue-stage";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
@@ -690,19 +691,18 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const developerSession = sessions.find((session) => session.sessionKey === issue.developerSessionId);
     const qaSession = sessions.find((session) => session.sessionKey === issue.qaSessionId);
     const qaStatus = getIssueQaStatus(issue, qaSession);
-    const reviewed = hasAnyLabel(issue, ["taskix:ready-to-merge"]);
-    const qaPassed = hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed"]);
-    const canHandoffToQa = Boolean(issue.prUrl) && qaStatus.id === "not_requested";
-    const specBlockedSessionKey = qaStatus.id === "spec_blocked"
+    const stage = getIssueStage(issue);
+    const canHandoffToQa = Boolean(issue.prUrl) && stage === "gd:qa";
+    const specBlockedSessionKey = stage === "gd:architect"
       ? (developerSession?.status === "blocked" ? developerSession.sessionKey : qaSession?.status === "blocked" ? qaSession.sessionKey : null)
       : null;
-    const canArchitectReview = Boolean(issue.prUrl) && qaPassed && !reviewed && issue.prState !== "MERGED";
-    const canMerge = Boolean(issue.prUrl) && reviewed && issue.prState !== "MERGED";
+    const canArchitectReview = Boolean(issue.prUrl) && stage === "gd:review" && issue.prState !== "MERGED";
+    const canMerge = Boolean(issue.prUrl) && stage === "gd:merge" && issue.prState !== "MERGED";
     const activeJob = latestIssueJob(issue.issueId, jobs);
     const completedDeveloperJob = latestIssueJob(issue.issueId, jobs, "issue_run", "done");
     const canRunDev = canRunDeveloperIssue(issue, workflow.issues);
     const isHighlighted = activeJob?.jobId === queuedJobId;
-    const primaryStatusBadge = githubIssueStatusBadge(issue, qaStatus);
+    const primaryStatusBadge = githubIssueStatusBadge(issue, stage, qaStatus);
     const prNumber = extractPullRequestNumber(issue.prUrl);
     const issueMetaParts = [
       workflow.trackingCode,
@@ -733,6 +733,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
             {renderIssueStageAction({
               projectId,
               issue,
+              stage,
               activeJob,
               completedDeveloperJob,
               qaStatusId: qaStatus.id,
@@ -753,6 +754,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
 function renderIssueStageAction(input: {
   projectId: string;
   issue: IssueRecord;
+  stage: IssueStage;
   activeJob: JobRecord | null;
   completedDeveloperJob: JobRecord | null;
   qaStatusId: ReturnType<typeof getIssueQaStatus>["id"];
@@ -770,17 +772,17 @@ function renderIssueStageAction(input: {
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob, input.issue)} />;
   if (input.activeJob?.status === "failed" && shouldFailedJobReturnToDeveloper(input.activeJob)) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.activeJob?.status === "failed") return <ProjectRetryJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />;
-  if (input.qaStatusId === "spec_blocked" && input.specBlockedSessionKey) return wrapAutoRunAction(runningLabelForStage("Architect", input.issue), <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />);
-  if (input.qaStatusId === "env_blocked" && input.issue.prUrl) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} label="Reset QA" />);
-  if (input.qaStatusId === "env_blocked") return null;
-  if (input.qaStatusId === "failed") return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectReturnToDeveloperButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (input.stage === "gd:architect" && input.specBlockedSessionKey) return wrapAutoRunAction(runningLabelForStage("Architect", input.issue), <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />);
+  if (input.stage === "gd:blocked" && input.issue.prUrl) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} label="Reset" />);
+  if (input.stage === "gd:blocked") return null;
+  if (input.stage === "gd:fix" || input.stage === "gd:rebase") return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.canMerge) return wrapAutoRunAction(runningLabelForStage("Merge", input.issue), <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />);
   if (input.canArchitectReview) return wrapAutoRunAction(runningLabelForStage("Review", input.issue), <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />);
-  if (input.canHandoffToQa || (input.issue.prUrl && input.qaStatusId === "needed")) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (input.canHandoffToQa) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.canRunDev) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (isDeveloperBlockedIssue(input.issue)) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (hasAnyLabel(input.issue, ["taskix:blocked", "taskix:spec-blocked"])) return null;
-  if (!input.issue.prUrl && input.completedDeveloperJob) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
+  if (!input.issue.prUrl && input.completedDeveloperJob && !hasPostDeveloperLifecycleLabel(input.issue)) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   return null;
 }
 
@@ -798,6 +800,30 @@ function isDeveloperBlockedIssue(issue: IssueRecord): boolean {
 
 function isCompletedIssue(issue: IssueRecord): boolean {
   return issue.githubState === "CLOSED" || issue.prState === "MERGED" || hasAnyLabel(issue, ["taskix:merged", "taskix:deployed"]);
+}
+
+function hasPostDeveloperLifecycleLabel(issue: IssueRecord): boolean {
+  return hasAnyLabel(issue, [
+    "gd:qa",
+    "gd:review",
+    "gd:merge",
+    "gd:fix",
+    "gd:rebase",
+    "gd:architect",
+    "gd:blocked",
+    "gd:done",
+    "taskix:need-qa",
+    "taskix:qa-running",
+    "qa-passed",
+    "taskix:qa-passed",
+    "qa-failed",
+    "taskix:qa-failed",
+    "taskix:spec-blocked",
+    "taskix:env-blocked",
+    "taskix:ready-to-merge",
+    "taskix:needs-rebase",
+    "taskix:merged"
+  ]);
 }
 
 function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolean {
@@ -866,12 +892,17 @@ function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["ty
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
 }
 
-function githubIssueStatusBadge(issue: IssueRecord, qaStatus: ReturnType<typeof getIssueQaStatus>): { label: string; color: string } {
-  if (hasAnyLabel(issue, ["taskix:merged"])) return { label: "Merged", color: "green" };
-  if (hasAnyLabel(issue, ["taskix:ready-to-merge"])) return { label: "Ready to merge", color: "green" };
+function githubIssueStatusBadge(issue: IssueRecord, stage: IssueStage, qaStatus: ReturnType<typeof getIssueQaStatus>): { label: string; color: string } {
+  if (stage === "gd:done") return { label: "Done", color: "green" };
+  if (stage === "gd:merge") return { label: "Merge", color: "green" };
+  if (stage === "gd:review") return { label: "Review", color: "yellow" };
+  if (stage === "gd:qa") return { label: "QA", color: "orange" };
+  if (stage === "gd:fix") return { label: "Fix", color: "red" };
+  if (stage === "gd:rebase") return { label: "Rebase", color: "orange" };
+  if (stage === "gd:architect") return { label: "Architect", color: "red" };
+  if (stage === "gd:blocked") return { label: "Blocked", color: "grape" };
+  if (stage === "gd:dev") return { label: "Dev", color: "blue" };
   if (qaStatus.id !== "not_requested") return { label: qaStatus.label, color: qaStatus.color };
-  if (hasAnyLabel(issue, ["taskix:architect-review"])) return { label: "Review needed", color: "yellow" };
-  if (hasAnyLabel(issue, ["taskix:dev-running"])) return { label: "Dev running", color: "blue" };
   return { label: "Tracked", color: "gray" };
 }
 
@@ -897,10 +928,10 @@ function renderQaIssueRows(projectId: string, workflows: WorkflowRecord[], sessi
 }
 
 function renderMergeIssueRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
-  const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => hasAnyLabel(issue, ["qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"]));
+  const issues = workflows.flatMap((workflow) => workflow.issues).filter((issue) => ["gd:review", "gd:merge"].includes(getIssueStage(issue)));
   if (!issues.length) return <Text size="xs" c="dimmed">No QA-passed or ready-to-merge issues yet.</Text>;
   return issues.map((issue) => {
-    const reviewed = hasAnyLabel(issue, ["taskix:ready-to-merge"]);
+    const reviewed = getIssueStage(issue) === "gd:merge";
     return (
       <div key={issue.issueId} className="workflow-job-row">
         <Group justify="space-between" gap="xs" wrap="nowrap">
