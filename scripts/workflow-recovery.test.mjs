@@ -22,7 +22,7 @@ const session = (status) => ({ status });
 describe("workflow recovery reasons", () => {
   it("shows QA recovery when an open PR has no QA labels", () => {
     const reason = recoveryReasonForQaStep([
-      workflow([issue({ prUrl: "https://github.com/Taskix-AI/Taskix/pull/111", prState: "OPEN" })])
+      workflow([issue({ prUrl: "https://github.com/Gitdex-AI/gitdex/pull/111", prState: "OPEN" })])
     ], []);
 
     assert.match(reason, /QA labels are missing/);
@@ -46,7 +46,7 @@ describe("workflow recovery reasons", () => {
 
   it("shows QA wait recovery for issues needing QA", () => {
     const reason = recoveryReasonForQaStep([
-      workflow([issue({ labels: ["taskix:need-qa"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
+      workflow([issue({ labels: ["gitdex:need-qa"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
     ], []);
 
     assert.match(reason, /waiting on QA labels/);
@@ -54,7 +54,7 @@ describe("workflow recovery reasons", () => {
 
   it("routes specification blockers back to architect", () => {
     const reason = recoveryReasonForQaStep([
-      workflow([issue({ labels: ["taskix:spec-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
+      workflow([issue({ labels: ["gitdex:spec-blocked", "gitdex:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
     ], []);
 
     assert.match(reason, /Architect/);
@@ -62,7 +62,7 @@ describe("workflow recovery reasons", () => {
 
   it("pauses QA recovery on environment blockers", () => {
     const reason = recoveryReasonForQaStep([
-      workflow([issue({ labels: ["taskix:env-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
+      workflow([issue({ labels: ["gitdex:env-blocked", "gitdex:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
     ], []);
 
     assert.match(reason, /validation environment/);

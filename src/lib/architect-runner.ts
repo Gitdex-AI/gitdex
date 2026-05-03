@@ -274,9 +274,9 @@ export function architectMergeInstruction(project: ProjectRecord, issue: IssueRe
     "",
     "Read the issue, PR state, checks, labels, comments, and mergeability with gh. Treat the issue gd:merge label as the workflow source of truth.",
     "Only merge if gd:merge is present on the issue and no blocker exists.",
-    "If merged, close the issue. Taskix will apply gd:done.",
+    "If merged, close the issue. Gitdex will apply gd:done.",
     "If merge is blocked by conflicts, non-fast-forward state, branch out of date, or any rebase-required condition, do not edit code or resolve conflicts as reviewer. Report that the PR must return to developer for rebase/branch update, and include the exact blocker from GitHub.",
-    "If blocked by checks or policy, report the blocker so Taskix can route it to the correct next role."
+    "If blocked by checks or policy, report the blocker so Gitdex can route it to the correct next role."
   ].join("\n");
 }
 

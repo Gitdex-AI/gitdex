@@ -88,7 +88,7 @@ export async function cleanupInactiveWorktrees(retentionDays: number): Promise<W
 }
 
 function workspaceRoot(): string {
-  return path.join(dataDir, "taskix-workspaces");
+  return path.join(dataDir, "gitdex-workspaces");
 }
 
 async function archiveWorkspaceIfPresent(workspaceDir: string): Promise<string | null> {
@@ -137,7 +137,7 @@ function isRunningIssueWorktree(name: string, workflows: WorkflowRecord[], runni
 
 function isCompletedIssue(issue: IssueRecord): boolean {
   const labels = [...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase());
-  return issue.githubState === "CLOSED" || issue.prState === "MERGED" || labels.includes("taskix:merged") || labels.includes("taskix:deployed");
+  return issue.githubState === "CLOSED" || issue.prState === "MERGED" || labels.includes("gitdex:merged") || labels.includes("gitdex:deployed");
 }
 
 function sanitizePathSegment(input: string): string {

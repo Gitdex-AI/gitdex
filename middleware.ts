@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server.js";
 
-const adminSessionCookieName = "taskix_admin_session";
+const adminSessionCookieName = "gitdex_admin_session";
 const publicConsoleApiPaths = new Set([
   "/api/admin/login",
   "/api/admin/logout",

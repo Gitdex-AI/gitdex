@@ -86,9 +86,9 @@ function getBlockedStep(
 ): WorkflowProgressStepId | null {
   if (jobs.some((job) => job.status === "failed" && job.type === "workflow_run")) return "planning";
   if (jobs.some((job) => job.status === "failed" && job.type === "issue_run")) return "developer";
-  if (issues.some((issue) => hasAnyIssueLabel(issue, ["gd:fix", "gd:blocked", "qa-failed", "taskix:qa-failed", "taskix:env-blocked"]))) return "qa";
+  if (issues.some((issue) => hasAnyIssueLabel(issue, ["gd:fix", "gd:blocked", "qa-failed", "gitdex:qa-failed", "gitdex:env-blocked"]))) return "qa";
   if (jobs.some((job) => job.status === "failed" && job.type === "qa_run")) return "qa";
-  const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["gd:architect", "taskix:blocked"]));
+  const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["gd:architect", "gitdex:blocked"]));
   if (blockedIssue) return blockedIssue.prUrl || blockedIssue.prState ? "qa" : "developer";
   if (workflows.some((workflow) => workflow.status === "blocked")) return "developer";
   return null;
@@ -114,7 +114,7 @@ function getCurrentStep(input: {
   if (input.jobs.some((job) => job.status !== "done" && job.type === "issue_run")) return "developer";
   if (input.jobs.some((job) => job.status !== "done" && job.type === "qa_run")) return "qa";
   if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["gd:merge"]))) return "merge";
-  if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["gd:review", "qa-passed", "taskix:qa-passed"]))) return "merge";
+  if (input.issues.some((issue) => hasAnyIssueLabel(issue, ["gd:review", "qa-passed", "gitdex:qa-passed"]))) return "merge";
   if (input.issues.some((issue) => issue.prUrl || issue.prState)) return "qa";
   if (input.issues.length) return "developer";
   if (input.hasActiveWorkflow) return "planning";
@@ -143,7 +143,7 @@ function isIssuePastDeveloperStep(issue: Pick<IssueRecord, "labels" | "prLabels"
   return Boolean(
     issue.prUrl ||
     issue.prState ||
-    hasAnyIssueLabel(issue, ["gd:qa", "gd:review", "gd:merge", "taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"])
+    hasAnyIssueLabel(issue, ["gd:qa", "gd:review", "gd:merge", "gitdex:need-qa", "gitdex:qa-running", "qa-passed", "gitdex:qa-passed", "gitdex:ready-to-merge"])
   );
 }
 

@@ -9,7 +9,7 @@ export type LabelPlan = {
 };
 
 export function expectedDeveloperBranch(workflowCode: string, issueNumberOrId: number | string): string {
-  return `taskix/${workflowCode}-issue-${issueNumberOrId}`;
+  return `gitdex/${workflowCode}-issue-${issueNumberOrId}`;
 }
 
 export function expectedDeveloperBaseBranch(): string {

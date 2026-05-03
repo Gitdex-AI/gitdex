@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { allTaskixLabels, roleLabel } from "@/lib/github-labels";
+import { allGitdexLabels, roleLabel } from "@/lib/github-labels";
 import { dataDir } from "@/lib/paths";
 import { classifyTriageIssue } from "@/lib/triage-classifier";
 import type { IssueSpec, ProjectTriageItem } from "@/lib/types";
@@ -124,12 +124,12 @@ function pickPrimaryPullRequest(prs: GhTriagePr[]): GhTriagePr | null {
   return prs.find((pr) => pr.state === "OPEN") ?? prs[0] ?? null;
 }
 
-export async function ensureTaskixLabels(repo: string): Promise<void> {
-  await Promise.all(allTaskixLabels().map((label) => ensureLabel(repo, label)));
+export async function ensureGitdexLabels(repo: string): Promise<void> {
+  await Promise.all(allGitdexLabels().map((label) => ensureLabel(repo, label)));
 }
 
 export async function createIssueWithGh(repo: string, issue: IssueSpec): Promise<{ number: number | null; htmlUrl: string | null; mock: false }> {
-  await ensureTaskixLabels(repo);
+  await ensureGitdexLabels(repo);
   const body = buildIssueBody(issue);
   const labels = [roleLabel(issue.developerRole), "gd:dev"];
   const { stdout } = await execFileAsync("gh", ["issue", "create", "--repo", repo, "--title", issue.title, "--body", body, "--label", labels.join(",")]);
@@ -181,7 +181,7 @@ export async function createPullRequestWithGh(input: {
   body: string;
   labels: string[];
 }): Promise<string> {
-  await ensureTaskixLabels(input.repo);
+  await ensureGitdexLabels(input.repo);
   const args = ["pr", "create", "--repo", input.repo, "--head", input.head, "--title", input.title, "--body", input.body];
   if (input.base) args.push("--base", input.base);
   const { stdout } = await execFileAsync("gh", args);
@@ -192,7 +192,7 @@ export async function createPullRequestWithGh(input: {
 
 export async function addLabelsWithGh(repo: string, target: number | string, labels: string[]): Promise<void> {
   if (!labels.length) return;
-  await ensureTaskixLabels(repo);
+  await ensureGitdexLabels(repo);
   await execFileAsync("gh", ["issue", "edit", String(target), "--repo", repo, "--add-label", labels.join(",")]);
 }
 
@@ -272,7 +272,7 @@ export async function upsertAgentsFileWithGh(input: {
   const content = existing ? replaceManagedSection(existing, buildAgentsSection(input.projectName, input.autoDeploy)) : `# Repository Agent Instructions\n\n${buildAgentsSection(input.projectName, input.autoDeploy)}\n`;
   const encoded = Buffer.from(content, "utf8").toString("base64");
 
-  const args = ["api", `repos/${input.repo}/contents/${encodeRepoPath(filePath)}`, "--method", "PUT", "-f", `message=chore: update Taskix AGENTS workflow`, "-f", `content=${encoded}`];
+  const args = ["api", `repos/${input.repo}/contents/${encodeRepoPath(filePath)}`, "--method", "PUT", "-f", `message=chore: update Gitdex AGENTS workflow`, "-f", `content=${encoded}`];
   try {
     const { stdout } = await execFileAsync("gh", ["api", `repos/${input.repo}/contents/${encodeRepoPath(filePath)}`, "--jq", ".sha"]);
     args.push("-f", `sha=${stdout.trim()}`);
@@ -291,7 +291,7 @@ export async function ensureGitHubSshKey(owner: string): Promise<{ privateKeyPat
   let created = false;
 
   if (!existsSync(privateKeyPath) || !existsSync(publicKeyPath)) {
-    await execFileAsync("ssh-keygen", ["-t", "ed25519", "-C", `taskix-${owner}`, "-f", privateKeyPath, "-N", ""]);
+    await execFileAsync("ssh-keygen", ["-t", "ed25519", "-C", `gitdex-${owner}`, "-f", privateKeyPath, "-N", ""]);
     created = true;
   }
 
@@ -302,8 +302,8 @@ export async function ensureGitHubSshKey(owner: string): Promise<{ privateKeyPat
   };
 }
 
-const start = "<!-- taskix:workflow:start -->";
-const end = "<!-- taskix:workflow:end -->";
+const start = "<!-- gitdex:workflow:start -->";
+const end = "<!-- gitdex:workflow:end -->";
 
 function normalizeRepoPath(filePath: string): string {
   return filePath.trim().replace(/^\/+/, "") || "AGENTS.md";
@@ -357,7 +357,7 @@ async function ensureLabel(repo: string, label: { name: string; color: string; d
 
 function buildAgentsSection(projectName: string, autoDeploy: boolean): string {
   return `${start}
-## Taskix Workflow
+## Gitdex Workflow
 
 Project: ${projectName}
 

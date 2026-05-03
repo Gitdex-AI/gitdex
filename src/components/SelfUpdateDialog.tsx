@@ -147,7 +147,7 @@ export function SelfUpdateDialog({
       pollStartedAt.current = Date.now();
       setPhase("polling");
     } catch (caught) {
-      setError(toErrorMessage(caught, "Taskix restart request failed."));
+      setError(toErrorMessage(caught, "Gitdex restart request failed."));
       setPhase("failure");
       try {
         setStatus(await loadStatus());
@@ -159,7 +159,7 @@ export function SelfUpdateDialog({
 
   return (
     <>
-      <button className={triggerClassName} type="button" aria-label={`Taskix version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
+      <button className={triggerClassName} type="button" aria-label={`Gitdex version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
         {triggerLabel ?? `v${version}`}
       </button>
       <Modal
@@ -167,7 +167,7 @@ export function SelfUpdateDialog({
         onClose={() => {
           if (canClose) setOpened(false);
         }}
-        title="Taskix self-update"
+        title="Gitdex self-update"
         centered
         size="lg"
         closeOnClickOutside={canClose}
@@ -235,7 +235,7 @@ export function SelfUpdateDialog({
                 disabled={!model.canSubmit}
                 onClick={status?.restartAvailable ? requestRestartConfirmation : startUpdate}
               >
-                {status?.restartAvailable ? "Restart Taskix" : "Update Taskix"}
+                {status?.restartAvailable ? "Restart Gitdex" : "Update Gitdex"}
               </Button>
             )}
           </Group>

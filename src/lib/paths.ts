@@ -6,4 +6,4 @@ export const workflowsDir = path.join(dataDir, "workflows");
 export const projectsDir = path.join(dataDir, "projects");
 export const chatProjectsDir = path.join(dataDir, "chat-projects");
 export const runtimeConfigPath = path.join(dataDir, "runtime-config.json");
-export const databasePath = path.join(dataDir, "taskix.sqlite");
+export const databasePath = path.join(dataDir, "gitdex.sqlite");

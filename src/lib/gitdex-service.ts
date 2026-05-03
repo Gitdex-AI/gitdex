@@ -3,39 +3,39 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-export type TaskixServiceManager = "systemctl" | "launchctl" | "pm2";
+export type GitdexServiceManager = "systemctl" | "launchctl" | "pm2";
 
-export type TaskixServiceRestartResult = {
+export type GitdexServiceRestartResult = {
   ok: boolean;
-  manager: TaskixServiceManager | null;
+  manager: GitdexServiceManager | null;
   serviceName: string | null;
   stdout: string;
   stderr: string;
   error: string | null;
 };
 
-export type TaskixServiceRestartResponse = TaskixServiceRestartResult & {
+export type GitdexServiceRestartResponse = GitdexServiceRestartResult & {
   status: number;
   restartRequested: boolean;
 };
 
 type RestartCommand = {
-  manager: TaskixServiceManager;
+  manager: GitdexServiceManager;
   bin: string;
   args: string[];
   serviceName: string;
 };
 
-type ServiceRestarter = (command: RestartCommand) => Promise<TaskixServiceRestartResult>;
+type ServiceRestarter = (command: RestartCommand) => Promise<GitdexServiceRestartResult>;
 type RestartGuardResult = { ok: true } | { ok: false; status: number; error: string };
 
 let serviceRestarter: ServiceRestarter = runRestartCommand;
 
-export async function requestTaskixServiceRestart<TSource>(input: {
+export async function requestGitdexServiceRestart<TSource>(input: {
   source: TSource;
   guard: (source: TSource) => RestartGuardResult;
   consumeRestartAvailability: () => boolean;
-}): Promise<TaskixServiceRestartResponse> {
+}): Promise<GitdexServiceRestartResponse> {
   const guard = input.guard(input.source);
   if (!guard.ok) {
     return {
@@ -63,7 +63,7 @@ export async function requestTaskixServiceRestart<TSource>(input: {
     };
   }
 
-  const result = await restartTaskixService();
+  const result = await restartGitdexService();
   return {
     ...result,
     status: result.ok ? 200 : result.manager ? 500 : 503,
@@ -71,8 +71,8 @@ export async function requestTaskixServiceRestart<TSource>(input: {
   };
 }
 
-export async function restartTaskixService(env: NodeJS.ProcessEnv = process.env): Promise<TaskixServiceRestartResult> {
-  const config = getTaskixServiceRestartCommand(env);
+export async function restartGitdexService(env: NodeJS.ProcessEnv = process.env): Promise<GitdexServiceRestartResult> {
+  const config = getGitdexServiceRestartCommand(env);
   if (!config.ok) {
     return {
       ok: false,
@@ -87,21 +87,21 @@ export async function restartTaskixService(env: NodeJS.ProcessEnv = process.env)
   return serviceRestarter(config.command);
 }
 
-export function getTaskixServiceRestartCommand(env: NodeJS.ProcessEnv = process.env) {
-  const manager = env.TASKIX_NEXT_SERVICE_MANAGER;
-  const serviceName = env.TASKIX_NEXT_SERVICE_NAME?.trim() ?? "";
+export function getGitdexServiceRestartCommand(env: NodeJS.ProcessEnv = process.env) {
+  const manager = env.GITDEX_NEXT_SERVICE_MANAGER;
+  const serviceName = env.GITDEX_NEXT_SERVICE_NAME?.trim() ?? "";
 
-  if (!isTaskixServiceManager(manager)) {
+  if (!isGitdexServiceManager(manager)) {
     return {
       ok: false as const,
-      error: "Taskix service restart is not configured. Set TASKIX_NEXT_SERVICE_MANAGER to systemctl, launchctl, or pm2."
+      error: "Gitdex service restart is not configured. Set GITDEX_NEXT_SERVICE_MANAGER to systemctl, launchctl, or pm2."
     };
   }
 
-  if (!isTaskixServiceName(serviceName)) {
+  if (!isGitdexServiceName(serviceName)) {
     return {
       ok: false as const,
-      error: "Taskix service restart requires TASKIX_NEXT_SERVICE_NAME to identify the Taskix Next.js service."
+      error: "Gitdex service restart requires GITDEX_NEXT_SERVICE_NAME to identify the Gitdex Next.js service."
     };
   }
 
@@ -111,15 +111,15 @@ export function getTaskixServiceRestartCommand(env: NodeJS.ProcessEnv = process.
   };
 }
 
-export function setTaskixServiceRestarterForTests(restarter: ServiceRestarter) {
+export function setGitdexServiceRestarterForTests(restarter: ServiceRestarter) {
   serviceRestarter = restarter;
 }
 
-export function resetTaskixServiceRestarterForTests() {
+export function resetGitdexServiceRestarterForTests() {
   serviceRestarter = runRestartCommand;
 }
 
-function buildRestartCommand(manager: TaskixServiceManager, serviceName: string): RestartCommand {
+function buildRestartCommand(manager: GitdexServiceManager, serviceName: string): RestartCommand {
   if (manager === "systemctl") {
     return { manager, bin: "systemctl", args: ["restart", serviceName], serviceName };
   }
@@ -131,16 +131,16 @@ function buildRestartCommand(manager: TaskixServiceManager, serviceName: string)
   return { manager, bin: "pm2", args: ["restart", serviceName], serviceName };
 }
 
-function isTaskixServiceManager(value: string | undefined): value is TaskixServiceManager {
+function isGitdexServiceManager(value: string | undefined): value is GitdexServiceManager {
   return value === "systemctl" || value === "launchctl" || value === "pm2";
 }
 
-function isTaskixServiceName(value: string) {
+function isGitdexServiceName(value: string) {
   // This endpoint is intentionally not a general service-control API.
-  return /^[a-zA-Z0-9._:@-]+$/.test(value) && value.toLowerCase().includes("taskix");
+  return /^[a-zA-Z0-9._:@-]+$/.test(value) && value.toLowerCase().includes("gitdex");
 }
 
-async function runRestartCommand(command: RestartCommand): Promise<TaskixServiceRestartResult> {
+async function runRestartCommand(command: RestartCommand): Promise<GitdexServiceRestartResult> {
   try {
     const { stdout, stderr } = await execFileAsync(command.bin, command.args, {
       maxBuffer: 1024 * 1024 * 2
@@ -167,7 +167,7 @@ async function runRestartCommand(command: RestartCommand): Promise<TaskixService
       serviceName: command.serviceName,
       stdout: stringifyOutput(failure.stdout),
       stderr: stringifyOutput(failure.stderr),
-      error: failure.message ?? "Taskix service restart failed."
+      error: failure.message ?? "Gitdex service restart failed."
     };
   }
 }

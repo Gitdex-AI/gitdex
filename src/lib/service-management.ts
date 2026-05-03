@@ -1,13 +1,13 @@
 export {
-  getTaskixServiceRestartCommand,
-  requestTaskixServiceRestart,
-  resetTaskixServiceRestarterForTests,
-  restartTaskixService,
-  setTaskixServiceRestarterForTests
-} from "@/lib/taskix-service";
+  getGitdexServiceRestartCommand,
+  requestGitdexServiceRestart,
+  resetGitdexServiceRestarterForTests,
+  restartGitdexService,
+  setGitdexServiceRestarterForTests
+} from "@/lib/gitdex-service";
 
 export type {
-  TaskixServiceManager,
-  TaskixServiceRestartResponse,
-  TaskixServiceRestartResult
-} from "@/lib/taskix-service";
+  GitdexServiceManager,
+  GitdexServiceRestartResponse,
+  GitdexServiceRestartResult
+} from "@/lib/gitdex-service";

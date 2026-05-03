@@ -8,7 +8,7 @@ export function PageTitle({ title }: { title: string }) {
           {title}
         </Title>
         <Text c="dimmed" size="sm">
-          Taskix control plane
+          Gitdex control plane
         </Text>
       </div>
     </Group>

@@ -29,7 +29,7 @@ export function getWorkflowNextAction(jobs: Pick<JobRecord, "status" | "type">[]
     return {
       title: "Workflow step running",
       phase: "Running",
-      description: "Taskix is executing the current job. Refresh or wait for the session and job status to update before starting another step.",
+      description: "Gitdex is executing the current job. Refresh or wait for the session and job status to update before starting another step.",
       buttonLabel: null,
       disabledLabel: "Running",
       tone: "running",

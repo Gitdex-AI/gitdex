@@ -4,13 +4,13 @@ import { qaValidationInstruction } from "../src/lib/qa-validation-instruction.ts
 
 test("QA handoff instruction includes local update scope and focused validation steps", () => {
   const instruction = qaValidationInstruction(
-    "https://github.com/Taskix-AI/Taskix/pull/141",
+    "https://github.com/Gitdex-AI/gitdex/pull/141",
     { githubIssueNumber: 141, title: "Run final integration checks for admin auth and self-update" },
     "abc123"
   );
 
   assert.match(instruction, /Expected head SHA: abc123/);
-  assert.match(instruction, /local Taskix program update validation only/);
+  assert.match(instruction, /local Gitdex program update validation only/);
   assert.match(instruction, /Do not validate CI\/CD, auto-merge, deployment, or user project workflow execution/);
   assert.match(instruction, /npm test/);
   assert.match(instruction, /npm run typecheck/);

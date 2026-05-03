@@ -12,13 +12,13 @@ import {
   setSelfUpdateCommandRunnerForTests
 } from "../src/lib/self-update.ts";
 
-const originalFlag = process.env.TASKIX_ENABLE_SELF_UPDATE;
+const originalFlag = process.env.GITDEX_ENABLE_SELF_UPDATE;
 
 afterEach(() => {
   if (originalFlag === undefined) {
-    delete process.env.TASKIX_ENABLE_SELF_UPDATE;
+    delete process.env.GITDEX_ENABLE_SELF_UPDATE;
   } else {
-    process.env.TASKIX_ENABLE_SELF_UPDATE = originalFlag;
+    process.env.GITDEX_ENABLE_SELF_UPDATE = originalFlag;
   }
   resetSelfUpdateStateForTests();
 });
@@ -56,18 +56,18 @@ test("all self-update mutation routes require confirmation before running comman
     const source = await readFile(routeFile, "utf8");
     assert.match(source, /runConfirmedSelfUpdate|runOperatorSelfUpdate/, `${routeFile} must require update confirmation`);
     assert.doesNotMatch(source, /runSelfUpdate\(/, `${routeFile} must not run updates without confirmation`);
-    assert.doesNotMatch(source, /restartTaskixService/, `${routeFile} must not request restart during update`);
+    assert.doesNotMatch(source, /restartGitdexService/, `${routeFile} must not request restart during update`);
   }
 
   for (const routeFile of restartRoutes) {
     const source = await readFile(routeFile, "utf8");
     assert.match(source, /requestConfirmedSelfUpdateRestart/, `${routeFile} must require restart confirmation`);
-    assert.doesNotMatch(source, /requestTaskixServiceRestart/, `${routeFile} must not restart without confirmation`);
+    assert.doesNotMatch(source, /requestGitdexServiceRestart/, `${routeFile} must not restart without confirmation`);
   }
 });
 
 test("confirmed self-update does not require flag or localhost guard and runs commands in order", async () => {
-  delete process.env.TASKIX_ENABLE_SELF_UPDATE;
+  delete process.env.GITDEX_ENABLE_SELF_UPDATE;
 
   const calls = [];
   setSelfUpdateCommandRunnerForTests(async (command) => {
@@ -77,7 +77,7 @@ test("confirmed self-update does not require flag or localhost guard and runs co
 
   assert.equal(selfUpdateGuard(new Headers({ host: "example.com" })).ok, true);
 
-  const response = await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/taskix-self-update-confirmed-test");
+  const response = await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/gitdex-self-update-confirmed-test");
 
   assert.equal(response.status, 200);
   assert.equal(response.ok, true);
@@ -93,7 +93,7 @@ test("confirmed self-update rejects missing confirmation before running commands
     return { command: command.command, exitCode: 0, stdout: "", stderr: "" };
   });
 
-  const response = await runConfirmedSelfUpdate({}, "/tmp/taskix-self-update-missing-confirmation-test");
+  const response = await runConfirmedSelfUpdate({}, "/tmp/gitdex-self-update-missing-confirmation-test");
 
   assert.equal(response.status, 400);
   assert.equal(response.ok, false);
@@ -113,7 +113,7 @@ test("failed self-update identifies the failed command and keeps restart unavail
     };
   });
 
-  const response = await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/taskix-self-update-failure-test");
+  const response = await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/gitdex-self-update-failure-test");
 
   assert.equal(response.status, 500);
   assert.equal(response.ok, false);
@@ -126,32 +126,32 @@ test("failed self-update identifies the failed command and keeps restart unavail
 
 test("restart requires a second confirmation and successful update eligibility", async () => {
   let restartCalls = 0;
-  const restartTaskixService = async () => {
+  const restartGitdexService = async () => {
     restartCalls += 1;
     return {
       ok: true,
       manager: "systemctl",
-      serviceName: "taskix-next.service",
+      serviceName: "gitdex-next.service",
       stdout: "restarted",
       stderr: "",
       error: null
     };
   };
 
-  const unconfirmed = await requestConfirmedSelfUpdateRestart({}, restartTaskixService);
+  const unconfirmed = await requestConfirmedSelfUpdateRestart({}, restartGitdexService);
   assert.equal(unconfirmed.status, 400);
   assert.equal(restartCalls, 0);
 
-  const unavailable = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartTaskixService);
+  const unavailable = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartGitdexService);
   assert.equal(unavailable.status, 409);
   assert.equal(restartCalls, 0);
 
   setSelfUpdateCommandRunnerForTests(async (command) => {
     return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
   });
-  await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/taskix-self-update-restart-confirmation-test");
+  await runConfirmedSelfUpdate({ confirmed: true }, "/tmp/gitdex-self-update-restart-confirmation-test");
 
-  const restarted = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartTaskixService);
+  const restarted = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartGitdexService);
   assert.equal(restarted.status, 200);
   assert.equal(restarted.ok, true);
   assert.equal(restarted.restart?.restartRequested, true);

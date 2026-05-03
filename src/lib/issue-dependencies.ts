@@ -13,7 +13,7 @@ export function isDependencySatisfied(issue: IssueRecord): boolean {
   const labels = [...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase());
   return issue.prState === "MERGED"
     || issue.githubState === "CLOSED"
-    || labels.some((label) => label === "taskix:merged" || label === "taskix:deployed");
+    || labels.some((label) => label === "gitdex:merged" || label === "gitdex:deployed");
 }
 
 export function normalizeIssueDependenciesToNumbers(issues: IssueRecord[]): number {

@@ -20,19 +20,19 @@ import {
   validateSelfUpdateOperatorIntent
 } from "../src/lib/self-update.ts";
 
-const originalFlag = process.env.TASKIX_ENABLE_SELF_UPDATE;
+const originalFlag = process.env.GITDEX_ENABLE_SELF_UPDATE;
 
 afterEach(() => {
   if (originalFlag === undefined) {
-    delete process.env.TASKIX_ENABLE_SELF_UPDATE;
+    delete process.env.GITDEX_ENABLE_SELF_UPDATE;
   } else {
-    process.env.TASKIX_ENABLE_SELF_UPDATE = originalFlag;
+    process.env.GITDEX_ENABLE_SELF_UPDATE = originalFlag;
   }
   resetSelfUpdateStateForTests();
 });
 
 test("self-update does not require an enablement flag", () => {
-  delete process.env.TASKIX_ENABLE_SELF_UPDATE;
+  delete process.env.GITDEX_ENABLE_SELF_UPDATE;
 
   const guard = selfUpdateGuard(localHeaders());
 
@@ -40,15 +40,15 @@ test("self-update does not require an enablement flag", () => {
 });
 
 test("self-update enablement state defaults to available", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "TRUE";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "TRUE";
   assert.equal(isSelfUpdateEnabled(), true);
 
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "false";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "false";
   assert.equal(isSelfUpdateEnabled(), false);
 });
 
 test("self-update guard does not require localhost callers", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const guard = selfUpdateGuard(new Headers({ "x-forwarded-for": "203.0.113.10", host: "example.com" }));
 
@@ -56,7 +56,7 @@ test("self-update guard does not require localhost callers", () => {
 });
 
 test("host headers do not prove a localhost caller", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(isLocalhostRequest(new Headers({ host: "127.0.0.1:8000" })), false);
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-host": "127.0.0.1:8000" })), false);
@@ -64,7 +64,7 @@ test("host headers do not prove a localhost caller", () => {
 });
 
 test("forwarding headers do not prove a localhost caller", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(isLocalhostRequest(new Headers({ "x-forwarded-for": "127.0.0.1" })), false);
   assert.equal(isLocalhostRequest(new Headers({ "x-real-ip": "127.0.0.1" })), false);
@@ -72,7 +72,7 @@ test("forwarding headers do not prove a localhost caller", () => {
 });
 
 test("plain request URLs do not prove a localhost caller", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
     isLocalhostRequest({
@@ -84,7 +84,7 @@ test("plain request URLs do not prove a localhost caller", () => {
 });
 
 test("next route localhost URLs do not affect self-update guard authorization", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
     selfUpdateGuard(new NextRequest("http://127.0.0.1:8000/api/self-update/update", { method: "POST" })).ok,
@@ -111,7 +111,7 @@ test("next route localhost URLs do not affect self-update guard authorization", 
 });
 
 test("self-update state reports trusted caller validation availability", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const routeRequest = new NextRequest("http://127.0.0.1:8000/api/self-update");
   const trustedRequest = {
@@ -138,7 +138,7 @@ test("self-update state reports trusted caller validation availability", () => {
 });
 
 test("self-update state exposes operator submission and boot readiness markers", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const state = getSelfUpdateState(new NextRequest("http://127.0.0.1:8000/api/self-update"));
 
@@ -150,7 +150,7 @@ test("self-update state exposes operator submission and boot readiness markers",
 });
 
 test("operator intent validation rejects missing stale and invalid tokens", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const firstIntent = mintSelfUpdateOperatorIntent();
   const secondIntent = mintSelfUpdateOperatorIntent();
@@ -178,7 +178,7 @@ test("operator intent validation rejects missing stale and invalid tokens", () =
 });
 
 test("operator intent validation rejects expired tokens", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
   let now = 1_000;
   setSelfUpdateOperatorIntentClockForTests(() => now);
 
@@ -191,14 +191,14 @@ test("operator intent validation rejects expired tokens", () => {
 });
 
 test("operator self-update flow requires a valid server-minted intent token", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
   const calls = [];
   setSelfUpdateCommandRunnerForTests(async (command) => {
     calls.push(command.command);
     return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
   });
 
-  const missing = await runOperatorSelfUpdate({ nonce: null, token: null }, "/tmp/taskix-self-update-operator-test");
+  const missing = await runOperatorSelfUpdate({ nonce: null, token: null }, "/tmp/gitdex-self-update-operator-test");
   assert.equal(missing.status, 403);
 
   const intent = mintSelfUpdateOperatorIntent();
@@ -206,13 +206,13 @@ test("operator self-update flow requires a valid server-minted intent token", as
 
   const stale = await runOperatorSelfUpdate(
     { nonce: "stale", token: intent.token },
-    "/tmp/taskix-self-update-operator-test"
+    "/tmp/gitdex-self-update-operator-test"
   );
   assert.equal(stale.status, 403);
 
   const accepted = await runOperatorSelfUpdate(
     { nonce: intent.cookie.value, token: intent.token },
-    "/tmp/taskix-self-update-operator-test"
+    "/tmp/gitdex-self-update-operator-test"
   );
 
   assert.equal(accepted.status, 200);
@@ -220,14 +220,14 @@ test("operator self-update flow requires a valid server-minted intent token", as
 
   const replay = await runOperatorSelfUpdate(
     { nonce: intent.cookie.value, token: intent.token },
-    "/tmp/taskix-self-update-operator-test"
+    "/tmp/gitdex-self-update-operator-test"
   );
   assert.equal(replay.status, 403);
   assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
 });
 
 test("operator self-update flow runs update only and leaves restart available", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const calls = [];
   let restartCalls = 0;
@@ -235,12 +235,12 @@ test("operator self-update flow runs update only and leaves restart available", 
     calls.push(command.command);
     return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
   });
-  const restartTaskixService = async () => {
+  const restartGitdexService = async () => {
     restartCalls += 1;
     return {
       ok: true,
       manager: "systemctl",
-      serviceName: "taskix-next.service",
+      serviceName: "gitdex-next.service",
       stdout: "restarted",
       stderr: "",
       error: null
@@ -252,7 +252,7 @@ test("operator self-update flow runs update only and leaves restart available", 
 
   const response = await runOperatorSelfUpdate(
     { nonce: intent.cookie.value, token: intent.token },
-    "/tmp/taskix-self-update-operator-restart-test"
+    "/tmp/gitdex-self-update-operator-restart-test"
   );
 
   assert.equal(response.status, 200);
@@ -264,7 +264,7 @@ test("operator self-update flow runs update only and leaves restart available", 
   assert.equal(getSelfUpdateState().restartStatus, "idle");
   assert.equal(getSelfUpdateState().restartAvailable, true);
 
-  const restarted = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartTaskixService);
+  const restarted = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartGitdexService);
   assert.equal(restarted.status, 200);
   assert.equal(restarted.restart?.restartRequested, true);
   assert.equal(restartCalls, 1);
@@ -273,18 +273,18 @@ test("operator self-update flow runs update only and leaves restart available", 
 });
 
 test("operator self-update restart requires a separate confirmation after update success", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   let restartCalls = 0;
   setSelfUpdateCommandRunnerForTests(async (command) => {
     return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
   });
-  const restartTaskixService = async () => {
+  const restartGitdexService = async () => {
     restartCalls += 1;
     return {
       ok: true,
       manager: "systemctl",
-      serviceName: "taskix-next.service",
+      serviceName: "gitdex-next.service",
       stdout: "restarted",
       stderr: "",
       error: null
@@ -296,32 +296,32 @@ test("operator self-update restart requires a separate confirmation after update
 
   const response = await runOperatorSelfUpdate(
     { nonce: intent.cookie.value, token: intent.token },
-    "/tmp/taskix-self-update-operator-restart-failure-test"
+    "/tmp/gitdex-self-update-operator-restart-failure-test"
   );
   assert.equal(response.status, 200);
   assert.equal(getSelfUpdateState().restartAvailable, true);
 
   const replayedUpdateIntent = await requestConfirmedSelfUpdateRestart(
     { operatorIntentToken: intent.token },
-    restartTaskixService
+    restartGitdexService
   );
   assert.equal(replayedUpdateIntent.status, 400);
   assert.equal(restartCalls, 0);
   assert.equal(getSelfUpdateState().restartAvailable, true);
 
-  const missingConfirmation = await requestConfirmedSelfUpdateRestart({}, restartTaskixService);
+  const missingConfirmation = await requestConfirmedSelfUpdateRestart({}, restartGitdexService);
   assert.equal(missingConfirmation.status, 400);
   assert.equal(restartCalls, 0);
   assert.equal(getSelfUpdateState().restartAvailable, true);
 
-  const confirmed = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartTaskixService);
+  const confirmed = await requestConfirmedSelfUpdateRestart({ confirmed: true }, restartGitdexService);
   assert.equal(confirmed.status, 200);
   assert.equal(confirmed.restart?.restartRequested, true);
   assert.equal(restartCalls, 1);
 });
 
 test("runtime loopback addresses prove localhost route callers", () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   assert.equal(
     isLocalhostRequest({
@@ -355,7 +355,7 @@ test("successful update runs commands in order and enables restart", async () =>
     return { command: command.command, exitCode: 0, stdout: `${command.command} ok`, stderr: "" };
   });
 
-  const result = await runSelfUpdate("/tmp/taskix-self-update-test");
+  const result = await runSelfUpdate("/tmp/gitdex-self-update-test");
 
   assert.deepEqual(calls, ["git pull", "npm install", "npm run build"]);
   assert.equal(result.ok, true);
@@ -377,7 +377,7 @@ test("failed command stops later commands and keeps restart unavailable", async 
     };
   });
 
-  const result = await runSelfUpdate("/tmp/taskix-self-update-test");
+  const result = await runSelfUpdate("/tmp/gitdex-self-update-test");
 
   assert.deepEqual(calls, ["git pull", "npm install"]);
   assert.equal(result.ok, false);

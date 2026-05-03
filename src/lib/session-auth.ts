@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { AdminSessionRecord } from "@/lib/store";
 
-export const adminSessionCookieName = "taskix_admin_session";
+export const adminSessionCookieName = "gitdex_admin_session";
 
 const sessionTokenBytes = 32;
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;

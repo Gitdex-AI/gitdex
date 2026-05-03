@@ -10,7 +10,7 @@ const issue = (overrides = {}) => ({
   issueId: "issue-1",
   githubState: "OPEN",
   prState: "OPEN",
-  prUrl: "https://github.com/Taskix-AI/Taskix/pull/1",
+  prUrl: "https://github.com/Gitdex-AI/gitdex/pull/1",
   labels: [],
   prLabels: [],
   ...overrides

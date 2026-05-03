@@ -79,7 +79,7 @@ const updateCommands: SelfUpdateCommand[] = [
   { command: "npm run build", bin: "npm", args: ["run", "build"] }
 ];
 
-export const selfUpdateOperatorNonceCookieName = "taskix_self_update_operator_nonce";
+export const selfUpdateOperatorNonceCookieName = "gitdex_self_update_operator_nonce";
 
 let restartAvailable = false;
 let lastRun: SelfUpdateRunResult | null = null;
@@ -95,7 +95,7 @@ const operatorIntentSecret = randomBytes(32).toString("hex");
 const operatorIntentMaxAgeSeconds = 5 * 60;
 
 export function isSelfUpdateEnabled(env: NodeJS.ProcessEnv = process.env) {
-  return env.TASKIX_ENABLE_SELF_UPDATE !== "false";
+  return env.GITDEX_ENABLE_SELF_UPDATE !== "false";
 }
 
 export function isLocalhostAddress(value: string | null | undefined) {
@@ -234,7 +234,7 @@ export async function runConfirmedSelfUpdate(
 
 export async function requestConfirmedSelfUpdateRestart(
   input: SelfUpdateConfirmationInput,
-  restartTaskixService: () => Promise<SelfUpdateServiceRestartResult>
+  restartGitdexService: () => Promise<SelfUpdateServiceRestartResult>
 ) {
   const confirmation = validateSelfUpdateConfirmation(input, "Restart confirmation is required.");
   if (!confirmation.ok) {
@@ -257,7 +257,7 @@ export async function requestConfirmedSelfUpdateRestart(
     };
   }
 
-  const restartResult = await restartTaskixService();
+  const restartResult = await restartGitdexService();
   const restart: SelfUpdateServiceRestartResponse = {
     ...restartResult,
     status: restartResult.ok ? 200 : restartResult.manager ? 500 : 503,
@@ -265,11 +265,11 @@ export async function requestConfirmedSelfUpdateRestart(
   };
 
   if (!restart.ok) {
-    markSelfUpdateRestartFailed(restart.error ?? "Taskix service restart failed.");
+    markSelfUpdateRestartFailed(restart.error ?? "Gitdex service restart failed.");
     return {
       ok: false as const,
       status: restart.status,
-      error: restart.error ?? "Taskix service restart failed.",
+      error: restart.error ?? "Gitdex service restart failed.",
       restart
     };
   }

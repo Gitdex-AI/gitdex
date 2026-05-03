@@ -57,7 +57,7 @@ export function deriveSelfUpdateDialogModel(input: {
   const canConfirmRestart = enabled && !actionDisabled && input.phase === "confirm-restart" && restartAvailable;
   const canCancelRestart = input.phase === "confirm-restart" && !actionDisabled;
   const unavailableReason = !enabled
-    ? "Self-update is disabled. Set TASKIX_ENABLE_SELF_UPDATE=true on the Taskix server to enable it."
+    ? "Self-update is disabled. Set GITDEX_ENABLE_SELF_UPDATE=true on the Gitdex server to enable it."
     : !operatorSubmissionAvailable && !restartAvailable
       ? "Operator self-update submission is not available for this UI session."
       : "";
@@ -81,7 +81,7 @@ export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUp
     return {
       phase: "failure",
       shouldContinue: false,
-      message: input.status.restartError || "Taskix service restart failed."
+      message: input.status.restartError || "Gitdex service restart failed."
     };
   }
 
@@ -89,7 +89,7 @@ export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUp
     return {
       phase: "success",
       shouldContinue: false,
-      message: "Taskix reported a new boot marker after the restart request."
+      message: "Gitdex reported a new boot marker after the restart request."
     };
   }
 
@@ -97,7 +97,7 @@ export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUp
     return {
       phase: "timeout",
       shouldContinue: false,
-      message: "Restart polling timed out before Taskix reported ready."
+      message: "Restart polling timed out before Gitdex reported ready."
     };
   }
 
@@ -105,8 +105,8 @@ export function deriveSelfUpdatePollDecision(input: SelfUpdatePollInput): SelfUp
     phase: "polling",
     shouldContinue: true,
     message: input.responseOk
-      ? "Waiting for Taskix to finish restarting."
-      : "Waiting for Taskix to respond after restart."
+      ? "Waiting for Gitdex to finish restarting."
+      : "Waiting for Gitdex to respond after restart."
   };
 }
 
@@ -115,19 +115,19 @@ function phaseMessage(phase: SelfUpdateDialogPhase, status: SelfUpdateState | nu
     case "loading":
       return "Checking self-update status.";
     case "confirm-restart":
-      return "Confirm restart to apply the completed self-update. Cancel keeps Taskix running without requesting restart.";
+      return "Confirm restart to apply the completed self-update. Cancel keeps Gitdex running without requesting restart.";
     case "updating":
       return "Running git pull, npm install, and production build.";
     case "restarting":
-      return "Requesting Taskix service restart.";
+      return "Requesting Gitdex service restart.";
     case "polling":
-      return "Waiting for Taskix to finish restarting.";
+      return "Waiting for Gitdex to finish restarting.";
     case "success":
-      return "Taskix reported a new boot marker after the restart request.";
+      return "Gitdex reported a new boot marker after the restart request.";
     case "failure":
       return status?.restartError || "Self-update failed.";
     case "timeout":
-      return "Restart polling timed out before Taskix reported ready.";
+      return "Restart polling timed out before Gitdex reported ready.";
     case "idle":
       if (status?.restartAvailable) return "Self-update completed successfully. Restart is available when you confirm it.";
       if (status?.lastRun?.ok) return "Last self-update completed successfully. Restart is available until it is requested.";

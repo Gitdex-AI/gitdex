@@ -7,12 +7,12 @@ type JobEvent = {
 };
 
 const globalForJobEvents = globalThis as typeof globalThis & {
-  taskixJobEvents?: EventEmitter;
+  gitdexJobEvents?: EventEmitter;
 };
 
-const jobEvents = globalForJobEvents.taskixJobEvents ?? new EventEmitter();
+const jobEvents = globalForJobEvents.gitdexJobEvents ?? new EventEmitter();
 jobEvents.setMaxListeners(200);
-globalForJobEvents.taskixJobEvents = jobEvents;
+globalForJobEvents.gitdexJobEvents = jobEvents;
 
 export function publishJobEvent(job: JobRecord): void {
   jobEvents.emit("job", {

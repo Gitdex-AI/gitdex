@@ -18,7 +18,7 @@ const triageGroups: Array<{
   {
     id: "blocked",
     title: "QA failed / needs fix",
-    description: "Issues blocked by failed QA or Taskix blocker labels.",
+    description: "Issues blocked by failed QA or Gitdex blocker labels.",
     emptyMessage: "No blocked or failed-QA items were found."
   },
   {
@@ -48,7 +48,7 @@ const triageGroups: Array<{
   {
     id: "untracked",
     title: "Backlog",
-    description: "Open items not yet represented by active Taskix workflow state.",
+    description: "Open items not yet represented by active Gitdex workflow state.",
     emptyMessage: "No backlog items remain."
   }
 ];
@@ -108,7 +108,7 @@ export default async function ProjectGitHubTriagePage({
             <Group justify="space-between" p="md" className="section-header" align="flex-start">
               <div>
                 <Text fw={760}>Repository</Text>
-                <Text size="sm" c="dimmed">Live GitHub state grouped by Taskix workflow state.</Text>
+                <Text size="sm" c="dimmed">Live GitHub state grouped by Gitdex workflow state.</Text>
               </div>
               <Stack gap={4} align="flex-end">
                 <Anchor href={`https://github.com/${triage.repo}`} target="_blank" rel="noreferrer" size="sm">
@@ -140,7 +140,7 @@ export default async function ProjectGitHubTriagePage({
                 </ThemeIcon>
                 <Text fw={760}>No GitHub triage items found</Text>
                 <Text size="sm" c="dimmed" ta="center" maw={460}>
-                  No GitHub issues matched the Taskix triage groups for this repository.
+                  No GitHub issues matched the Gitdex triage groups for this repository.
                 </Text>
               </Stack>
             </Paper>

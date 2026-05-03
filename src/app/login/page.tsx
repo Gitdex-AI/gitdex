@@ -28,7 +28,7 @@ export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-panel" aria-labelledby="login-title">
-        <h1 id="login-title">Taskix Console</h1>
+        <h1 id="login-title">Gitdex Console</h1>
         <form className="auth-form" onSubmit={submitLogin}>
           <label>
             Username

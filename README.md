@@ -1,6 +1,6 @@
-# Taskix
+# Gitdex
 
-Taskix is a local-first control plane for running Codex-powered software teams against GitHub issues and pull requests.
+Gitdex is a local-first control plane for running Codex-powered software teams against GitHub issues and pull requests.
 
 It turns a product request into a tracked delivery flow with fixed AI roles:
 
@@ -10,14 +10,14 @@ It turns a product request into a tracked delivery flow with fixed AI roles:
 - QA: validates pull requests against issue requirements and acceptance criteria.
 - DevOps: handles deployment planning, release operations, and production follow-up.
 
-Taskix uses the local `codex` CLI, the local `gh` CLI, GitHub issues/PRs/labels, and local SQLite state. It is designed to keep the backend deterministic: the server queues work, passes context between agents, stores state, and syncs GitHub; agents make the judgment calls.
+Gitdex uses the local `codex` CLI, the local `gh` CLI, GitHub issues/PRs/labels, and local SQLite state. It is designed to keep the backend deterministic: the server queues work, passes context between agents, stores state, and syncs GitHub; agents make the judgment calls.
 
 ## Current Capabilities
 
 - Next.js 16 web console and API server.
 - First-run admin setup and login-protected console.
 - Project setup bound to a GitHub repository.
-- Local SQLite storage in `data/taskix.sqlite`.
+- Local SQLite storage in `data/gitdex.sqlite`.
 - GitHub account setup, SSH key generation, repo discovery, issue creation, PR lookup, labels, comments, review, and merge operations through `gh`.
 - Codex CLI status checks and long-running agent sessions.
 - PM, Architect, Developer, QA, and DevOps sessions with persistent chat and execution logs.
@@ -25,23 +25,23 @@ Taskix uses the local `codex` CLI, the local `gh` CLI, GitHub issues/PRs/labels,
 - Requirement IDs such as `WF-YYYYMMDD-NNN`.
 - Architect issue planning with explicit developer roles, owned paths, acceptance criteria, and issue-number dependencies.
 - GitHub issue tracking as the main execution object after planning.
-- Developer worktree isolation under `data/taskix-workspaces/`.
+- Developer worktree isolation under `data/gitdex-workspaces/`.
 - Developer PR creation/recovery and retry after failed QA.
-- QA validation with comments and `taskix:qa-*` labels.
+- QA validation with comments and `gitdex:qa-*` labels.
 - Architect code review before merge.
 - Architect merge jobs after QA and review pass.
 - Specification blocker escalation back to Architect from Developer or QA.
-- Auto Run for issue lists: Taskix keeps running any currently runnable issue stage, including parallel work where dependencies allow it.
+- Auto Run for issue lists: Gitdex keeps running any currently runnable issue stage, including parallel work where dependencies allow it.
 - Auto Run pause, stop, resume, and persisted state across refreshes.
 - Per-issue controls: `Run Dev`, `Run QA`, `Run Review`, and `Run Merge`.
 - Live job status and Codex output in the chat window.
 - GitHub sync and triage views.
-- Self-update UI for pulling/building the latest Taskix code and requesting a service restart when configured.
+- Self-update UI for pulling/building the latest Gitdex code and requesting a service restart when configured.
 - Optional Telegram PM entry point.
 
 ## Workflow Model
 
-Taskix separates work into three phases.
+Gitdex separates work into three phases.
 
 ### 1. Requirements Before GitHub
 
@@ -54,7 +54,7 @@ The PM produces structured handoff JSON with:
 - acceptance criteria,
 - open questions, if any.
 
-Taskix records this as a requirement. Requirements may be created while other requirements are still running; workflows are not assumed to be serial.
+Gitdex records this as a requirement. Requirements may be created while other requirements are still running; workflows are not assumed to be serial.
 
 ### 2. GitHub Issue Tracking
 
@@ -122,23 +122,23 @@ The chat window shows agent messages, job status, elapsed time, and live Codex o
 
 ## GitHub Labels
 
-Taskix creates and reads labels for durable GitHub workflow state.
+Gitdex creates and reads labels for durable GitHub workflow state.
 
 Common state labels:
 
 ```text
-taskix:dev-running
-taskix:architect-review
-taskix:need-qa
-taskix:qa-running
-taskix:qa-passed
-taskix:qa-failed
-taskix:spec-blocked
-taskix:ready-to-merge
-taskix:merged
-taskix:deployed
-taskix:blocked
-taskix:superseded
+gitdex:dev-running
+gitdex:architect-review
+gitdex:need-qa
+gitdex:qa-running
+gitdex:qa-passed
+gitdex:qa-failed
+gitdex:spec-blocked
+gitdex:ready-to-merge
+gitdex:merged
+gitdex:deployed
+gitdex:blocked
+gitdex:superseded
 ```
 
 Common role labels:
@@ -153,7 +153,7 @@ role:data_developer
 role:general_developer
 ```
 
-Labels should be changed through Taskix or by an operator who understands the workflow. The UI treats GitHub labels as the visible badge source, while local job state controls button loading and live execution status.
+Labels should be changed through Gitdex or by an operator who understands the workflow. The UI treats GitHub labels as the visible badge source, while local job state controls button loading and live execution status.
 
 ## Architecture
 
@@ -168,8 +168,8 @@ data/             Local runtime state, ignored by git
 Important runtime files:
 
 ```text
-data/taskix.sqlite              SQLite runtime database
-data/taskix-workspaces/         per-agent Git worktrees
+data/gitdex.sqlite              SQLite runtime database
+data/gitdex-workspaces/         per-agent Git worktrees
 data/ssh/                       generated GitHub SSH keys
 ```
 
@@ -190,15 +190,15 @@ codex --version
 codex login
 ```
 
-Taskix expects `codex exec` and `gh` operations to work on the host machine.
+Gitdex expects `codex exec` and `gh` operations to work on the host machine.
 
 ## Installation
 
 Clone the repository:
 
 ```bash
-git clone git@github.com:Taskix-AI/Taskix.git
-cd Taskix
+git clone git@github.com:Gitdex-AI/gitdex.git
+cd Gitdex
 ```
 
 Install dependencies:
@@ -242,9 +242,9 @@ GITHUB_REPO=owner/repo
 GITHUB_API_URL=https://api.github.com
 DATA_DIR=./data
 
-TASKIX_ENABLE_SELF_UPDATE=true
-TASKIX_NEXT_SERVICE_MANAGER=pm2
-TASKIX_NEXT_SERVICE_NAME=taskix-next
+GITDEX_ENABLE_SELF_UPDATE=true
+GITDEX_NEXT_SERVICE_MANAGER=pm2
+GITDEX_NEXT_SERVICE_NAME=gitdex-next
 ```
 
 `data/` is local runtime state and must not be committed.
@@ -255,10 +255,10 @@ TASKIX_NEXT_SERVICE_NAME=taskix-next
 2. Configure a GitHub account or organization.
 3. Generate or register the SSH key if needed.
 4. Create a project and bind it to a GitHub repository.
-5. Let Taskix update the repo's `AGENTS.md` workflow section.
+5. Let Gitdex update the repo's `AGENTS.md` workflow section.
 6. Open the project page and start from the PM chat.
 
-Taskix preserves content outside its managed `AGENTS.md` block.
+Gitdex preserves content outside its managed `AGENTS.md` block.
 
 ## Development
 

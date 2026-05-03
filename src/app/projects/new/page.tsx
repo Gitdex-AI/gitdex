@@ -62,7 +62,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             <TextInput
               name="agentsFilePath"
               label="Agent Instructions File"
-              description="Used only when AGENTS update is enabled. Existing content outside Taskix's managed block is preserved."
+              description="Used only when AGENTS update is enabled. Existing content outside Gitdex's managed block is preserved."
               defaultValue="AGENTS.md"
               required
             />
@@ -72,7 +72,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             value="true"
             mt="md"
             label="Update AGENTS.md in the selected repository"
-            description="Enable only when you want Taskix to commit or update the managed workflow section in the remote repo."
+            description="Enable only when you want Gitdex to commit or update the managed workflow section in the remote repo."
           />
           <Checkbox
             name="autoDeploy"

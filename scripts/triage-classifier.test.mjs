@@ -14,14 +14,14 @@ describe("classifyTriageIssue", () => {
   it("keeps closed blocked issues in blocked instead of done", () => {
     assert.equal(classify({
       issueState: "CLOSED",
-      issueLabels: ["taskix:blocked"]
+      issueLabels: ["gitdex:blocked"]
     }), "blocked");
   });
 
   it("keeps closed QA-failed issues in blocked instead of done", () => {
     assert.equal(classify({
       issueState: "CLOSED",
-      issueLabels: ["taskix:qa-failed"]
+      issueLabels: ["gitdex:qa-failed"]
     }), "blocked");
 
     assert.equal(classify({
@@ -33,13 +33,13 @@ describe("classifyTriageIssue", () => {
   it("treats linked PR failed labels as blocked even when the issue is closed", () => {
     assert.equal(classify({
       issueState: "CLOSED",
-      primaryLinkedPrLabels: ["taskix:qa-failed"]
+      primaryLinkedPrLabels: ["gitdex:qa-failed"]
     }), "blocked");
   });
 
   it("treats environment-blocked labels as blocked", () => {
     assert.equal(classify({
-      issueLabels: ["taskix:env-blocked"]
+      issueLabels: ["gitdex:env-blocked"]
     }), "blocked");
   });
 
@@ -53,7 +53,7 @@ describe("classifyTriageIssue", () => {
   it("keeps merged linked PRs as done when no blocked labels exist", () => {
     assert.equal(classify({
       primaryLinkedPrState: "MERGED",
-      primaryLinkedPrLabels: ["taskix:qa-passed"]
+      primaryLinkedPrLabels: ["gitdex:qa-passed"]
     }), "done");
   });
 });

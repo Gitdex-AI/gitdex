@@ -38,7 +38,7 @@ describe("deriveWorkflowStatus", () => {
   it("keeps blocked closed issues blocked until the blocker label is removed", () => {
     const status = deriveWorkflowStatus(workflow({
       issues: [
-        issue({ labels: ["taskix:env-blocked"], githubState: "CLOSED", prState: "CLOSED" })
+        issue({ labels: ["gitdex:env-blocked"], githubState: "CLOSED", prState: "CLOSED" })
       ]
     }));
 

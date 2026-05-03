@@ -6,18 +6,18 @@ import process from "node:process";
 import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
 
-process.chdir(mkdtempSync(`${tmpdir()}/taskix-project-delete-`));
+process.chdir(mkdtempSync(`${tmpdir()}/gitdex-project-delete-`));
 
 const { deleteProjectLocalState } = await import("../src/lib/project-delete.ts");
 
 describe("deleteProjectLocalState", () => {
-  it("removes a project and its local Taskix state", async () => {
+  it("removes a project and its local Gitdex state", async () => {
     const database = createTestDatabase();
     const project = {
       projectId: "project-delete-test",
       slug: "delete-me",
       name: "Delete Me",
-      githubRepo: "Taskix-AI/Taskix"
+      githubRepo: "Gitdex-AI/gitdex"
     };
     database.prepare("INSERT INTO projects (project_id, slug, created_at, payload) VALUES (?, ?, ?, ?)").run(project.projectId, project.slug, new Date().toISOString(), JSON.stringify(project));
     database.prepare("INSERT INTO chat_projects (chat_id, project_id) VALUES (?, ?)").run(12345, project.projectId);

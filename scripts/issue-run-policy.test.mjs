@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import process from "node:process";
 
-process.chdir(mkdtempSync(`${tmpdir()}/taskix-issue-run-policy-`));
+process.chdir(mkdtempSync(`${tmpdir()}/gitdex-issue-run-policy-`));
 
 import {
   expectedDeveloperBranch,
@@ -16,7 +16,7 @@ import {
 
 const workflowCode = "WF-20260501-999";
 const issueNumber = 123;
-const expectedBranch = `taskix/${workflowCode}-issue-${issueNumber}`;
+const expectedBranch = `gitdex/${workflowCode}-issue-${issueNumber}`;
 
 assert.equal(expectedDeveloperBranch(workflowCode, issueNumber), expectedBranch);
 assert.equal(expectedDeveloperBaseBranch(), "main");
@@ -37,9 +37,9 @@ assert.deepEqual(
 );
 
 const ready = manualDeployFinalLabelPlan({
-  prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
+  prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
   architectDecision: manualDeployArchitectPolicyDecision({
-    prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
+    prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
     qaPassed: true,
     prState: "OPEN",
     prMerged: false
@@ -53,9 +53,9 @@ assert.match(ready.summary, /ready for the dedicated merge step/);
 assert.match(ready.summary, /does not block merging/);
 
 const blocked = manualDeployFinalLabelPlan({
-  prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
+  prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
   architectDecision: manualDeployArchitectPolicyDecision({
-    prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
+    prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
     qaPassed: false,
     prState: "OPEN",
     prMerged: false
@@ -68,7 +68,7 @@ assert.deepEqual(blocked.labelsRemoved, ["gd:review", "gd:merge"]);
 assert.match(blocked.summary, /QA has not passed/);
 
 const mergedBlocked = manualDeployArchitectPolicyDecision({
-  prUrl: "https://github.com/Taskix-AI/Taskix/pull/999",
+  prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
   qaPassed: true,
   prState: "MERGED",
   prMerged: true

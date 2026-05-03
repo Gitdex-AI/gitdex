@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import process from "node:process";
 import { describe, it } from "node:test";
 
-process.chdir(mkdtempSync(`${tmpdir()}/taskix-admin-auth-`));
+process.chdir(mkdtempSync(`${tmpdir()}/gitdex-admin-auth-`));
 
 const { setupInitialAdminWithStore, authenticateAdminWithStore } = await import("../src/lib/admin-auth.ts");
 const { createAdminSessionWithStore, verifyAdminSessionTokenWithStore } = await import("../src/lib/session-auth.ts");

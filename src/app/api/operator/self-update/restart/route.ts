@@ -4,13 +4,13 @@ import {
   requestConfirmedSelfUpdateRestart,
   type SelfUpdateConfirmationInput
 } from "@/lib/self-update";
-import { restartTaskixService } from "@/lib/taskix-service";
+import { restartGitdexService } from "@/lib/gitdex-service";
 
 export async function POST(request: Request) {
   const unauthorized = await requireConsoleApiAuth();
   if (unauthorized) return unauthorized;
 
-  const response = await requestConfirmedSelfUpdateRestart(await readConfirmationPayload(request), restartTaskixService);
+  const response = await requestConfirmedSelfUpdateRestart(await readConfirmationPayload(request), restartGitdexService);
   if (!response.ok || !response.restart) {
     return NextResponse.json({ ok: false, error: response.error, restart: response.restart }, { status: response.status });
   }

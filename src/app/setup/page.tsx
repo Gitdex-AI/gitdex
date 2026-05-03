@@ -29,7 +29,7 @@ export default function SetupPage() {
   return (
     <main className="auth-page">
       <section className="auth-panel" aria-labelledby="setup-title">
-        <h1 id="setup-title">Taskix Setup</h1>
+        <h1 id="setup-title">Gitdex Setup</h1>
         <form className="auth-form" onSubmit={submitSetup}>
           <label>
             Username

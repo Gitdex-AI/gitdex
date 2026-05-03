@@ -81,7 +81,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div>
             <Text fw={760}>Runtime Settings</Text>
             <Text size="sm" c="dimmed">
-              Saved to data/taskix.sqlite
+              Saved to data/gitdex.sqlite
             </Text>
           </div>
         </Group>
@@ -119,7 +119,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </div>
             </SimpleGrid>
             <Text size="sm" c="dimmed">
-              Completed issue, QA, review, and archived recovery worktrees are local execution buffers. Taskix keeps recent worktrees for diagnosis and removes older completed buffers after the retention window.
+              Completed issue, QA, review, and archived recovery worktrees are local execution buffers. Gitdex keeps recent worktrees for diagnosis and removes older completed buffers after the retention window.
             </Text>
 
             <Group className="form-actions">

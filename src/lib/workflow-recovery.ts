@@ -21,27 +21,27 @@ export function recoveryReasonForDeveloperStep(
   if (sessions.some((session) => session.status === "blocked")) return "A developer session is blocked. Open the session for the blocker details, then retry or recover the PR from GitHub.";
   const issues = workflows.flatMap((workflow) => workflow.issues);
   if (issues.some((issue) => issue.branch && !issue.prUrl)) return "Developer work has a branch but no recorded PR. Use GitHub sync to recover a PR that was created or finish PR creation manually.";
-  if (issues.some((issue) => hasAnyLabel(issue, ["gd:dev", "taskix:dev-running"]) && !issue.prUrl)) return "Developer work is marked running without a PR. Sync GitHub to detect a partially completed PR, or retry the developer job.";
+  if (issues.some((issue) => hasAnyLabel(issue, ["gd:dev", "gitdex:dev-running"]) && !issue.prUrl)) return "Developer work is marked running without a PR. Sync GitHub to detect a partially completed PR, or retry the developer job.";
   return null;
 }
 
 export function recoveryReasonForQaStep(workflows: RecoveryWorkflow[], sessions: RecoverySession[]): string | null {
   const issues = workflows.flatMap((workflow) => workflow.issues);
-  if (issues.some((issue) => hasAnyLabel(issue, ["gd:blocked", "taskix:env-blocked"]))) return "QA is blocked by the local validation environment. Fix the environment or provide a usable preview before retrying QA.";
-  if (issues.some((issue) => hasAnyLabel(issue, ["gd:architect", "taskix:spec-blocked"]))) return "QA found a specification or architecture blocker. Send the QA session to Architect for issue clarification before retrying developer work.";
+  if (issues.some((issue) => hasAnyLabel(issue, ["gd:blocked", "gitdex:env-blocked"]))) return "QA is blocked by the local validation environment. Fix the environment or provide a usable preview before retrying QA.";
+  if (issues.some((issue) => hasAnyLabel(issue, ["gd:architect", "gitdex:spec-blocked"]))) return "QA found a specification or architecture blocker. Send the QA session to Architect for issue clarification before retrying developer work.";
   if (sessions.some((session) => session.status === "blocked")) return "QA is blocked or failed. Open the QA session for findings, then retry the developer fix path after the issue is updated.";
-  if (issues.some((issue) => (issue.prUrl || issue.prState?.toUpperCase() === "OPEN") && !hasAnyLabel(issue, ["gd:qa", "gd:review", "gd:merge", "gd:fix", "gd:architect", "gd:blocked", "taskix:need-qa", "taskix:qa-running", "qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:env-blocked", "taskix:ready-to-merge"]))) {
+  if (issues.some((issue) => (issue.prUrl || issue.prState?.toUpperCase() === "OPEN") && !hasAnyLabel(issue, ["gd:qa", "gd:review", "gd:merge", "gd:fix", "gd:architect", "gd:blocked", "gitdex:need-qa", "gitdex:qa-running", "qa-passed", "gitdex:qa-passed", "qa-failed", "gitdex:qa-failed", "gitdex:spec-blocked", "gitdex:env-blocked", "gitdex:ready-to-merge"]))) {
     return "A PR is open but QA labels are missing. Sync GitHub to recover labels, or request QA before this workflow can move forward.";
   }
-  if (issues.some((issue) => issue.prUrl && hasAnyLabel(issue, ["gd:qa", "taskix:need-qa", "taskix:qa-running"]))) {
-    return "A PR is waiting on QA labels. After QA finishes, sync GitHub so Taskix can move the workflow to pass/fail or merge readiness.";
+  if (issues.some((issue) => issue.prUrl && hasAnyLabel(issue, ["gd:qa", "gitdex:need-qa", "gitdex:qa-running"]))) {
+    return "A PR is waiting on QA labels. After QA finishes, sync GitHub so Gitdex can move the workflow to pass/fail or merge readiness.";
   }
   return null;
 }
 
 export function recoveryReasonForMergeStep(workflows: RecoveryWorkflow[]): string | null {
   const issues = workflows.flatMap((workflow) => workflow.issues);
-  if (issues.some((issue) => hasAnyLabel(issue, ["gd:review", "gd:merge", "qa-passed", "taskix:qa-passed", "taskix:ready-to-merge"]) && issue.prState !== "MERGED")) {
+  if (issues.some((issue) => hasAnyLabel(issue, ["gd:review", "gd:merge", "qa-passed", "gitdex:qa-passed", "gitdex:ready-to-merge"]) && issue.prState !== "MERGED")) {
     return "QA has passed and the PR is ready. Merge from this step, then sync GitHub if the issue or PR state does not update.";
   }
   return null;

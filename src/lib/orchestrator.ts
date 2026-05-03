@@ -137,7 +137,7 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
   }
 
   workflow.status = "transferred_to_github";
-  workflow.timeline.push(`Created ${workflow.issues.length} GitHub issue(s) with Taskix labels.`);
+  workflow.timeline.push(`Created ${workflow.issues.length} GitHub issue(s) with Gitdex labels.`);
   if (project?.projectId) {
     const queued = await queueReadyDeveloperJobs(project.projectId, workflow);
     workflow.timeline.push(`Queued ${queued} ready developer issue job(s). Issues with dependencies wait for their prerequisites.`);
@@ -404,7 +404,7 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   if (!project?.githubRepo || !issue.githubIssueNumber) {
     const followUp = await createIssue({
       title: `Blocked: ${issue.title}`,
-      description: `Taskix could not start developer execution because this workflow issue has no bound GitHub repo or issue number.`,
+      description: `Gitdex could not start developer execution because this workflow issue has no bound GitHub repo or issue number.`,
       assigneeRole: "developer",
       developerRole: "general_developer",
       ownedPaths: [],
@@ -455,10 +455,10 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     workflowId: displayWorkflowCode(workflow),
     activePrUrl: issue.prUrl ?? null,
     activeBranch: issue.branch ?? null,
-    returnedFromQa: includesAny([...(issue.labels ?? [])], ["gd:fix", "gd:rebase", "taskix:qa-failed", "qa-failed", "taskix:blocked", "taskix:dev-running"])
+    returnedFromQa: includesAny([...(issue.labels ?? [])], ["gd:fix", "gd:rebase", "gitdex:qa-failed", "qa-failed", "gitdex:blocked", "gitdex:dev-running"])
   });
   if (developerResult.prUrl && !isPullRequestUrl(developerResult.prUrl)) {
-    timeline.push(`Developer returned a non-PR URL for issue ${issue.issueId}; Taskix will create or recover the pull request from branch ${developerResult.branch || "unknown"}.`);
+    timeline.push(`Developer returned a non-PR URL for issue ${issue.issueId}; Gitdex will create or recover the pull request from branch ${developerResult.branch || "unknown"}.`);
     developerResult.prUrl = "";
   }
   if (!developerResult.prUrl && developerResult.blockedType === "none") {
@@ -466,23 +466,23 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
     if (recovery) {
       developerResult.prUrl = recovery.prUrl;
       developerResult.branch = recovery.branch;
-      developerResult.summary = `${developerResult.summary}\n\nTaskix recovered existing PR context after developer publishing returned empty.\nRecovery source: ${recovery.source}.\nRecovered base: ${recovery.base ?? "repository default branch"}.`;
+      developerResult.summary = `${developerResult.summary}\n\nGitdex recovered existing PR context after developer publishing returned empty.\nRecovery source: ${recovery.source}.\nRecovered base: ${recovery.base ?? "repository default branch"}.`;
       timeline.push(`Recovered existing PR context for issue ${issue.issueId} via ${recovery.source}; base ${recovery.base ?? "repository default branch"}.`);
     }
   }
   if (!developerResult.prUrl && developerResult.branch && developerResult.blockedType === "none") {
     try {
       developerResult.prUrl = await createDeveloperPullRequest(project.githubRepo, issue, workflow, developerResult);
-      timeline.push(`Taskix created PR ${developerResult.prUrl} for issue ${issue.issueId} from branch ${developerResult.branch}.`);
+      timeline.push(`Gitdex created PR ${developerResult.prUrl} for issue ${issue.issueId} from branch ${developerResult.branch}.`);
     } catch (error) {
-      developerResult.summary = `${developerResult.summary}\n\nTaskix server could not create a PR from branch ${developerResult.branch}: ${error instanceof Error ? error.message : String(error)}`;
-      timeline.push(`Taskix server could not create PR for issue ${issue.issueId} from branch ${developerResult.branch}.`);
+      developerResult.summary = `${developerResult.summary}\n\nGitdex server could not create a PR from branch ${developerResult.branch}: ${error instanceof Error ? error.message : String(error)}`;
+      timeline.push(`Gitdex server could not create PR for issue ${issue.issueId} from branch ${developerResult.branch}.`);
     }
   }
   const previousPrUrl = issue.prUrl ?? null;
   if (previousPrUrl && developerResult.prUrl && previousPrUrl !== developerResult.prUrl && project?.githubRepo) {
     try {
-      await addLabelsWithGh(project.githubRepo, previousPrUrl, ["taskix:superseded"]);
+      await addLabelsWithGh(project.githubRepo, previousPrUrl, ["gitdex:superseded"]);
       timeline.push(`Marked previous PR ${previousPrUrl} superseded because developer returned ${developerResult.prUrl}.`);
     } catch {
       timeline.push(`Developer returned a replacement PR ${developerResult.prUrl}; previous PR ${previousPrUrl} could not be marked superseded.`);
@@ -493,9 +493,9 @@ async function runIssue(issue: IssueRecord, workflow: WorkflowRecord, codex: Cod
   if (developerResult.prUrl) {
     try {
       await publishDeveloperPrStateToGitHub(project.githubRepo, issue, developerResult.prUrl);
-      timeline.push(`Taskix updated GitHub labels for issue ${issue.issueId} after developer PR completion.`);
+      timeline.push(`Gitdex updated GitHub labels for issue ${issue.issueId} after developer PR completion.`);
     } catch (error) {
-      timeline.push(`Taskix could not update GitHub labels for issue ${issue.issueId}: ${error instanceof Error ? error.message : String(error)}`);
+      timeline.push(`Gitdex could not update GitHub labels for issue ${issue.issueId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   if (workflow.projectId) {
@@ -661,8 +661,8 @@ function createIssueCreator(project: ProjectRecord | null | undefined, settings:
 function choosePrimaryPr(prs: Array<{ url: string; state: string; labels: string[] }>, preferredPrUrl?: string | null): { url: string; state: string; labels: string[] } | null {
   if (!prs.length) return null;
   const preferred = preferredPrUrl ? prs.find((pr) => pr.url === preferredPrUrl) : null;
-  if (preferred && !preferred.labels.map((label) => label.toLowerCase()).includes("taskix:superseded")) return preferred;
-  const active = prs.filter((pr) => !pr.labels.map((label) => label.toLowerCase()).includes("taskix:superseded"));
+  if (preferred && !preferred.labels.map((label) => label.toLowerCase()).includes("gitdex:superseded")) return preferred;
+  const active = prs.filter((pr) => !pr.labels.map((label) => label.toLowerCase()).includes("gitdex:superseded"));
   return active.find((pr) => pr.state === "OPEN") ?? active[0] ?? prs.find((pr) => pr.state === "OPEN") ?? prs[0];
 }
 
@@ -726,7 +726,7 @@ function hasAgentMessage(session: Awaited<ReturnType<typeof getAgentSession>> | 
 async function createDeveloperPullRequest(repo: string, issue: IssueRecord, workflow: WorkflowRecord, developerResult: DeveloperIssueResult): Promise<string> {
   const issueNumber = issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId;
   const body = [
-    `Taskix workflow: ${displayWorkflowCode(workflow)}`,
+    `Gitdex workflow: ${displayWorkflowCode(workflow)}`,
     `Issue: ${issueNumber}`,
     "",
     "## Summary",
@@ -803,7 +803,7 @@ async function maybeRebuildEnvironmentBlockedWorktree(input: {
     try {
       await transitionIssueStage({ repo: input.project.githubRepo, issue: input.issue, stage: "gd:dev" });
       await commentIssueWithGh(input.project.githubRepo, input.issue.githubIssueNumber, [
-        "Taskix rebuilt the developer worktree after an environment blocker.",
+        "Gitdex rebuilt the developer worktree after an environment blocker.",
         "",
         `Archived previous workspace: ${rebuilt.archivedDir ?? "none"}`,
         `Retry branch: ${branch}`

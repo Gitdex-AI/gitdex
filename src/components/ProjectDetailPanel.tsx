@@ -61,7 +61,7 @@ export function ProjectDetailPanel({
           <div className="project-danger-zone project-detail-danger-zone">
             <Text size="xs" fw={780} c="red">Delete local project</Text>
             <Text size="xs" c="dimmed">
-              Type <Code>{project.slug}</Code> to remove this local project and its local Taskix state. GitHub data is not deleted.
+              Type <Code>{project.slug}</Code> to remove this local project and its local Gitdex state. GitHub data is not deleted.
             </Text>
             <ProjectDeleteForm projectId={project.projectId} slug={project.slug} />
           </div>

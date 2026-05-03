@@ -93,7 +93,7 @@ describe("getWorkflowProgress", () => {
 
   it("shows environment-blocked issues on the QA step", () => {
     const steps = getWorkflowProgress({
-      workflows: [workflow("in_progress", [issue({ labels: ["taskix:env-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
+      workflows: [workflow("in_progress", [issue({ labels: ["gitdex:env-blocked", "gitdex:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
       jobs: []
     });
 
@@ -103,7 +103,7 @@ describe("getWorkflowProgress", () => {
 
   it("shows completed workflows on done even when issues retain QA-passed labels", () => {
     const steps = getWorkflowProgress({
-      workflows: [workflow("done", [issue({ labels: ["qa-passed"], prLabels: ["taskix:ready-to-merge"], prState: "MERGED" })])],
+      workflows: [workflow("done", [issue({ labels: ["qa-passed"], prLabels: ["gitdex:ready-to-merge"], prState: "MERGED" })])],
       jobs: []
     });
 
@@ -124,7 +124,7 @@ describe("getWorkflowProgress", () => {
 
   it("ignores stale failed developer jobs after a retry reaches merge readiness", () => {
     const steps = getWorkflowProgress({
-      workflows: [workflow("in_progress", [issue({ labels: ["taskix:qa-passed"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
+      workflows: [workflow("in_progress", [issue({ labels: ["gitdex:qa-passed"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
       jobs: [
         job("issue_run", "failed", "issue-1"),
         job("issue_run", "done", "issue-1")

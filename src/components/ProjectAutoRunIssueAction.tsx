@@ -1,6 +1,6 @@
 "use client";
 
-const autoRunStartEvent = "taskix:auto-run-start";
+const autoRunStartEvent = "gitdex:auto-run-start";
 
 export function announceIssueAutoRunStart() {
   window.dispatchEvent(new Event(autoRunStartEvent));

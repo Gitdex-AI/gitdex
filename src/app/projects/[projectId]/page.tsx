@@ -770,7 +770,7 @@ function renderIssueStageAction(input: {
   if (input.canHandoffToQa) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.canRunDev) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (isDeveloperBlockedIssue(input.issue)) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
-  if (hasAnyLabel(input.issue, ["taskix:blocked", "taskix:spec-blocked"])) return null;
+  if (hasAnyLabel(input.issue, ["gitdex:blocked", "gitdex:spec-blocked"])) return null;
   if (!input.issue.prUrl && input.completedDeveloperJob && !hasPostDeveloperLifecycleLabel(input.issue)) return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   return null;
 }
@@ -784,11 +784,11 @@ function shouldFailedJobReturnToDeveloper(job: JobRecord): boolean {
 }
 
 function isDeveloperBlockedIssue(issue: IssueRecord): boolean {
-  return hasAnyLabel(issue, ["taskix:blocked"]) && !hasAnyLabel(issue, ["taskix:spec-blocked"]) && issue.prState !== "MERGED";
+  return hasAnyLabel(issue, ["gitdex:blocked"]) && !hasAnyLabel(issue, ["gitdex:spec-blocked"]) && issue.prState !== "MERGED";
 }
 
 function isCompletedIssue(issue: IssueRecord): boolean {
-  return issue.githubState === "CLOSED" || issue.prState === "MERGED" || hasAnyLabel(issue, ["taskix:merged", "taskix:deployed"]);
+  return issue.githubState === "CLOSED" || issue.prState === "MERGED" || hasAnyLabel(issue, ["gitdex:merged", "gitdex:deployed"]);
 }
 
 function hasPostDeveloperLifecycleLabel(issue: IssueRecord): boolean {
@@ -801,17 +801,17 @@ function hasPostDeveloperLifecycleLabel(issue: IssueRecord): boolean {
     "gd:architect",
     "gd:blocked",
     "gd:done",
-    "taskix:need-qa",
-    "taskix:qa-running",
+    "gitdex:need-qa",
+    "gitdex:qa-running",
     "qa-passed",
-    "taskix:qa-passed",
+    "gitdex:qa-passed",
     "qa-failed",
-    "taskix:qa-failed",
-    "taskix:spec-blocked",
-    "taskix:env-blocked",
-    "taskix:ready-to-merge",
-    "taskix:needs-rebase",
-    "taskix:merged"
+    "gitdex:qa-failed",
+    "gitdex:spec-blocked",
+    "gitdex:env-blocked",
+    "gitdex:ready-to-merge",
+    "gitdex:needs-rebase",
+    "gitdex:merged"
   ]);
 }
 

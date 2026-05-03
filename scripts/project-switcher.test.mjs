@@ -11,14 +11,14 @@ const projects = [
     projectId: "alpha-1",
     name: "Dispatch",
     slug: "dispatch",
-    githubAccount: "Taskix-AI",
+    githubAccount: "Gitdex-AI",
     githubRepo: "Dispatch"
   },
   {
     projectId: "beta-2",
     name: "Dispatch",
     slug: "dispatch-beta",
-    githubAccount: "Taskix-AI",
+    githubAccount: "Gitdex-AI",
     githubRepo: "DispatchBeta"
   }
 ];
@@ -32,6 +32,6 @@ assert.equal(projectIdFromPathname("/workflows"), null, "Non-project routes shou
 assert.equal(currentProjectFromPathname(projects, "/projects/alpha-1/requirements")?.name, "Dispatch", "Known project routes should resolve the current project");
 assert.equal(currentProjectFromPathname(projects, "/projects/missing"), null, "Unknown project ids should not render a current project");
 assert.equal(projectHref("beta-2"), "/projects/beta-2", "Switch targets should use existing project detail routes");
-assert.equal(projectContextLabel(projects[1]), "Taskix-AI/DispatchBeta", "Project entries should include repository context for similar names");
+assert.equal(projectContextLabel(projects[1]), "Gitdex-AI/DispatchBeta", "Project entries should include repository context for similar names");
 
 console.log("project switcher verification passed");

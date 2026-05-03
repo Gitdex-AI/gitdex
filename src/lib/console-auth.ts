@@ -1,4 +1,4 @@
-export const adminSessionCookieName = "taskix_admin_session";
+export const adminSessionCookieName = "gitdex_admin_session";
 
 const publicConsoleApiPaths = new Set([
   "/api/admin/login",

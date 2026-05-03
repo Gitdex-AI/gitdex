@@ -32,7 +32,7 @@ export async function checkCodexStatus(settings: Settings): Promise<CodexStatus>
           ...codexPermissionArgs(settings.codexSandbox, settings.codexApprovalPolicy),
           "--model",
           settings.codexModel,
-          "Reply with exactly: taskix-codex-ok"
+          "Reply with exactly: gitdex-codex-ok"
         ],
         20_000,
         settings.codexHome

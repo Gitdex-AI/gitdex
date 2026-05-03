@@ -26,12 +26,12 @@ export function getIssueQaStatus(issue: IssueRecord, qaSession?: AgentSessionRec
   if (labels.has("gd:fix")) return qaStatuses.failed;
   if (labels.has("gd:review") || labels.has("gd:merge") || labels.has("gd:done")) return qaStatuses.passed;
   if (labels.has("gd:qa")) return qaStatuses.needed;
-  if (labels.has("taskix:spec-blocked")) return qaStatuses.spec_blocked;
-  if (labels.has("taskix:env-blocked")) return qaStatuses.env_blocked;
-  if (labels.has("taskix:qa-failed") || labels.has("qa-failed")) return qaStatuses.failed;
-  if (labels.has("taskix:qa-passed") || labels.has("qa-passed")) return qaStatuses.passed;
-  if (labels.has("taskix:qa-running")) return qaStatuses.running;
-  if (labels.has("taskix:need-qa")) return qaStatuses.needed;
+  if (labels.has("gitdex:spec-blocked")) return qaStatuses.spec_blocked;
+  if (labels.has("gitdex:env-blocked")) return qaStatuses.env_blocked;
+  if (labels.has("gitdex:qa-failed") || labels.has("qa-failed")) return qaStatuses.failed;
+  if (labels.has("gitdex:qa-passed") || labels.has("qa-passed")) return qaStatuses.passed;
+  if (labels.has("gitdex:qa-running")) return qaStatuses.running;
+  if (labels.has("gitdex:need-qa")) return qaStatuses.needed;
   if (qaSession?.status === "active" && !qaSession.archivedAt && !qaSession.closedAt) return qaStatuses.running;
   return qaStatuses.not_requested;
 }

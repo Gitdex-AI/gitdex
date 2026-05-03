@@ -38,10 +38,10 @@ const agentFinalInstruction = `
 
 Agent completion protocol:
 - As the final visible output before exiting, print this exact block to stdout:
-TASKIX_AGENT_FINAL
+GITDEX_AGENT_FINAL
 status: pass|fail|blocked
 summary: one concise sentence describing the final outcome
-TASKIX_AGENT_FINAL_END
+GITDEX_AGENT_FINAL_END
 - Use status "pass" when your assigned task completed successfully, "fail" for implementation/test/review failures, and "blocked" for environment, permissions, missing specification, or user-decision blockers.
 - Do not put this block inside JSON output files or markdown fences.`;
 
@@ -175,7 +175,7 @@ GitHub repo: ${input.githubRepo}
 Workspace: ${workspaceDir}
 
 Hard rules:
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated architect clone: ${workspaceDir}.
 - Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
 
@@ -204,7 +204,7 @@ GitHub repo: ${input.githubRepo}
 Workspace: ${workspaceDir}
 
 Hard rules:
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated reviewer clone: ${workspaceDir}.
 - Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
 
@@ -247,7 +247,7 @@ Hard rules:
 - If merged successfully, return decision "merged".
 - If merge is blocked by conflicts, non-fast-forward state, branch out of date, merge queue/base mismatch, or any rebase-required condition, return decision "needs_developer_rebase". Do not edit code or resolve conflicts as reviewer.
 - If blocked by checks, policy, permissions, or unclear GitHub state not requiring developer rebase, return decision "blocked".
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated reviewer clone: ${workspaceDir}.
 - Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
 
@@ -284,7 +284,7 @@ Project: ${input.projectName}
 GitHub repo: ${input.githubRepo}
 Workspace: ${workspaceDir}
 
-You are resolving a blocked Taskix workflow, not just giving advice.
+You are resolving a blocked Gitdex workflow, not just giving advice.
 
 Resolution rules:
 - QA may send two different blocked states: implementation failure goes back to developer; spec or architecture blocker comes to you. If QA identified missing, contradictory, or technically non-executable acceptance criteria, update the issue criteria before retrying developer.
@@ -293,7 +293,7 @@ Resolution rules:
 - If the blocker needs a user decision that cannot be inferred, return action "request_user_input" and put the exact question in comment.
 - Only return action "mark_blocked" if the issue cannot proceed safely.
 - Do not return general advice. Return a concrete executable resolution.
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated architect clone: ${workspaceDir}.
 - Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
 
@@ -336,7 +336,7 @@ Conversation rules:
 {
   "status": "ready_for_cd_setup",
   "provider": "github_actions",
-  "workflowPath": ".github/workflows/taskix-deploy.yml",
+  "workflowPath": ".github/workflows/gitdex-deploy.yml",
   "trigger": { "onPushBranches": ["main"], "manualDispatch": true },
   "environment": "production",
   "requiredSecrets": [],
@@ -406,7 +406,7 @@ Rules:
 - Each issue should have clear directory ownership and should not require edits outside ownedPaths unless explicitly stated in acceptance criteria.
 - Acceptance criteria should make expected test updates explicit when a requirement intentionally changes text, behavior, parsing, routing, labels, or workflow state already covered by tests.
 - Mark independent issues with the same parallelGroup when they can run at the same time.
-- Set dependsOn to the titles of issues that must complete first. Use [] for issues that can start immediately. Taskix will convert these temporary planning references to GitHub issue numbers after issues are created.
+- Set dependsOn to the titles of issues that must complete first. Use [] for issues that can start immediately. Gitdex will convert these temporary planning references to GitHub issue numbers after issues are created.
 - Set executionOrder to the intended serial order, using the same number for issues that can run in parallel.`;
     const payload = await this.runJsonResult<{ issues: IssueSpec[] }>(prompt, schema);
     return {
@@ -481,7 +481,7 @@ Implementation must stay within owned paths unless the issue explicitly calls ou
       };
     }
     const baseBranch = expectedDeveloperBaseBranch();
-    const expectedBranch = `taskix/${input.workflowId}-issue-${input.issueNumber}`;
+    const expectedBranch = `gitdex/${input.workflowId}-issue-${input.issueNumber}`;
     const worktreeFacts = await this.collectDeveloperWorktreeFacts({
       repo: input.repo,
       workspaceDir,
@@ -516,15 +516,15 @@ Task:
 - Read issue #${input.issueNumber}, labels, linked PRs, and the full issue/PR comment timeline with gh. Treat GitHub as the source of truth for requirements, ownedPaths, acceptance criteria, dependencies, and prior QA/architect feedback.
 - Do not rely only on the latest comment. Understand the whole issue history, including earlier QA failures, QA passes, architect blockers, developer retries, and whether the same requirement is cycling between incompatible fixes.
 - Implement or update the active PR according to that GitHub context.
-- If QA/architect comments conflict, follow the newest relevant comment and the current Taskix workflow rules. Treat older conflicting QA findings as superseded by newer QA feedback.
+- If QA/architect comments conflict, follow the newest relevant comment and the current Gitdex workflow rules. Treat older conflicting QA findings as superseded by newer QA feedback.
 
 Hard rules:
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated clone for this issue: ${workspaceDir}.
 - Run git fetch, checkout, commit, and push only in the current working directory.
 - Work only inside ownedPaths from the GitHub issue unless an issue comment explicitly revises scope.
 - You may also update test files that directly verify this issue's acceptance criteria, even if the architect omitted them from ownedPaths. Keep those test edits minimal and explain the test-scope reason in summary.
-- Do not revert a directly related test update merely because an older QA comment called it outside ownedPaths; current Taskix policy allows that narrow test-scope exception.
+- Do not revert a directly related test update merely because an older QA comment called it outside ownedPaths; current Gitdex policy allows that narrow test-scope exception.
 - If Current active PR is not "none", update that PR branch and return the same PR URL. Do not create a replacement PR unless the existing PR is closed or unusable.
 - If Returned from QA is "yes", address QA findings on the current active PR branch and push follow-up commits.
 - Do not continue implementation on the wrong branch merely because the code compiles locally.
@@ -533,9 +533,9 @@ Hard rules:
 - If the QA finding involves a trust boundary, API contract, state machine, permissions model, lifecycle rule, dependency ordering, ownedPaths boundary, data consistency rule, or cross-component interaction, audit analogous paths and update the complete affected workflow.
 - Keep this audit scoped to the issue and ownedPaths. "Analogous paths" means paths necessary to satisfy the same contract for this issue, not unrelated broad refactors.
 - If the complete contract is not specified well enough to choose a safe fix, stop and return blockedType "spec" with the missing architect decision.
-- If there is no active PR, create a branch named taskix/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
+- If there is no active PR, create a branch named gitdex/${input.workflowId}-issue-${input.issueNumber} or a similarly unique branch.
 - Implement the issue, run relevant tests, commit, and push the branch. Do not run gh pr create.
-- Do not add/remove GitHub labels or comments. Taskix server will create/update the PR and labels after you return JSON.
+- Do not add/remove GitHub labels or comments. Gitdex server will create/update the PR and labels after you return JSON.
 - If implementation is blocked, return JSON with prUrl as an empty string and explain the blocker in summary.
 - Before returning any blocked result or making another follow-up fix after QA failed, explicitly decide whether this is developer work or architect work. If the current issue remains executable and the fix is clear, continue as developer. If the problem requires changing or clarifying the issue, return blockedType "spec".
 - Set blockedType:
@@ -586,12 +586,12 @@ Task:
 - Decide merge readiness without merging.
 
 Hard rules:
-- Do not add/remove GitHub labels or comments. Taskix server will apply labels/comments after your structured decision.
+- Do not add/remove GitHub labels or comments. Gitdex server will apply labels/comments after your structured decision.
 - If QA is required before merge, return decision "need_qa".
 - If changes are required from developer, return decision "changes_requested" and include the required changes in comments.
 - If QA is already passed or QA is not needed and the PR is acceptable, return decision "ready_to_merge".
 - Never merge the PR and never return a merged state during review.
-- If auto deploy is disabled, stop at decision "ready_to_merge"; Taskix will move the issue to gd:merge.
+- If auto deploy is disabled, stop at decision "ready_to_merge"; Gitdex will move the issue to gd:merge.
 - If auto deploy is enabled and QA has passed, verify repository checks and branch state, then still stop at decision "ready_to_merge" without merging.
 
 Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied to an empty array.`;
@@ -634,11 +634,11 @@ Hard rules:
 - Manual deployment only restricts deployment after merge; it does not mean the PR should remain unmerged.
 - If approved, state clearly that the PR is ready for the dedicated merge step.
 - Do not generate deployment actions.
-- Do not add or remove GitHub labels; Taskix will apply labels after your structured decision.
+- Do not add or remove GitHub labels; Gitdex will apply labels after your structured decision.
 - Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
 - Return "changes_requested" if implementation changes are required.
 - Return "blocked" if readiness cannot be determined from available GitHub state.
-- Do not modify the current Taskix app checkout or its .git directory.
+- Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated architect clone: ${workspaceDir}.
 - Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
 
@@ -700,7 +700,7 @@ Hard rules:
 - If Expected PR head SHA is captured, verify the PR head still matches it before testing. If it changed, report blocked/stale QA instead of testing a moving target.
 - You may run git fetch/checkout/reset inside the isolated QA clone when needed to validate the expected PR head. Prefer checking out the PR branch or exact expected SHA before running npm/browser checks.
 - If the isolated QA clone is on the wrong branch or commit, recover it yourself with git/gh commands in that clone. Report environment only if recovery fails after reasonable attempts.
-- Do not create/edit GitHub issues, PRs, labels, or comments. Taskix server will publish QA evidence and labels after you return JSON.
+- Do not create/edit GitHub issues, PRs, labels, or comments. Gitdex server will publish QA evidence and labels after you return JSON.
 - Enforce ownedPaths, but allow minimal changes to automated test files that directly verify this issue's acceptance criteria, even when the architect omitted those test files from ownedPaths. Do not fail QA for that narrow test-scope exception; mention it in summary if relevant.
 - Treat Next-generated next-env.d.ts route import changes as local tooling noise unless the issue explicitly concerns Next type generation. Do not fail QA solely because next dev, next build, or tsc rewrote next-env.d.ts; restore it before reporting final git status when possible, or mention it as uncommitted generated noise.
 - When passing QA, include concise verification evidence in summary, including commands run and any observable state required by acceptance criteria.
@@ -711,17 +711,17 @@ Hard rules:
   - "spec" when acceptance criteria are missing, contradictory, mutually unsatisfiable, or not executable in this stack without an architect decision. These go back to architect, not developer.
   - "environment" when validation is blocked by local tooling/runtime constraints unrelated to the PR.
   - "stale" when the expected PR head SHA no longer matches.
-- Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. Taskix will move the issue to gd:architect.
-- Use "environment" when local validation cannot proceed because of port binding, sandbox permissions, local tool failures, workspace preparation, or other runtime constraints unrelated to the PR. Taskix will move the issue to gd:blocked.
+- Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. Gitdex will move the issue to gd:architect.
+- Use "environment" when local validation cannot proceed because of port binding, sandbox permissions, local tool failures, workspace preparation, or other runtime constraints unrelated to the PR. Gitdex will move the issue to gd:blocked.
 - Use "spec" when the PR alternates between passing one requirement and failing another because the issue does not define the trusted signal, policy, dependency, interface, or ownership boundary needed to satisfy both. This is an architecture/specification problem even if a concrete probe can reproduce the current failure.
 - Use "spec" when the issue has already cycled through multiple developer fixes and QA/architect findings show mutually incompatible expectations under the current issue text.
-- Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. Taskix will move the issue to gd:fix.
+- Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. Gitdex will move the issue to gd:fix.
 - When failing QA, include actionable findings and reproduction notes. For spec failures, explain the architectural decision that is missing and do not prescribe code changes as if the developer can choose the policy alone.
 - If a required baseline command fails for a repo-level reason that is clearly unrelated to the PR diff, report it as an environment or repository blocker in findings, but do not mark the PR implementation failed solely for that unrelated baseline failure when the acceptance criteria and PR-scoped automated tests pass.
-- The Taskix server normally occupies 127.0.0.1:8000. For browser validation, do not run \`npm run dev\` because it binds to 8000. Use the assigned preview URL ${previewUrl}. Start the PR worktree server on that port, for example \`DATA_DIR=/private/tmp/taskix-qa-${input.issueNumber}-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p ${previewPort}\`, then validate against \`${previewUrl}\`.
-- Use an isolated DATA_DIR under /private/tmp for QA dev-server and build checks that need runtime state, so local Taskix SQLite locks do not affect the PR verdict.
-- DATA_DIR isolation is a QA runner guard, not a product acceptance criterion unless this issue directly changes runtime data path handling. If the assigned preview port is available and browser validation can proceed safely, do not fail this PR solely because the PR branch does not include a later Taskix DATA_DIR infrastructure fix. Mention the limitation in findings or untested areas, then continue validating the PR-scoped behavior.
-- Do not modify the main Taskix app checkout or its .git directory.
+- The Gitdex server normally occupies 127.0.0.1:8000. For browser validation, do not run \`npm run dev\` because it binds to 8000. Use the assigned preview URL ${previewUrl}. Start the PR worktree server on that port, for example \`DATA_DIR=/private/tmp/gitdex-qa-${input.issueNumber}-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p ${previewPort}\`, then validate against \`${previewUrl}\`.
+- Use an isolated DATA_DIR under /private/tmp for QA dev-server and build checks that need runtime state, so local Gitdex SQLite locks do not affect the PR verdict.
+- DATA_DIR isolation is a QA runner guard, not a product acceptance criterion unless this issue directly changes runtime data path handling. If the assigned preview port is available and browser validation can proceed safely, do not fail this PR solely because the PR branch does not include a later Gitdex DATA_DIR infrastructure fix. Mention the limitation in findings or untested areas, then continue validating the PR-scoped behavior.
+- Do not modify the main Gitdex app checkout or its .git directory.
 - The current working directory is the isolated QA clone for this PR: ${workspaceDir}.
 - Run git, npm, and browser validation commands only in the isolated QA clone unless explicitly inspecting GitHub with gh. It is acceptable to modify the isolated QA clone's git checkout state to reach the expected PR head.
 
@@ -944,14 +944,14 @@ Summarize code review outcome, merge readiness, and deployment status according 
   }
 
   private async tmpDir(): Promise<string> {
-    return mkdir(await os.tmpdir(), { recursive: true }).then(() => path.join(os.tmpdir(), `taskix-${Date.now()}-${Math.random().toString(16).slice(2)}`)).then(async (dir) => {
+    return mkdir(await os.tmpdir(), { recursive: true }).then(() => path.join(os.tmpdir(), `gitdex-${Date.now()}-${Math.random().toString(16).slice(2)}`)).then(async (dir) => {
       await mkdir(dir, { recursive: true });
       return dir;
     });
   }
 
   private async prepareDeveloperWorkspace(repo: string, workflowId: string, issueNumber: number): Promise<string> {
-    const workspaceRoot = path.join(dataDir, "taskix-workspaces");
+    const workspaceRoot = path.join(dataDir, "gitdex-workspaces");
     await mkdir(workspaceRoot, { recursive: true });
     const baseDir = path.join(workspaceRoot, sanitizePathSegment(`${workflowId}-issue-${issueNumber}`));
     const workspaceDir = await chooseWorkspaceDir(baseDir);
@@ -1017,7 +1017,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
   }
 
   private async prepareQaWorkspace(repo: string, issueNumber: number, prUrl: string): Promise<string> {
-    const workspaceRoot = path.join(dataDir, "taskix-workspaces");
+    const workspaceRoot = path.join(dataDir, "gitdex-workspaces");
     await mkdir(workspaceRoot, { recursive: true });
     const baseDir = path.join(workspaceRoot, sanitizePathSegment(`qa-issue-${issueNumber}`));
     const workspaceDir = await chooseWorkspaceDir(baseDir);
@@ -1048,7 +1048,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
   }
 
   private async prepareArchitectWorkspace(repo: string, context: string): Promise<string> {
-    const workspaceRoot = path.join(dataDir, "taskix-workspaces");
+    const workspaceRoot = path.join(dataDir, "gitdex-workspaces");
     await mkdir(workspaceRoot, { recursive: true });
     const baseDir = path.join(workspaceRoot, sanitizePathSegment(`architect-${context}`));
     const workspaceDir = await chooseWorkspaceDir(baseDir);
@@ -1092,7 +1092,7 @@ function withAgentFinalInstruction(prompt: string): string {
 }
 
 function parseAgentFinal(output: string): { status: "pass" | "fail" | "blocked"; summary: string | null } | null {
-  const match = output.match(/TASKIX_AGENT_FINAL\s+([\s\S]*?)\s+TASKIX_AGENT_FINAL_END/);
+  const match = output.match(/GITDEX_AGENT_FINAL\s+([\s\S]*?)\s+GITDEX_AGENT_FINAL_END/);
   if (!match) return null;
   const fields = new Map<string, string>();
   for (const line of match[1].split("\n")) {

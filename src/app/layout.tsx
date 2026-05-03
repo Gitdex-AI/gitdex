@@ -11,7 +11,7 @@ import "@mantine/core/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Taskix Console",
+  title: "Gitdex Console",
   description: "Project routing, Codex sessions, and GitHub issue orchestration"
 };
 

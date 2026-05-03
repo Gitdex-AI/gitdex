@@ -11,23 +11,23 @@ const issue = (overrides = {}) => ({
 describe("getIssueQaStatus", () => {
   it("uses current issue and PR labels ahead of stale QA session state", () => {
     const status = getIssueQaStatus(
-      issue({ labels: ["role:web_developer"], prLabels: ["taskix:architect-review"] }),
-      { role: "qa", status: "blocked", labels: ["taskix:qa-failed"] }
+      issue({ labels: ["role:web_developer"], prLabels: ["gitdex:architect-review"] }),
+      { role: "qa", status: "blocked", labels: ["gitdex:qa-failed"] }
     );
 
     assert.equal(status.id, "not_requested");
   });
 
   it("still reports failed when current issue or PR labels are QA failed", () => {
-    assert.equal(getIssueQaStatus(issue({ labels: ["taskix:qa-failed"] })).id, "failed");
+    assert.equal(getIssueQaStatus(issue({ labels: ["gitdex:qa-failed"] })).id, "failed");
     assert.equal(getIssueQaStatus(issue({ prLabels: ["qa-failed"] })).id, "failed");
   });
 
   it("reports spec blocked separately from implementation QA failure", () => {
-    assert.equal(getIssueQaStatus(issue({ labels: ["taskix:spec-blocked", "taskix:blocked"] })).id, "spec_blocked");
+    assert.equal(getIssueQaStatus(issue({ labels: ["gitdex:spec-blocked", "gitdex:blocked"] })).id, "spec_blocked");
   });
 
   it("reports environment blocked separately from implementation QA failure", () => {
-    assert.equal(getIssueQaStatus(issue({ labels: ["taskix:env-blocked", "taskix:blocked"] })).id, "env_blocked");
+    assert.equal(getIssueQaStatus(issue({ labels: ["gitdex:env-blocked", "gitdex:blocked"] })).id, "env_blocked");
   });
 });

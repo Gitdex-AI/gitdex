@@ -1,8 +1,8 @@
 import type { WorkflowRecord } from "@/lib/types";
 
-const blockedLabels = ["gd:blocked", "gd:architect", "taskix:blocked", "taskix:qa-failed", "taskix:spec-blocked", "taskix:env-blocked"];
-const doneLabels = ["gd:done", "taskix:merged", "taskix:deployed"];
-const progressLabels = ["gd:dev", "gd:fix", "gd:rebase", "gd:qa", "gd:review", "gd:merge", "taskix:dev-running", "taskix:architect-review", "taskix:need-qa", "taskix:qa-running", "taskix:qa-passed", "taskix:ready-to-merge"];
+const blockedLabels = ["gd:blocked", "gd:architect", "gitdex:blocked", "gitdex:qa-failed", "gitdex:spec-blocked", "gitdex:env-blocked"];
+const doneLabels = ["gd:done", "gitdex:merged", "gitdex:deployed"];
+const progressLabels = ["gd:dev", "gd:fix", "gd:rebase", "gd:qa", "gd:review", "gd:merge", "gitdex:dev-running", "gitdex:architect-review", "gitdex:need-qa", "gitdex:qa-running", "gitdex:qa-passed", "gitdex:ready-to-merge"];
 
 export function deriveWorkflowStatus(workflow: WorkflowRecord): WorkflowRecord["status"] {
   if (!workflow.issues.length) return workflow.status;

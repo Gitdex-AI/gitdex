@@ -23,8 +23,8 @@ type GitHubContentResponse = {
   sha: string;
 };
 
-const AGENTS_START = "<!-- taskix:workflow:start -->";
-const AGENTS_END = "<!-- taskix:workflow:end -->";
+const AGENTS_START = "<!-- gitdex:workflow:start -->";
+const AGENTS_END = "<!-- gitdex:workflow:end -->";
 
 export class GitHubClient {
   constructor(
@@ -106,7 +106,7 @@ export class GitHubClient {
 
     const filePath = normalizeRepoPath(input.path || "AGENTS.md");
     const existing = await this.readContent(filePath);
-    const managedSection = buildTaskixAgentsSection(input.projectName, input.autoDeploy);
+    const managedSection = buildGitdexAgentsSection(input.projectName, input.autoDeploy);
     const nextContent = existing
       ? replaceManagedSection(existing.content, managedSection)
       : `# Repository Agent Instructions\n\n${managedSection}\n`;
@@ -114,7 +114,7 @@ export class GitHubClient {
     await this.request(`/repos/${this.repo}/contents/${encodeRepoPath(filePath)}`, {
       method: "PUT",
       body: JSON.stringify({
-        message: existing ? "chore: update Taskix AGENTS workflow" : "chore: add Taskix AGENTS workflow",
+        message: existing ? "chore: update Gitdex AGENTS workflow" : "chore: add Gitdex AGENTS workflow",
         content: Buffer.from(nextContent, "utf8").toString("base64"),
         sha: existing?.sha
       })
@@ -189,9 +189,9 @@ function replaceManagedSection(content: string, managedSection: string): string 
   return `${content.trimEnd()}\n\n${managedSection}\n`;
 }
 
-function buildTaskixAgentsSection(projectName: string, autoDeploy: boolean): string {
+function buildGitdexAgentsSection(projectName: string, autoDeploy: boolean): string {
   return `${AGENTS_START}
-## Taskix Workflow
+## Gitdex Workflow
 
 Project: ${projectName}
 

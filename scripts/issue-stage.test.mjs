@@ -18,10 +18,10 @@ const issue = (overrides = {}) => ({
 
 describe("deriveIssueStage", () => {
   it("migrates old need-qa labels to gd:qa", () => {
-    const result = deriveIssueStage({ labels: ["taskix:need-qa", "role:web_developer"], prUrl: "https://example.test/pull/1" });
+    const result = deriveIssueStage({ labels: ["gitdex:need-qa", "role:web_developer"], prUrl: "https://example.test/pull/1" });
     assert.equal(result.stage, "gd:qa");
     assert.deepEqual(result.addLabels, ["gd:qa"]);
-    assert.deepEqual(result.removeLabels, ["taskix:need-qa"]);
+    assert.deepEqual(result.removeLabels, ["gitdex:need-qa"]);
   });
 
   it("keeps only one gd stage when labels conflict", () => {
@@ -57,7 +57,7 @@ describe("deriveIssueAction", () => {
 describe("applyStageLabels", () => {
   it("removes old workflow labels while preserving role labels", () => {
     assert.deepEqual(
-      applyStageLabels(["taskix:need-qa", "gd:merge", "role:web_developer"], "gd:qa"),
+      applyStageLabels(["gitdex:need-qa", "gd:merge", "role:web_developer"], "gd:qa"),
       ["role:web_developer", "gd:qa"]
     );
   });

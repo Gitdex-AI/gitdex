@@ -10,26 +10,26 @@ import {
   setSelfUpdateCommandRunnerForTests
 } from "../src/lib/self-update.ts";
 import {
-  getTaskixServiceRestartCommand,
-  requestTaskixServiceRestart,
-  resetTaskixServiceRestarterForTests,
-  setTaskixServiceRestarterForTests
-} from "../src/lib/taskix-service.ts";
+  getGitdexServiceRestartCommand,
+  requestGitdexServiceRestart,
+  resetGitdexServiceRestarterForTests,
+  setGitdexServiceRestarterForTests
+} from "../src/lib/gitdex-service.ts";
 
-const originalFlag = process.env.TASKIX_ENABLE_SELF_UPDATE;
-const originalManager = process.env.TASKIX_NEXT_SERVICE_MANAGER;
-const originalServiceName = process.env.TASKIX_NEXT_SERVICE_NAME;
+const originalFlag = process.env.GITDEX_ENABLE_SELF_UPDATE;
+const originalManager = process.env.GITDEX_NEXT_SERVICE_MANAGER;
+const originalServiceName = process.env.GITDEX_NEXT_SERVICE_NAME;
 
 afterEach(() => {
-  restoreEnv("TASKIX_ENABLE_SELF_UPDATE", originalFlag);
-  restoreEnv("TASKIX_NEXT_SERVICE_MANAGER", originalManager);
-  restoreEnv("TASKIX_NEXT_SERVICE_NAME", originalServiceName);
+  restoreEnv("GITDEX_ENABLE_SELF_UPDATE", originalFlag);
+  restoreEnv("GITDEX_NEXT_SERVICE_MANAGER", originalManager);
+  restoreEnv("GITDEX_NEXT_SERVICE_NAME", originalServiceName);
   resetSelfUpdateStateForTests();
-  resetTaskixServiceRestarterForTests();
+  resetGitdexServiceRestarterForTests();
 });
 
 test("restart endpoint does not require self-update flag", async () => {
-  delete process.env.TASKIX_ENABLE_SELF_UPDATE;
+  delete process.env.GITDEX_ENABLE_SELF_UPDATE;
 
   const response = await restartRequest(trustedRequest());
 
@@ -38,7 +38,7 @@ test("restart endpoint does not require self-update flag", async () => {
 });
 
 test("restart endpoint does not require trusted localhost proof", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const response = await restartRequest({ headers: new Headers(), remoteAddress: "203.0.113.10" });
 
@@ -47,7 +47,7 @@ test("restart endpoint does not require trusted localhost proof", async () => {
 });
 
 test("restart endpoint blocks before a successful update build", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
 
   const response = await restartRequest(trustedRequest());
 
@@ -55,10 +55,10 @@ test("restart endpoint blocks before a successful update build", async () => {
   assert.match(response.error, /self-update completes successfully/);
 });
 
-test("restart endpoint invokes the configured Taskix Next.js service after a successful update", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
-  process.env.TASKIX_NEXT_SERVICE_MANAGER = "systemctl";
-  process.env.TASKIX_NEXT_SERVICE_NAME = "taskix-next.service";
+test("restart endpoint invokes the configured Gitdex Next.js service after a successful update", async () => {
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_NEXT_SERVICE_MANAGER = "systemctl";
+  process.env.GITDEX_NEXT_SERVICE_NAME = "gitdex-next.service";
   const invoked = [];
 
   setSelfUpdateCommandRunnerForTests(async (command) => ({
@@ -67,7 +67,7 @@ test("restart endpoint invokes the configured Taskix Next.js service after a suc
     stdout: `${command.command} ok`,
     stderr: ""
   }));
-  setTaskixServiceRestarterForTests(async (command) => {
+  setGitdexServiceRestarterForTests(async (command) => {
     invoked.push(command);
     return {
       ok: true,
@@ -79,22 +79,22 @@ test("restart endpoint invokes the configured Taskix Next.js service after a suc
     };
   });
 
-  await runSelfUpdate("/tmp/taskix-self-update-restart-test");
+  await runSelfUpdate("/tmp/gitdex-self-update-restart-test");
   const response = await restartRequest(trustedRequest());
 
   assert.equal(response.status, 200);
   assert.equal(response.ok, true);
   assert.equal(response.restartRequested, true);
   assert.equal(response.manager, "systemctl");
-  assert.equal(response.serviceName, "taskix-next.service");
+  assert.equal(response.serviceName, "gitdex-next.service");
   assert.equal(invoked.length, 1);
-  assert.deepEqual(invoked[0].args, ["restart", "taskix-next.service"]);
+  assert.deepEqual(invoked[0].args, ["restart", "gitdex-next.service"]);
 });
 
 test("restart endpoint reports configured service failures", async () => {
-  process.env.TASKIX_ENABLE_SELF_UPDATE = "true";
-  process.env.TASKIX_NEXT_SERVICE_MANAGER = "pm2";
-  process.env.TASKIX_NEXT_SERVICE_NAME = "taskix-next";
+  process.env.GITDEX_ENABLE_SELF_UPDATE = "true";
+  process.env.GITDEX_NEXT_SERVICE_MANAGER = "pm2";
+  process.env.GITDEX_NEXT_SERVICE_NAME = "gitdex-next";
 
   setSelfUpdateCommandRunnerForTests(async (command) => ({
     command: command.command,
@@ -102,16 +102,16 @@ test("restart endpoint reports configured service failures", async () => {
     stdout: "",
     stderr: ""
   }));
-  setTaskixServiceRestarterForTests(async (command) => ({
+  setGitdexServiceRestarterForTests(async (command) => ({
     ok: false,
     manager: command.manager,
     serviceName: command.serviceName,
     stdout: "",
     stderr: "pm2 failed",
-    error: "Taskix service restart failed."
+    error: "Gitdex service restart failed."
   }));
 
-  await runSelfUpdate("/tmp/taskix-self-update-restart-test");
+  await runSelfUpdate("/tmp/gitdex-self-update-restart-test");
   const response = await restartRequest(trustedRequest());
 
   assert.equal(response.status, 500);
@@ -120,11 +120,11 @@ test("restart endpoint reports configured service failures", async () => {
   assert.match(response.error, /restart failed/);
 });
 
-test("service restart config is limited to explicit Taskix service managers and names", () => {
-  assert.equal(getTaskixServiceRestartCommand({ TASKIX_NEXT_SERVICE_MANAGER: "sh", TASKIX_NEXT_SERVICE_NAME: "taskix" }).ok, false);
-  assert.equal(getTaskixServiceRestartCommand({ TASKIX_NEXT_SERVICE_MANAGER: "systemctl", TASKIX_NEXT_SERVICE_NAME: "other-app" }).ok, false);
-  assert.equal(getTaskixServiceRestartCommand({ TASKIX_NEXT_SERVICE_MANAGER: "systemctl", TASKIX_NEXT_SERVICE_NAME: "taskix/other" }).ok, false);
-  assert.equal(getTaskixServiceRestartCommand({ TASKIX_NEXT_SERVICE_MANAGER: "pm2", TASKIX_NEXT_SERVICE_NAME: "taskix-next" }).ok, true);
+test("service restart config is limited to explicit Gitdex service managers and names", () => {
+  assert.equal(getGitdexServiceRestartCommand({ GITDEX_NEXT_SERVICE_MANAGER: "sh", GITDEX_NEXT_SERVICE_NAME: "gitdex" }).ok, false);
+  assert.equal(getGitdexServiceRestartCommand({ GITDEX_NEXT_SERVICE_MANAGER: "systemctl", GITDEX_NEXT_SERVICE_NAME: "other-app" }).ok, false);
+  assert.equal(getGitdexServiceRestartCommand({ GITDEX_NEXT_SERVICE_MANAGER: "systemctl", GITDEX_NEXT_SERVICE_NAME: "gitdex/other" }).ok, false);
+  assert.equal(getGitdexServiceRestartCommand({ GITDEX_NEXT_SERVICE_MANAGER: "pm2", GITDEX_NEXT_SERVICE_NAME: "gitdex-next" }).ok, true);
 });
 
 function trustedRequest() {
@@ -132,7 +132,7 @@ function trustedRequest() {
 }
 
 function restartRequest(source) {
-  return requestTaskixServiceRestart({
+  return requestGitdexServiceRestart({
     source,
     guard: selfUpdateGuard,
     consumeRestartAvailability
