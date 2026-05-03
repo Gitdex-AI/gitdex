@@ -486,6 +486,7 @@ Hard rules:
 - If Current active PR is not "none", update that PR branch and return the same PR URL. Do not create a replacement PR unless the existing PR is closed or unusable.
 - If Returned from QA is "yes", address QA findings on the current active PR branch and push follow-up commits.
 - Do not continue implementation on the wrong branch merely because the code compiles locally.
+- Treat Next-generated next-env.d.ts route import changes as local tooling noise unless the GitHub issue explicitly asks to change Next type generation. Do not commit next-env.d.ts solely because next dev, next build, or tsc rewrote it; restore it before committing or explain that it was restored as generated noise.
 - When retrying after QA failure, do not patch only the exact reported symptom. Identify the underlying contract behind the QA finding.
 - If the QA finding involves a trust boundary, API contract, state machine, permissions model, lifecycle rule, dependency ordering, ownedPaths boundary, data consistency rule, or cross-component interaction, audit analogous paths and update the complete affected workflow.
 - Keep this audit scoped to the issue and ownedPaths. "Analogous paths" means paths necessary to satisfy the same contract for this issue, not unrelated broad refactors.
@@ -657,6 +658,7 @@ Hard rules:
 - If Expected PR head SHA is captured, verify the PR head still matches it before testing. If it changed, report blocked/stale QA instead of testing a moving target.
 - Do not create/edit GitHub issues, PRs, labels, or comments. Taskix server will publish QA evidence and labels after you return JSON.
 - Enforce ownedPaths, but allow minimal changes to automated test files that directly verify this issue's acceptance criteria, even when the architect omitted those test files from ownedPaths. Do not fail QA for that narrow test-scope exception; mention it in summary if relevant.
+- Treat Next-generated next-env.d.ts route import changes as local tooling noise unless the issue explicitly concerns Next type generation. Do not fail QA solely because next dev, next build, or tsc rewrote next-env.d.ts; restore it before reporting final git status when possible, or mention it as uncommitted generated noise.
 - When passing QA, include concise verification evidence in summary, including commands run and any observable state required by acceptance criteria.
 - Before every failed result, explicitly re-evaluate whether the issue should return to developer or architect. If the current issue remains executable and the developer can fix it without changing the issue, use failureType "implementation". If the issue needs clarification or policy/architecture changes before a developer can know the correct fix, use failureType "spec".
 - Classify the result with failureType:

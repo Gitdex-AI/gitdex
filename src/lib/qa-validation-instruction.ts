@@ -20,6 +20,7 @@ export function qaValidationInstruction(
     `- Use an isolated DATA_DIR under /private/tmp and run the QA worktree on ${previewUrl}.`,
     `- If you start Next dev manually, bind to the assigned preview URL, for example: DATA_DIR=/private/tmp/taskix-qa-${issue.githubIssueNumber ?? "issue"}-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p ${new URL(previewUrl).port}.`,
     "- DATA_DIR isolation is a QA runner guard, not a product acceptance criterion unless this issue directly changes runtime data path handling. If the assigned preview port is available and browser validation can proceed safely, do not fail this PR solely because the PR branch does not include a later Taskix DATA_DIR infrastructure fix.",
+    "- Treat Next-generated next-env.d.ts route import changes as local tooling noise unless this issue explicitly concerns Next type generation. Restore it before final status when possible, or mention it as uncommitted generated noise.",
     "- Verify first-run setup, initialized login protection, protected internal APIs, version label, self-update failure handling, restart confirmation, restart polling, and page restoration end to end.",
     "- Record pages visited, controls clicked, observed results, and any environment limits."
   ].join("\n");
