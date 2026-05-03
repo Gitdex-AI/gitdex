@@ -3,6 +3,7 @@ import { Group, Text } from "@mantine/core";
 import { getSettings } from "@/lib/settings";
 import { listProjects, listWorkflows } from "@/lib/store";
 import { HeaderSecondaryActions } from "@/components/HeaderSecondaryActions";
+import { Nav } from "@/components/Nav";
 import { Providers } from "@/components/Providers";
 import { ShellLayout } from "@/components/ShellLayout";
 import packageJson from "../../package.json";
@@ -29,12 +30,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 Gitdex
               </Text>
             </Group>
+            <Nav workflowCount={workflows.length} projectCount={projects.length} />
             <Group className="topbar-actions" gap={6} justify="flex-start" wrap="nowrap">
               <HeaderSecondaryActions codexModel={settings.codexModel} webhookUrl={webhookUrl} version={packageJson.version} />
             </Group>
           </header>
           <div className="shell">
-            <ShellLayout workflowCount={workflows.length} projectCount={projects.length}>{children}</ShellLayout>
+            <ShellLayout>{children}</ShellLayout>
           </div>
         </Providers>
       </body>

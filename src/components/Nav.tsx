@@ -2,19 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ActionIcon, Badge, Paper, Stack, Text, Tooltip } from "@mantine/core";
-import { ChevronsLeft, ChevronsRight, FolderKanban, Gauge, Settings, Wrench } from "lucide-react";
+import { Badge, Menu } from "@mantine/core";
+import { FolderKanban, Gauge, Menu as MenuIcon, Settings, Wrench } from "lucide-react";
 
 export function Nav({
   workflowCount,
-  projectCount,
-  collapsed,
-  onToggleCollapsed
+  projectCount
 }: {
   workflowCount: number;
   projectCount: number;
-  collapsed: boolean;
-  onToggleCollapsed: () => void;
 }) {
   const pathname = usePathname();
   const items = [
@@ -25,34 +21,48 @@ export function Nav({
   ];
 
   return (
-    <Paper className={`sidebar ${collapsed ? "collapsed" : ""}`} component="nav" aria-label="Primary" p="xs">
-      <div className="nav-head">
-        {!collapsed && <Text className="nav-kicker">Workspace</Text>}
-        <ActionIcon variant="subtle" size="sm" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={onToggleCollapsed}>
-          {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-        </ActionIcon>
-      </div>
-      <Stack gap={6}>
+    <nav className="top-nav" aria-label="Primary">
+      <div className="top-nav-links">
         {items.map((item) => {
           const Icon = item.icon;
-          const link = (
-            <Link key={item.href} href={item.href} className={`side-link ${item.active ? "active" : ""}`}>
-              <span className="side-link-main">
-                <span className="side-link-icon">
-                  <Icon size={17} strokeWidth={2.2} />
-                </span>
-                {!collapsed && <span>{item.label}</span>}
+          return (
+            <Link key={item.href} href={item.href} className={`top-nav-link ${item.active ? "active" : ""}`}>
+              <span className="top-nav-link-main">
+                <Icon size={16} strokeWidth={2.2} aria-hidden="true" />
+                <span>{item.label}</span>
               </span>
-              {!collapsed && typeof item.count === "number" && (
-                <Badge size="sm" variant={item.active ? "filled" : "light"} color={item.active ? "blue" : "gray"}>
+              {typeof item.count === "number" && (
+                <Badge size="xs" variant={item.active ? "filled" : "light"} color={item.active ? "blue" : "gray"}>
                   {item.count}
                 </Badge>
               )}
             </Link>
           );
-          return collapsed ? <Tooltip key={item.href} label={item.label} position="right">{link}</Tooltip> : link;
         })}
-      </Stack>
-    </Paper>
+      </div>
+      <Menu shadow="md" width={220} position="bottom-end" withArrow>
+        <Menu.Target>
+          <button className="top-nav-menu-trigger" type="button" aria-label="Open primary navigation">
+            <MenuIcon size={18} aria-hidden="true" />
+          </button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Menu.Item
+                key={item.href}
+                component={Link}
+                href={item.href}
+                leftSection={<Icon size={16} aria-hidden="true" />}
+                rightSection={typeof item.count === "number" ? <Badge size="xs">{item.count}</Badge> : null}
+              >
+                {item.label}
+              </Menu.Item>
+            );
+          })}
+        </Menu.Dropdown>
+      </Menu>
+    </nav>
   );
 }
