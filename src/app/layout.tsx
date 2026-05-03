@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 Gitdex
               </Text>
             </Group>
-            <Group className="topbar-actions" gap={6} justify="flex-end" wrap="nowrap">
+            <Group className="topbar-actions" gap={6} justify="flex-start" wrap="nowrap">
               <Badge color="dark" variant="light">
                 Model <Code>{settings.codexModel}</Code>
               </Badge>

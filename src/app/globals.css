@@ -81,6 +81,16 @@ pre,
 
 .topbar-actions .mantine-Badge-root {
   flex: 0 0 auto;
+  max-width: none;
+}
+
+.topbar-actions .mantine-Badge-label {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.topbar-actions .topbar-version {
+  flex: 0 0 auto;
 }
 
 .mark {
