@@ -197,7 +197,7 @@ export function ProjectChatArea({
   );
 }
 
-function RunningAgentStatus({ jobs, sessions, workflows }: { jobs: JobRecord[]; sessions: AgentSessionRecord[]; workflows: WorkflowRecord[] }) {
+function RunningAgentMessages({ jobs, sessions, workflows }: { jobs: JobRecord[]; sessions: AgentSessionRecord[]; workflows: WorkflowRecord[] }) {
   const runningJobs = jobs.filter((job) => job.status === "running");
   const [, setTick] = useState(0);
 
@@ -210,41 +210,42 @@ function RunningAgentStatus({ jobs, sessions, workflows }: { jobs: JobRecord[]; 
   if (!runningJobs.length) return null;
 
   return (
-    <div className="chat-message assistant pending" aria-live="polite">
-      <div className="chat-avatar">A</div>
-      <div className="chat-bubble running-agent-bubble">
-        <Group gap="xs" mb={6} justify="space-between" align="center">
-          <Badge variant="light">agent status</Badge>
-          <Text component="time" dateTime={new Date().toISOString()} size="xs" c="dimmed">
-            now
-          </Text>
-        </Group>
-        <Stack gap={4}>
-          {runningJobs.map((job) => {
-            const session = findJobSession(job, sessions);
-            const label = runningAgentLabel(job, session);
-            const issueLabel = runningJobIssueLabel(job, session, workflows);
-            const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
-            const outputTail = job.runtime?.outputTail?.trimEnd();
-            return (
-              <div key={job.jobId} className="running-agent-item">
-                <Text size="sm" c="dimmed" className="running-agent-line">
-                  <LoaderCircle size={13} className="chat-composer-spinner" />
-                  <span>{label} working{issueLabel ? ` on ${issueLabel}` : ""} ...({formatElapsed(startedAt)})</span>
+    <>
+      {runningJobs.map((job) => {
+        const session = findJobSession(job, sessions);
+        const label = runningAgentLabel(job, session);
+        const issueLabel = runningJobIssueLabel(job, session, workflows);
+        const startedAt = job.runtime?.startedAt ?? job.updatedAt ?? job.createdAt;
+        const outputTail = job.runtime?.outputTail?.trimEnd();
+        return (
+          <div key={job.jobId} className="chat-message assistant pending" aria-live="polite">
+            <div className="chat-avatar">{runningAgentAvatar(job, session)}</div>
+            <div className="chat-bubble running-agent-bubble">
+              <Group gap="xs" mb={6} justify="space-between" align="center">
+                <Group gap={6}>
+                  <Badge variant="light">{label}</Badge>
+                  {issueLabel ? <Badge size="xs" variant="outline">{issueLabel}</Badge> : null}
+                </Group>
+                <Text component="time" dateTime={new Date().toISOString()} size="xs" c="dimmed">
+                  {formatElapsed(startedAt)}
                 </Text>
-                {outputTail ? (
-                  <RunningAgentLog label={label} output={outputTail} />
-                ) : (
-                  <Text size="xs" c="dimmed" className="running-agent-waiting">
-                    Waiting for Codex output...
-                  </Text>
-                )}
-              </div>
-            );
-          })}
-        </Stack>
-      </div>
-    </div>
+              </Group>
+              <Text size="sm" c="dimmed" className="running-agent-line">
+                <LoaderCircle size={13} className="chat-composer-spinner" />
+                <span>{label} working{issueLabel ? ` on ${issueLabel}` : ""}...</span>
+              </Text>
+              {outputTail ? (
+                <RunningAgentLog label={label} output={outputTail} />
+              ) : (
+                <Text size="xs" c="dimmed" className="running-agent-waiting">
+                  Waiting for Codex output...
+                </Text>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </>
   );
 }
 
@@ -292,6 +293,18 @@ function runningAgentLabel(job: JobRecord, session: AgentSessionRecord | null): 
   return "Agent";
 }
 
+function runningAgentAvatar(job: JobRecord, session: AgentSessionRecord | null): string {
+  if (job.type === "qa_run") return "QA";
+  if (job.type === "issue_run") return "DV";
+  if (job.type === "workflow_run" || job.type === "architect_blocker_run" || job.type === "architect_review_run" || job.type === "merge_run") return "AR";
+  if (session?.role === "qa") return "QA";
+  if (session?.role === "developer") return "DV";
+  if (session?.role === "architect") return "AR";
+  if (session?.role === "devops") return "DO";
+  if (session?.role === "product_manager") return "PM";
+  return "A";
+}
+
 function runningJobIssueLabel(job: JobRecord, session: AgentSessionRecord | null, workflows: WorkflowRecord[]): string | null {
   const issue = findWorkflowIssue(job.payload.issueId ?? null, workflows);
   const issueNumber = issue?.githubIssueNumber ?? session?.githubIssueNumber ?? null;
@@ -328,7 +341,7 @@ function MessageList({
     ...(optimisticMessage ? [optimisticMessage] : [])
   ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
-  const runningStatus = <RunningAgentStatus jobs={jobs} sessions={sessions} workflows={workflows} />;
+  const runningStatus = <RunningAgentMessages jobs={jobs} sessions={sessions} workflows={workflows} />;
 
   if (!messages.length && !jobs.some((job) => job.status === "running")) {
     return <Text c="dimmed" ta="center" mt="xl">No messages yet.</Text>;
