@@ -21,15 +21,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.issueId === session.issueId
     && job.payload.sessionKey === session.sessionKey
   ));
-  const job = existingJob ?? await createJob({
-    projectId: project.projectId,
-    type: "architect_blocker_run",
-    payload: {
-      workflowId: session.workflowId,
-      issueId: session.issueId,
-      sessionKey: session.sessionKey
-    }
-  });
   const architectSessionKey = `${project.projectId}:architect`;
   const architectInstruction = architectBlockerInstruction(session);
   const existingArchitectSession = await getAgentSession(architectSessionKey);
@@ -55,6 +46,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       ]
     });
   }
+  const job = existingJob ?? await createJob({
+    projectId: project.projectId,
+    type: "architect_blocker_run",
+    payload: {
+      workflowId: session.workflowId,
+      issueId: session.issueId,
+      sessionKey: session.sessionKey
+    }
+  });
   requestAutoRunPause(project.projectId, "Auto Run pause requested because a blocked issue was manually sent to Architect.");
 
   return NextResponse.json({

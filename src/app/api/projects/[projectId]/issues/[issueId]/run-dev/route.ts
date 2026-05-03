@@ -24,19 +24,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.issueId === issue.issueId
   ));
 
-  const job = existingJob ?? await createJob({
-    projectId: project.projectId,
-    type: "issue_run",
-    payload: {
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      prUrl: issue.prUrl ?? null,
-      branch: issue.branch ?? null,
-      returnedFromQa: false,
-      previousPrUrl: issue.prUrl ?? null
-    }
-  });
-
   workflow.status = "in_progress";
   workflow.timeline.push(existingJob ? `Developer job already queued for ${issue.issueId}.` : `Developer job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
@@ -67,6 +54,19 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       ]
     });
   }
+
+  const job = existingJob ?? await createJob({
+    projectId: project.projectId,
+    type: "issue_run",
+    payload: {
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      prUrl: issue.prUrl ?? null,
+      branch: issue.branch ?? null,
+      returnedFromQa: false,
+      previousPrUrl: issue.prUrl ?? null
+    }
+  });
 
   return NextResponse.json({
     ok: true,

@@ -32,16 +32,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     && job.payload.workflowId === workflow.workflowId
     && job.payload.issueId === issue.issueId
   ));
-  const job = existingJob ?? await createJob({
-    projectId: project.projectId,
-    type: "merge_run",
-    payload: {
-      workflowId: workflow.workflowId,
-      issueId: issue.issueId,
-      prUrl: issue.prUrl
-    }
-  });
-
   workflow.status = "in_progress";
   workflow.timeline.push(existingJob ? `Architect merge job already queued for ${issue.issueId}.` : `Architect merge job queued for ${issue.issueId}.`);
   await saveWorkflow(workflow);
@@ -71,6 +61,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
       ]
     });
   }
+
+  const job = existingJob ?? await createJob({
+    projectId: project.projectId,
+    type: "merge_run",
+    payload: {
+      workflowId: workflow.workflowId,
+      issueId: issue.issueId,
+      prUrl: issue.prUrl
+    }
+  });
 
   return NextResponse.json({
     ok: true,
