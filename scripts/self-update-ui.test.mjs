@@ -27,6 +27,16 @@ test("self-update dialog allows submission only when server integration and oper
   );
 });
 
+test("self-update dialog allows restart confirmation after update without a fresh update intent", () => {
+  const model = deriveSelfUpdateDialogModel({
+    phase: "idle",
+    status: { ...enabledStatus(), operatorSubmissionAvailable: false, operatorIntentToken: null, restartAvailable: true }
+  });
+
+  assert.equal(model.canSubmit, true);
+  assert.match(model.message, /Restart is available/);
+});
+
 test("self-update polling continues when status responds with the pre-restart boot marker", () => {
   const decision = deriveSelfUpdatePollDecision({
     responseOk: true,

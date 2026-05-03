@@ -283,62 +283,6 @@ export async function requestConfirmedSelfUpdateRestart(
   };
 }
 
-export async function runOperatorSelfUpdateAndRestart(
-  input: { nonce?: string | null; token?: string | null },
-  restartTaskixService: () => Promise<SelfUpdateServiceRestartResult>,
-  cwd = process.cwd()
-) {
-  const update = await runOperatorSelfUpdate(input, cwd);
-  if (!update.ok || !update.result) {
-    return {
-      ok: false as const,
-      status: update.status,
-      error: update.error,
-      update: update.result,
-      restart: null
-    };
-  }
-
-  if (!consumeRestartAvailability()) {
-    const error = "Restart is not available until self-update completes successfully.";
-    markSelfUpdateRestartFailed(error);
-    return {
-      ok: false as const,
-      status: 409,
-      error,
-      update: update.result,
-      restart: null
-    };
-  }
-
-  const restartResult = await restartTaskixService();
-  const restart: SelfUpdateServiceRestartResponse = {
-    ...restartResult,
-    status: restartResult.ok ? 200 : restartResult.manager ? 500 : 503,
-    restartRequested: restartResult.ok
-  };
-
-  if (!restart.ok) {
-    markSelfUpdateRestartFailed(restart.error ?? "Taskix service restart failed.");
-    return {
-      ok: false as const,
-      status: restart.status,
-      error: restart.error ?? "Taskix service restart failed.",
-      update: update.result,
-      restart
-    };
-  }
-
-  markSelfUpdateRestartRequested();
-  return {
-    ok: true as const,
-    status: 200,
-    error: null,
-    update: update.result,
-    restart
-  };
-}
-
 export function getSelfUpdateCommands() {
   return updateCommands.map(({ command }) => command);
 }

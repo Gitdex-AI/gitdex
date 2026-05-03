@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 import {
-  runOperatorSelfUpdateAndRestart,
+  runOperatorSelfUpdate,
   selfUpdateOperatorNonceCookieName
 } from "@/lib/self-update";
-import { restartTaskixService } from "@/lib/taskix-service";
 
 type OperatorUpdatePayload = {
   operatorIntentToken?: string;
@@ -21,14 +20,14 @@ export async function POST(request: NextRequest) {
     payload = {};
   }
 
-  const response = await runOperatorSelfUpdateAndRestart({
+  const response = await runOperatorSelfUpdate({
     nonce: request.cookies.get(selfUpdateOperatorNonceCookieName)?.value,
     token: payload.operatorIntentToken
-  }, restartTaskixService);
+  });
 
-  if (!response.ok || !response.update) {
-    return NextResponse.json({ error: response.error, restart: response.restart }, { status: response.status });
+  if (!response.ok || !response.result) {
+    return NextResponse.json({ error: response.error, result: response.result }, { status: response.status });
   }
 
-  return NextResponse.json(response.update, { status: response.status });
+  return NextResponse.json(response.result, { status: response.status });
 }

@@ -3,7 +3,7 @@
 import { Alert, Badge, Button, Code, Group, Modal, Stack, Text } from "@mantine/core";
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SelfUpdateRunResult, SelfUpdateState } from "@/lib/self-update";
+import type { SelfUpdateRunResult, SelfUpdateServiceRestartResponse, SelfUpdateState } from "@/lib/self-update";
 import { deriveSelfUpdateDialogModel, deriveSelfUpdatePollDecision, type SelfUpdateDialogPhase } from "@/lib/self-update-ui";
 
 const pollIntervalMs = 2_000;
@@ -101,13 +101,35 @@ export function SelfUpdateDialog({ version }: { version: string }) {
 
       preRestartBootId.current = status?.bootId ?? null;
       const updateResult = await postJson<SelfUpdateRunResult>("/api/operator/self-update/update", { operatorIntentToken });
-      setStatus((current) => current ? { ...current, lastRun: updateResult, restartAvailable: updateResult.restartAvailable } : current);
       if (!updateResult.ok) throw new Error(`Self-update failed at ${updateResult.failedCommand ?? "unknown command"}.`);
 
+      setStatus(await loadStatus());
+      setPhase("idle");
+    } catch (caught) {
+      setError(toErrorMessage(caught, "Self-update failed."));
+      setPhase("failure");
+      try {
+        setStatus(await loadStatus());
+      } catch {
+        // Keep the original failure visible if status refresh also fails.
+      }
+    }
+  }
+
+  async function startRestart() {
+    if (!window.confirm("Restart Taskix now?")) {
+      return;
+    }
+
+    setError("");
+    setPhase("restarting");
+    try {
+      preRestartBootId.current = status?.bootId ?? null;
+      await postJson<SelfUpdateServiceRestartResponse>("/api/operator/self-update/restart", { confirmed: true });
       pollStartedAt.current = Date.now();
       setPhase("polling");
     } catch (caught) {
-      setError(toErrorMessage(caught, "Self-update failed."));
+      setError(toErrorMessage(caught, "Taskix restart request failed."));
       setPhase("failure");
       try {
         setStatus(await loadStatus());
@@ -166,9 +188,9 @@ export function SelfUpdateDialog({ version }: { version: string }) {
               leftSection={model.shouldPoll ? <RotateCcw size={16} /> : <RefreshCw size={16} />}
               loading={model.actionDisabled}
               disabled={!model.canSubmit}
-              onClick={startUpdate}
+              onClick={status?.restartAvailable ? startRestart : startUpdate}
             >
-              Update and restart
+              {status?.restartAvailable ? "Restart Taskix" : "Update Taskix"}
             </Button>
           </Group>
         </Stack>

@@ -41,10 +41,11 @@ export function deriveSelfUpdateDialogModel(input: {
   const actionDisabled = runningPhases.has(input.phase);
   const enabled = input.status?.enabled ?? false;
   const operatorSubmissionAvailable = input.status?.operatorSubmissionAvailable ?? false;
-  const canSubmit = enabled && operatorSubmissionAvailable && !actionDisabled;
+  const restartAvailable = input.status?.restartAvailable ?? false;
+  const canSubmit = enabled && !actionDisabled && (restartAvailable || operatorSubmissionAvailable);
   const unavailableReason = !enabled
     ? "Self-update is disabled. Set TASKIX_ENABLE_SELF_UPDATE=true on the Taskix server to enable it."
-    : !operatorSubmissionAvailable
+    : !operatorSubmissionAvailable && !restartAvailable
       ? "Operator self-update submission is not available for this UI session."
       : "";
 
@@ -111,8 +112,9 @@ function phaseMessage(phase: SelfUpdateDialogPhase, status: SelfUpdateState | nu
     case "timeout":
       return "Restart polling timed out before Taskix reported ready.";
     case "idle":
+      if (status?.restartAvailable) return "Self-update completed successfully. Restart is available when you confirm it.";
       if (status?.lastRun?.ok) return "Last self-update completed successfully. Restart is available until it is requested.";
       if (status?.lastRun && !status.lastRun.ok) return `Last self-update failed at ${status.lastRun.failedCommand}.`;
-      return "Ready to check for updates and restart Taskix.";
+      return "Ready to check for updates.";
   }
 }

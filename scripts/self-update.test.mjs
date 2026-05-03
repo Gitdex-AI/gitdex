@@ -29,7 +29,9 @@ test("admin self-update routes require console API authentication", async () => 
     "src/app/api/admin/self-update/update/route.ts",
     "src/app/api/admin/self-update/restart/route.ts",
     "src/app/api/self-update/update/route.ts",
-    "src/app/api/self-update/restart/route.ts"
+    "src/app/api/self-update/restart/route.ts",
+    "src/app/api/operator/self-update/update/route.ts",
+    "src/app/api/operator/self-update/restart/route.ts"
   ];
 
   for (const routeFile of routeFiles) {
@@ -38,20 +40,23 @@ test("admin self-update routes require console API authentication", async () => 
   }
 });
 
-test("admin and legacy self-update mutation routes require confirmation before running commands or restart", async () => {
+test("all self-update mutation routes require confirmation before running commands or restart", async () => {
   const updateRoutes = [
     "src/app/api/admin/self-update/update/route.ts",
-    "src/app/api/self-update/update/route.ts"
+    "src/app/api/self-update/update/route.ts",
+    "src/app/api/operator/self-update/update/route.ts"
   ];
   const restartRoutes = [
     "src/app/api/admin/self-update/restart/route.ts",
-    "src/app/api/self-update/restart/route.ts"
+    "src/app/api/self-update/restart/route.ts",
+    "src/app/api/operator/self-update/restart/route.ts"
   ];
 
   for (const routeFile of updateRoutes) {
     const source = await readFile(routeFile, "utf8");
-    assert.match(source, /runConfirmedSelfUpdate/, `${routeFile} must require update confirmation`);
+    assert.match(source, /runConfirmedSelfUpdate|runOperatorSelfUpdate/, `${routeFile} must require update confirmation`);
     assert.doesNotMatch(source, /runSelfUpdate\(/, `${routeFile} must not run updates without confirmation`);
+    assert.doesNotMatch(source, /restartTaskixService/, `${routeFile} must not request restart during update`);
   }
 
   for (const routeFile of restartRoutes) {
