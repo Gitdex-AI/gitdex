@@ -274,7 +274,7 @@ async function appendRunUserInstruction(input: {
   labels?: string[];
 }): Promise<void> {
   const existing = await getAgentSession(input.sessionKey);
-  if (existing?.messages.some((message) => message.content === input.content)) return;
+  if (shouldSkipImmediateDuplicateUserInstruction(existing, input.content)) return;
   await appendAgentMessages({
     sessionKey: input.sessionKey,
     projectId: input.project.projectId,
@@ -296,6 +296,13 @@ async function appendRunUserInstruction(input: {
       { role: "user", content: input.content, createdAt: new Date().toISOString() }
     ]
   });
+}
+
+function shouldSkipImmediateDuplicateUserInstruction(session: AgentSessionRecord | null, content: string): boolean {
+  const lastMessage = session?.messages.at(-1);
+  if (!lastMessage || lastMessage.role !== "user" || lastMessage.content !== content) return false;
+  const createdAt = Date.parse(lastMessage.createdAt);
+  return Number.isFinite(createdAt) && Date.now() - createdAt < 10_000;
 }
 
 function sleep(ms: number): Promise<void> {
