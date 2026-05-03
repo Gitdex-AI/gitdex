@@ -12,7 +12,7 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /<HeaderSecondaryActions[^>]*version=\{packageJson\.version\}[^>]*\/>/,
+  /<HeaderSecondaryActions[^>]*projects=\{headerProjects\}[^>]*version=\{packageJson\.version\}[^>]*\/>/,
   "Root layout should wire the package version into the compact header actions entry point"
 );
 

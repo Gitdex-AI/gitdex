@@ -18,6 +18,13 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [settings, projects, workflows] = await Promise.all([getSettings(), listProjects(), listWorkflows()]);
   const webhookUrl = `${settings.appBaseUrl.replace(/\/$/, "")}/telegram/webhook`;
+  const headerProjects = projects.map(({ projectId, name, slug, githubAccount, githubRepo }) => ({
+    projectId,
+    name,
+    slug,
+    githubAccount,
+    githubRepo
+  }));
 
   return (
     <html lang="en">
@@ -32,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Group>
             <Nav workflowCount={workflows.length} projectCount={projects.length} />
             <Group className="topbar-actions" gap={6} justify="flex-start" wrap="nowrap">
-              <HeaderSecondaryActions codexModel={settings.codexModel} webhookUrl={webhookUrl} version={packageJson.version} />
+              <HeaderSecondaryActions codexModel={settings.codexModel} projects={headerProjects} webhookUrl={webhookUrl} version={packageJson.version} />
             </Group>
           </header>
           <div className="shell">

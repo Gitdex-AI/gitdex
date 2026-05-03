@@ -31,6 +31,12 @@ assert.match(
 
 assert.match(
   headerActionsSource,
+  /<ProjectSwitcher projects=\{projects\} \/>/,
+  "Compact header actions should preserve the project switcher entry point"
+);
+
+assert.match(
+  headerActionsSource,
   /Self-update v\$\{version\}/,
   "Compact header action menu should keep the self-update action label clear"
 );
