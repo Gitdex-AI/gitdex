@@ -8,8 +8,8 @@ import { cancelPendingJobs, createJob, listAgentSessions, listJobs, listProjectW
 import type { AgentSessionRecord, IssueRecord, JobRecord, JobType, ProjectRecord, WorkflowRecord } from "@/lib/types";
 
 const autoRunnableJobTypes: JobType[] = ["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"];
-const returnRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked"];
-const qaRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:ready-to-merge"];
+const returnRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:spec-blocked", "taskix:env-blocked", "taskix:ready-to-merge", "taskix:need-qa", "taskix:qa-running", "taskix:blocked"];
+const qaRemoveLabels = ["qa-passed", "taskix:qa-passed", "qa-failed", "taskix:qa-failed", "taskix:env-blocked", "taskix:ready-to-merge"];
 const devLabels = ["taskix:dev-running"];
 const qaLabels = ["taskix:need-qa", "taskix:qa-running"];
 
@@ -40,6 +40,12 @@ export async function runProjectIssueAutoRun(project: ProjectRecord, options: { 
       }
 
       const sessions = await listAgentSessions(project.projectId);
+      const environmentBlocker = findEnvironmentBlockedIssue(workflows, issueScope);
+      if (environmentBlocker) {
+        const message = `Auto Run paused because ${environmentBlocker.githubIssueNumber ? `issue #${environmentBlocker.githubIssueNumber}` : environmentBlocker.issueId} is blocked by the local execution environment. Fix the environment or provide a usable preview before resuming.`;
+        updateAutoRunState(project.projectId, { runId: runState.runId, status: "paused", message });
+        return { completed: false, steps, message };
+      }
       const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs, issueScope);
       if (!batch.jobIds.length) {
         const message = "No runnable issue jobs remain.";
@@ -170,6 +176,12 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
     const upstream = findDependencyIssue(dependency, issues);
     return upstream ? isDependencySatisfied(upstream) : false;
   });
+}
+
+function findEnvironmentBlockedIssue(workflows: WorkflowRecord[], issueScope: Set<string>): IssueRecord | null {
+  return workflows
+    .flatMap((workflow) => workflow.issues)
+    .find((issue) => (!issueScope.size || issueScope.has(issue.issueId)) && hasAnyIssueLabel(issue, ["taskix:env-blocked"])) ?? null;
 }
 
 function canRunQa(issue: IssueRecord): boolean {

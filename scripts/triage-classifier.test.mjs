@@ -37,6 +37,12 @@ describe("classifyTriageIssue", () => {
     }), "blocked");
   });
 
+  it("treats environment-blocked labels as blocked", () => {
+    assert.equal(classify({
+      issueLabels: ["taskix:env-blocked"]
+    }), "blocked");
+  });
+
   it("still marks closed unblocked issues as done", () => {
     assert.equal(classify({
       issueState: "CLOSED",

@@ -60,6 +60,14 @@ describe("workflow recovery reasons", () => {
     assert.match(reason, /Architect/);
   });
 
+  it("pauses QA recovery on environment blockers", () => {
+    const reason = recoveryReasonForQaStep([
+      workflow([issue({ labels: ["taskix:env-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])
+    ], []);
+
+    assert.match(reason, /validation environment/);
+  });
+
   it("shows planning recovery for failed jobs", () => {
     assert.match(recoveryReasonForJobs([job("workflow_run", "failed")]), /planning job failed/);
   });

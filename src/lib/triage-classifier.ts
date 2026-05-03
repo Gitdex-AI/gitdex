@@ -7,7 +7,7 @@ export function classifyTriageIssue(input: {
   primaryLinkedPrLabels: string[];
 }): ProjectTriageGroup {
   const labels = new Set([...input.issueLabels, ...input.primaryLinkedPrLabels].map((label) => label.toLowerCase()));
-  if (hasAnyLabel(labels, ["taskix:blocked", "taskix:spec-blocked", "qa-failed", "taskix:qa-failed"])) return "blocked";
+  if (hasAnyLabel(labels, ["taskix:blocked", "taskix:spec-blocked", "taskix:env-blocked", "qa-failed", "taskix:qa-failed"])) return "blocked";
   if (input.issueState === "CLOSED" || input.primaryLinkedPrState === "MERGED" || hasAnyLabel(labels, ["taskix:merged"])) return "done";
   if (hasAnyLabel(labels, ["taskix:need-qa", "qa-running", "taskix:qa-running"])) return "needs_qa";
   if (hasAnyLabel(labels, ["taskix:ready-to-merge", "qa-passed", "taskix:qa-passed"])) return "ready_to_merge";

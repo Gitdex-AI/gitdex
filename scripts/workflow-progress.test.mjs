@@ -91,6 +91,16 @@ describe("getWorkflowProgress", () => {
     assert.equal(currentStep(steps).id, "merge");
   });
 
+  it("shows environment-blocked issues on the QA step", () => {
+    const steps = getWorkflowProgress({
+      workflows: [workflow("in_progress", [issue({ labels: ["taskix:env-blocked", "taskix:blocked"], prUrl: "https://example.test/pr/1", prState: "OPEN" })])],
+      jobs: []
+    });
+
+    assert.equal(currentStep(steps).id, "qa");
+    assert.equal(currentStep(steps).status, "blocked");
+  });
+
   it("shows completed workflows on done even when issues retain QA-passed labels", () => {
     const steps = getWorkflowProgress({
       workflows: [workflow("done", [issue({ labels: ["qa-passed"], prLabels: ["taskix:ready-to-merge"], prState: "MERGED" })])],

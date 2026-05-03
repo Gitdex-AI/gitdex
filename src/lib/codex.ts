@@ -649,6 +649,7 @@ Hard rules:
   - "environment" when validation is blocked by local tooling/runtime constraints unrelated to the PR.
   - "stale" when the expected PR head SHA no longer matches.
 - Use "spec" instead of "implementation" when a developer cannot choose the correct fix without changing the issue, security model, ownedPaths, dependency order, or acceptance criteria. In that case, labelsApplied must include "taskix:spec-blocked" and "taskix:blocked", and must not include "taskix:qa-failed".
+- Use "environment" when local validation cannot proceed because of port binding, sandbox permissions, local tool failures, workspace preparation, or other runtime constraints unrelated to the PR. In that case, labelsApplied must include "taskix:env-blocked" and "taskix:blocked", and must not include "taskix:qa-failed".
 - Use "spec" when the PR alternates between passing one requirement and failing another because the issue does not define the trusted signal, policy, dependency, interface, or ownership boundary needed to satisfy both. This is an architecture/specification problem even if a concrete probe can reproduce the current failure.
 - Use "spec" when the issue has already cycled through multiple developer fixes and QA/architect findings show mutually incompatible expectations under the current issue text.
 - Use "implementation" only when the existing issue is executable as written and the developer can fix the PR without architect clarification. In that case, labelsApplied should include "taskix:qa-failed".

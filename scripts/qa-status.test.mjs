@@ -26,4 +26,8 @@ describe("getIssueQaStatus", () => {
   it("reports spec blocked separately from implementation QA failure", () => {
     assert.equal(getIssueQaStatus(issue({ labels: ["taskix:spec-blocked", "taskix:blocked"] })).id, "spec_blocked");
   });
+
+  it("reports environment blocked separately from implementation QA failure", () => {
+    assert.equal(getIssueQaStatus(issue({ labels: ["taskix:env-blocked", "taskix:blocked"] })).id, "env_blocked");
+  });
 });

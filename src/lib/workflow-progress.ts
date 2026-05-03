@@ -86,7 +86,7 @@ function getBlockedStep(
 ): WorkflowProgressStepId | null {
   if (jobs.some((job) => job.status === "failed" && job.type === "workflow_run")) return "planning";
   if (jobs.some((job) => job.status === "failed" && job.type === "issue_run")) return "developer";
-  if (issues.some((issue) => hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed"]))) return "qa";
+  if (issues.some((issue) => hasAnyIssueLabel(issue, ["qa-failed", "taskix:qa-failed", "taskix:env-blocked"]))) return "qa";
   if (jobs.some((job) => job.status === "failed" && job.type === "qa_run")) return "qa";
   const blockedIssue = issues.find((issue) => hasAnyIssueLabel(issue, ["taskix:blocked"]));
   if (blockedIssue) return blockedIssue.prUrl || blockedIssue.prState ? "qa" : "developer";

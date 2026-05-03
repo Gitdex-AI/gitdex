@@ -28,6 +28,10 @@ describe("canAutoRunQa", () => {
   it("does not start QA for closed PRs", () => {
     assert.equal(canAutoRunQa(issue({ prState: "CLOSED" })), false);
   });
+
+  it("does not restart QA for environment-blocked issues", () => {
+    assert.equal(canAutoRunQa(issue({ labels: ["taskix:env-blocked"] })), false);
+  });
 });
 
 describe("canAutoRunDeveloper", () => {
@@ -41,5 +45,9 @@ describe("canAutoRunDeveloper", () => {
 
   it("does not start developer work for spec-blocked issues", () => {
     assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:spec-blocked"] })), false);
+  });
+
+  it("does not start developer work for environment-blocked issues", () => {
+    assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["taskix:env-blocked"] })), false);
   });
 });

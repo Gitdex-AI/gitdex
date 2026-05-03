@@ -1,6 +1,6 @@
 import type { AgentSessionRecord, IssueRecord, WorkflowRecord } from "@/lib/types";
 
-export type QaStatusId = "not_requested" | "needed" | "running" | "passed" | "failed" | "spec_blocked";
+export type QaStatusId = "not_requested" | "needed" | "running" | "passed" | "failed" | "spec_blocked" | "env_blocked";
 
 export type QaStatus = {
   id: QaStatusId;
@@ -14,13 +14,15 @@ const qaStatuses: Record<QaStatusId, QaStatus> = {
   running: { id: "running", label: "QA running", color: "blue" },
   passed: { id: "passed", label: "QA passed", color: "green" },
   failed: { id: "failed", label: "QA failed", color: "red" },
-  spec_blocked: { id: "spec_blocked", label: "Spec blocked", color: "red" }
+  spec_blocked: { id: "spec_blocked", label: "Spec blocked", color: "red" },
+  env_blocked: { id: "env_blocked", label: "Environment blocked", color: "red" }
 };
 
 export function getIssueQaStatus(issue: IssueRecord, qaSession?: AgentSessionRecord | null): QaStatus {
   const labels = new Set([...(issue.labels ?? []), ...(issue.prLabels ?? [])].map((label) => label.toLowerCase()));
 
   if (labels.has("taskix:spec-blocked")) return qaStatuses.spec_blocked;
+  if (labels.has("taskix:env-blocked")) return qaStatuses.env_blocked;
   if (labels.has("taskix:qa-failed") || labels.has("qa-failed")) return qaStatuses.failed;
   if (labels.has("taskix:qa-passed") || labels.has("qa-passed")) return qaStatuses.passed;
   if (labels.has("taskix:qa-running")) return qaStatuses.running;
@@ -34,6 +36,7 @@ export function getWorkflowQaStatus(workflow: WorkflowRecord): QaStatus {
 
   const issueStatuses = workflow.issues.map((issue) => getIssueQaStatus(issue).id);
   if (issueStatuses.includes("spec_blocked")) return qaStatuses.spec_blocked;
+  if (issueStatuses.includes("env_blocked")) return qaStatuses.env_blocked;
   if (issueStatuses.includes("failed")) return qaStatuses.failed;
   if (issueStatuses.includes("running")) return qaStatuses.running;
   if (issueStatuses.includes("needed")) return qaStatuses.needed;

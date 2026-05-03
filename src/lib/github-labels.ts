@@ -7,6 +7,7 @@ export const taskixLabels = [
   { name: "taskix:qa-running", color: "006b75", description: "Taskix QA is validating" },
   { name: "taskix:qa-passed", color: "0e8a16", description: "Taskix QA passed" },
   { name: "taskix:qa-failed", color: "b60205", description: "Taskix QA failed" },
+  { name: "taskix:env-blocked", color: "5319e7", description: "Taskix workflow blocked by local validation environment" },
   { name: "taskix:spec-blocked", color: "b60205", description: "Taskix issue needs architect clarification" },
   { name: "taskix:ready-to-merge", color: "0e8a16", description: "Taskix PR is ready to merge" },
   { name: "taskix:merged", color: "5319e7", description: "Taskix PR merged" },
