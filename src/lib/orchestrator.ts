@@ -68,12 +68,20 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
   if (project?.projectId) {
     const plannerInstruction = plannerWorkflowInstruction(workflow);
     const existingPlannerSession = await getAgentSession(`${workflow.workflowId}:planner`);
+    const finishedAt = new Date().toISOString();
+    const startedAt = existingPlannerSession?.startedAt ?? existingPlannerSession?.messages.find((message) => message.status === "running" || message.status === "pending")?.createdAt ?? finishedAt;
+    const durationMs = Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime());
+    const activeJobId = getActiveJobId();
     await appendAgentMessages({
       sessionKey: `${workflow.workflowId}:planner`,
       projectId: project.projectId,
       role: "planner",
       title: "Planner",
       workflowId: workflow.workflowId,
+      status: "done",
+      currentStep: "planner created GitHub issues",
+      finishedAt,
+      durationMs,
       messages: [
         ...(hasAgentMessage(existingPlannerSession, plannerInstruction) ? [] : [{
           role: "user" as const,
@@ -81,12 +89,17 @@ export async function runWorkflow(workflowId: string, project?: ProjectRecord | 
           createdAt: new Date().toISOString()
         }]),
         {
+          messageId: activeJobId ? agentJobMessageId(activeJobId) : undefined,
+          jobId: activeJobId,
           role: "assistant",
+          status: "done" as const,
+          durationMs,
           content: `Planner created ${issues.length} implementation issue(s):\n\n${issues.map((issue, index) => {
             const ownedPaths = issue.ownedPaths.length ? issue.ownedPaths.join(", ") : "unspecified";
             return `${index + 1}. ${issue.title}\nDeveloper role: ${issue.developerRole ?? issue.assigneeRole}\nOwned paths: ${ownedPaths}\nAcceptance criteria:\n${issue.acceptanceCriteria.map((item) => `- ${item}`).join("\n")}`;
           }).join("\n\n")}`,
-          createdAt: new Date().toISOString()
+          createdAt: finishedAt,
+          updatedAt: finishedAt
         }
       ]
     });
