@@ -17,6 +17,13 @@ export function projectIdFromPathname(pathname: string): string | null {
   return decodeURIComponent(segments[1]);
 }
 
+export function isProjectWorkspacePathname(pathname: string): boolean {
+  const [pathOnly] = pathname.split(/[?#]/, 1);
+  const segments = pathOnly.split("/").filter(Boolean);
+
+  return segments[0] === "projects" && Boolean(segments[1]) && segments[1] !== "new" && segments.length === 2;
+}
+
 export function projectHref(projectId: string): string {
   return `/projects/${encodeURIComponent(projectId)}`;
 }

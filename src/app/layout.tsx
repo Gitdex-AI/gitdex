@@ -6,6 +6,7 @@ import { HeaderSecondaryActions } from "@/components/HeaderSecondaryActions";
 import { Nav } from "@/components/Nav";
 import { Providers } from "@/components/Providers";
 import { ShellLayout } from "@/components/ShellLayout";
+import { WorkspaceBodyClass } from "@/components/WorkspaceBodyClass";
 import packageJson from "../../package.json";
 import "@mantine/core/styles.css";
 import "./globals.css";
@@ -30,6 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body>
         <Providers>
+          <WorkspaceBodyClass />
           <header className="topbar">
             <Group className="topbar-brand" gap="xs" wrap="nowrap">
               <div className="mark">GD</div>
@@ -42,9 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <HeaderSecondaryActions codexModel={settings.codexModel} projects={headerProjects} webhookUrl={webhookUrl} version={packageJson.version} />
             </Group>
           </header>
-          <div className="shell">
-            <ShellLayout>{children}</ShellLayout>
-          </div>
+          <ShellLayout>{children}</ShellLayout>
         </Providers>
       </body>
     </html>

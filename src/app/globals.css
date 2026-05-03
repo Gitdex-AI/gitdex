@@ -208,6 +208,24 @@ pre,
   cursor: pointer;
 }
 
+.project-switcher-trigger.sidebar {
+  justify-content: flex-start;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0;
+  color: #172033;
+  background: transparent;
+  border-color: transparent;
+  font-size: 15px;
+  font-weight: 840;
+}
+
+.project-switcher-trigger.sidebar:hover,
+.project-switcher-trigger.sidebar:focus-visible {
+  color: #111827;
+  background: #f1f5f9;
+}
+
 .project-switcher-trigger-label {
   min-width: 0;
   overflow: hidden;
@@ -309,6 +327,22 @@ pre,
 .shell {
   width: 100%;
   padding: 22px 28px 36px;
+}
+
+.layout.workspace-mode {
+  background: #f8fbff;
+}
+
+.layout.workspace-mode .content {
+  min-height: 100vh;
+}
+
+body.workspace-mode-body .topbar {
+  display: none;
+}
+
+.shell.workspace-shell {
+  padding: 0;
 }
 
 .auth-page {
@@ -465,25 +499,25 @@ pre,
   grid-template-columns: clamp(300px, 25vw, 380px) minmax(0, 1fr);
   gap: 0;
   align-items: start;
-  min-height: calc(100vh - 92px);
-  margin: -4px -8px 0;
+  min-height: 100vh;
+  margin: 0;
   overflow: visible;
   background: #f8fbff;
   border: 1px solid #e0e7f0;
-  border-radius: 16px;
+  border-radius: 0;
 }
 
 .project-workspace-sidebar {
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: 12px;
+  top: 0;
   min-width: 0;
-  height: calc(100vh - 116px);
+  height: 100vh;
   min-height: 540px;
   background: #ffffff;
   border-right: 1px solid #e0e7f0;
-  border-radius: 16px 0 0 16px;
+  border-radius: 0;
 }
 
 .project-sidebar-scroll {
@@ -604,15 +638,15 @@ pre,
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 92px);
+  min-height: 100vh;
   overflow: visible;
   background: #f8fbff;
-  border-radius: 0 16px 16px 0;
+  border-radius: 0;
 }
 
 .chat-scroll {
   flex: 0 0 auto;
-  min-height: calc(100vh - 210px);
+  min-height: calc(100vh - 118px);
   overflow-x: hidden;
   overflow-y: visible;
   overscroll-behavior: auto;
@@ -1447,7 +1481,7 @@ pre,
     max-height: none;
     border-right: 0;
     border-bottom: 1px solid #e0e7f0;
-    border-radius: 16px 16px 0 0;
+    border-radius: 0;
   }
 
   .project-sidebar-scroll {
@@ -1457,7 +1491,7 @@ pre,
 
   .chat-panel {
     min-height: 520px;
-    border-radius: 0 0 16px 16px;
+    border-radius: 0;
   }
 }
 

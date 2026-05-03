@@ -10,7 +10,7 @@ import {
   type ProjectSwitcherProject
 } from "@/components/project-switcher/routes";
 
-export function ProjectSwitcher({ projects }: { projects: ProjectSwitcherProject[] }) {
+export function ProjectSwitcher({ projects, variant = "topbar" }: { projects: ProjectSwitcherProject[]; variant?: "topbar" | "sidebar" }) {
   const pathname = usePathname();
   const router = useRouter();
   const currentProject = currentProjectFromPathname(projects, pathname);
@@ -22,7 +22,7 @@ export function ProjectSwitcher({ projects }: { projects: ProjectSwitcherProject
   return (
     <Menu shadow="md" width={280} position="bottom-end" withArrow>
       <Menu.Target>
-        <button className="project-switcher-trigger" type="button" aria-label={`Current project: ${currentProject.name}`}>
+        <button className={`project-switcher-trigger ${variant}`} type="button" aria-label={`Current project: ${currentProject.name}`}>
           <FolderKanban size={16} aria-hidden="true" />
           <span className="project-switcher-trigger-label">{currentProject.name}</span>
           <ChevronsUpDown size={14} aria-hidden="true" />

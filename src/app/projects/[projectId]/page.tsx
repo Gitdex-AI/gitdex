@@ -20,6 +20,7 @@ import { ProjectRunDeveloperIssueButton } from "@/components/ProjectRunDeveloper
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { getAutoRunState } from "@/lib/auto-run-control";
 import { canAutoRunDeveloper } from "@/lib/auto-run-policy";
@@ -28,7 +29,7 @@ import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-h
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { getIssueStage, type IssueStage } from "@/lib/issue-stage";
 import { getIssueQaStatus } from "@/lib/qa-status";
-import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
+import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows, listProjects } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
 import type { AutoRunState } from "@/lib/auto-run-control";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
@@ -54,12 +55,20 @@ export default async function ProjectDetailPage({
 
   const activeRole = query.role === "architect" ? "architect" : query.role === "devops" ? "devops" : "product_manager";
   const activeSessionKey = query.session ?? `${project.projectId}:${activeRole}`;
-  const [sessions, workflows, jobs, activeSession] = await Promise.all([
+  const [sessions, workflows, jobs, activeSession, projects] = await Promise.all([
     listAgentSessions(project.projectId),
     listProjectWorkflows(project.projectId),
     listJobs(project.projectId),
-    getAgentSession(activeSessionKey)
+    getAgentSession(activeSessionKey),
+    listProjects()
   ]);
+  const switcherProjects = projects.map(({ projectId, name, slug, githubAccount, githubRepo }) => ({
+    projectId,
+    name,
+    slug,
+    githubAccount,
+    githubRepo
+  }));
   const roleSession = activeSession ?? await getAgentSession(`${project.projectId}:${activeRole}`);
   const isInspectingIssueSession = Boolean(query.session);
   const pmSession = sessions.find((session) => session.sessionKey === `${project.projectId}:product_manager`);
@@ -129,6 +138,7 @@ export default async function ProjectDetailPage({
           activeWorkflow={latestWorkflow}
           autoRunState={autoRunState}
           autorunEnabled={query.autorun === "1"}
+          switcherProjects={switcherProjects}
         />
 
         <main className="chat-panel">
@@ -205,6 +215,7 @@ function ProjectWorkspaceSidebar(input: {
   activeWorkflow: WorkflowRecord | null;
   autoRunState: AutoRunState | null;
   autorunEnabled: boolean;
+  switcherProjects: ComponentProps<typeof ProjectSwitcher>["projects"];
 }) {
   const project = input.project;
 
@@ -215,7 +226,7 @@ function ProjectWorkspaceSidebar(input: {
           <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
             <div className="project-sidebar-title">
               <Text size="xs" c="dimmed" fw={780}>Project</Text>
-              <Text fw={840} lineClamp={1}>{project.name}</Text>
+              <ProjectSwitcher projects={input.switcherProjects} variant="sidebar" />
               <Text size="xs" c="dimmed" lineClamp={1}>{project.githubRepo}</Text>
             </div>
             <ProjectDetailPanel

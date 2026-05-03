@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   currentProjectFromPathname,
+  isProjectWorkspacePathname,
   projectContextLabel,
   projectHref,
   projectIdFromPathname
@@ -33,5 +34,8 @@ assert.equal(currentProjectFromPathname(projects, "/projects/alpha-1/requirement
 assert.equal(currentProjectFromPathname(projects, "/projects/missing"), null, "Unknown project ids should not render a current project");
 assert.equal(projectHref("beta-2"), "/projects/beta-2", "Switch targets should use existing project detail routes");
 assert.equal(projectContextLabel(projects[1]), "Gitdex-AI/DispatchBeta", "Project entries should include repository context for similar names");
+assert.equal(isProjectWorkspacePathname("/projects/alpha-1"), true, "Project detail routes should use workspace mode");
+assert.equal(isProjectWorkspacePathname("/projects/alpha-1/requirements"), false, "Nested project utility pages keep the global header");
+assert.equal(isProjectWorkspacePathname("/projects/new"), false, "New project page keeps the global header");
 
 console.log("project switcher verification passed");
