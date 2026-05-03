@@ -7,10 +7,12 @@ import { useState } from "react";
 
 export function ProjectHandoffToQaButton({
   projectId,
-  issueId
+  issueId,
+  label = "Run QA"
 }: {
   projectId: string;
   issueId: string;
+  label?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -56,7 +58,7 @@ export function ProjectHandoffToQaButton({
   return (
     <>
       <Button type="button" variant="light" color="blue" size="compact-xs" radius="xl" leftSection={<ClipboardCheck size={14} />} loading={pending} onClick={handoffToQa}>
-        Run QA
+        {label}
       </Button>
       {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
     </>
