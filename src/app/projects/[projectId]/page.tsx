@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
+import { Alert, Badge, Button, Code, Group, Stack, Text } from "@mantine/core";
+import { GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, UserCircle } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
@@ -29,7 +29,7 @@ import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependen
 import { getIssueStage, type IssueStage } from "@/lib/issue-stage";
 import { getIssueQaStatus } from "@/lib/qa-status";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows } from "@/lib/store";
-import type { AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
+import type { AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
 import type { AutoRunState } from "@/lib/auto-run-control";
 import { getWorkflowProgress, type WorkflowProgressStep } from "@/lib/workflow-progress";
 import {
@@ -113,103 +113,27 @@ export default async function ProjectDetailPage({
       )}
       <ProjectAutoSync projectId={project.projectId} />
       <div className="project-chat-layout">
-        <Paper className="chat-panel">
+        <ProjectWorkspaceSidebar
+          project={project}
+          selectedPhase={selectedPhase}
+          isInspectingIssueSession={isInspectingIssueSession}
+          readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
+          pmSession={pmSession}
+          workflows={workflowPanelWorkflows}
+          visibleActiveWorkflows={visibleActiveWorkflows}
+          requirementWorkflows={sortedWorkflows}
+          doneWorkflows={doneWorkflows}
+          sessions={sessions}
+          jobs={jobs}
+          queuedJobId={queuedJobId}
+          activeWorkflow={latestWorkflow}
+          autoRunState={autoRunState}
+          autorunEnabled={query.autorun === "1"}
+        />
+
+        <main className="chat-panel">
           <ProjectChatArea projectId={project.projectId} sessions={sessions} jobs={jobs} workflows={workflows} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
-        </Paper>
-
-        <aside className="project-context">
-          <Paper>
-            <Group p="md" className="section-header">
-              <div>
-                <Text fw={760}>Workflows</Text>
-                <Text size="sm" c="dimmed">Current project delivery flow.</Text>
-              </div>
-              <Group gap="xs">
-                <ProjectDetailPanel
-                  project={{
-                    projectId: project.projectId,
-                    slug: project.slug,
-                    githubRepo: project.githubRepo,
-                    autoDeploy: project.autoDeploy,
-                    agentsFilePath: project.agentsFilePath,
-                    updateAgentsFile: project.updateAgentsFile,
-                    projectManagerSessionId: project.projectManagerSessionId,
-                    devopsSessionId: project.devopsSessionId
-                  }}
-                />
-                <Button
-                  component="a"
-                  href={`/projects/${project.projectId}/github-triage`}
-                  variant="light"
-                  size="xs"
-                  radius="xl"
-                  leftSection={<ListTodo size={14} />}
-                >
-                  GitHub triage
-                </Button>
-                <ProjectSyncForm projectId={project.projectId} />
-              </Group>
-            </Group>
-            <Stack p="md">
-              <ProjectAutoRunJob projectId={project.projectId} enabled={query.autorun === "1"} />
-              <ProjectPhaseSwitcher
-                initialPhase={selectedPhase}
-                counts={getPhaseCounts(sortedWorkflows, jobs)}
-                content={{
-                  requirements: (
-                    <ThreePhaseWorkflowPanel
-                      projectId={project.projectId}
-                      selectedPhase="requirements"
-                      isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
-                      pmSession={pmSession}
-                      workflows={visibleActiveWorkflows}
-                      requirementWorkflows={sortedWorkflows}
-                      doneWorkflows={doneWorkflows}
-                      sessions={sessions}
-                      jobs={jobs}
-                      queuedJobId={queuedJobId}
-                      autoRunState={autoRunState}
-                    />
-                  ),
-                  github: (
-                    <ThreePhaseWorkflowPanel
-                      projectId={project.projectId}
-                      selectedPhase="github"
-                      isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
-                      pmSession={pmSession}
-                      workflows={workflowPanelWorkflows}
-                      requirementWorkflows={sortedWorkflows}
-                      doneWorkflows={doneWorkflows}
-                      sessions={sessions}
-                      jobs={jobs}
-                      queuedJobId={queuedJobId}
-                      autoRunState={autoRunState}
-                    />
-                  ),
-                  operations: (
-                    <ThreePhaseWorkflowPanel
-                      projectId={project.projectId}
-                      selectedPhase="operations"
-                      isInspectingIssueSession={isInspectingIssueSession}
-                      readyForArchitectPayload={hasUnqueuedPmHandoff ? readyForArchitectPayload : null}
-                      pmSession={pmSession}
-                      workflows={visibleActiveWorkflows}
-                      requirementWorkflows={sortedWorkflows}
-                      doneWorkflows={doneWorkflows}
-                      sessions={sessions}
-                      jobs={jobs}
-                      queuedJobId={queuedJobId}
-                      autoRunState={autoRunState}
-                    />
-                  )
-                }}
-              />
-            </Stack>
-          </Paper>
-
-        </aside>
+        </main>
       </div>
     </>
   );
@@ -263,6 +187,185 @@ function getPhaseCounts(workflows: WorkflowRecord[], jobs: JobRecord[]): {
     operations: opsJobs,
     readyJobs
   };
+}
+
+function ProjectWorkspaceSidebar(input: {
+  project: ProjectRecord;
+  selectedPhase: WorkflowPhase;
+  isInspectingIssueSession: boolean;
+  readyForArchitectPayload: ProjectHandoffPayload;
+  pmSession: AgentSessionRecord | undefined;
+  workflows: WorkflowRecord[];
+  visibleActiveWorkflows: WorkflowRecord[];
+  requirementWorkflows: WorkflowRecord[];
+  doneWorkflows: WorkflowRecord[];
+  sessions: AgentSessionRecord[];
+  jobs: JobRecord[];
+  queuedJobId: string | null;
+  activeWorkflow: WorkflowRecord | null;
+  autoRunState: AutoRunState | null;
+  autorunEnabled: boolean;
+}) {
+  const project = input.project;
+
+  return (
+    <aside className="project-workspace-sidebar" aria-label="Project workspace">
+      <div className="project-sidebar-scroll">
+        <div className="project-sidebar-header">
+          <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
+            <div className="project-sidebar-title">
+              <Text size="xs" c="dimmed" fw={780}>Project</Text>
+              <Text fw={840} lineClamp={1}>{project.name}</Text>
+              <Text size="xs" c="dimmed" lineClamp={1}>{project.githubRepo}</Text>
+            </div>
+            <ProjectDetailPanel
+              project={{
+                projectId: project.projectId,
+                slug: project.slug,
+                githubRepo: project.githubRepo,
+                autoDeploy: project.autoDeploy,
+                agentsFilePath: project.agentsFilePath,
+                updateAgentsFile: project.updateAgentsFile,
+                projectManagerSessionId: project.projectManagerSessionId,
+                devopsSessionId: project.devopsSessionId
+              }}
+            />
+          </Group>
+          <Button
+            component="a"
+            href={`/projects/${project.projectId}?role=product_manager&phase=requirements`}
+            fullWidth
+            radius="md"
+            leftSection={<Plus size={16} />}
+            mt="sm"
+          >
+            New Requirement
+          </Button>
+        </div>
+
+        <div className="project-sidebar-section">
+          <Group justify="space-between" gap="xs" mb="xs" wrap="nowrap">
+            <Text size="xs" fw={820} tt="uppercase" c="dimmed">Workflows</Text>
+            <Button component="a" href={`/projects/${project.projectId}/requirements`} variant="subtle" size="compact-xs" radius="xl">
+              View all
+            </Button>
+          </Group>
+          <Stack gap={4}>
+            {renderWorkflowSwitcher(project.projectId, input.requirementWorkflows, input.jobs, input.activeWorkflow?.workflowId ?? null)}
+          </Stack>
+        </div>
+
+        <div className="project-sidebar-section project-sidebar-stage">
+          <ProjectAutoRunJob projectId={project.projectId} enabled={input.autorunEnabled} />
+          <ProjectPhaseSwitcher
+            initialPhase={input.selectedPhase}
+            counts={getPhaseCounts(input.requirementWorkflows, input.jobs)}
+            content={{
+              requirements: (
+                <ThreePhaseWorkflowPanel
+                  projectId={project.projectId}
+                  selectedPhase="requirements"
+                  isInspectingIssueSession={input.isInspectingIssueSession}
+                  readyForArchitectPayload={input.readyForArchitectPayload}
+                  pmSession={input.pmSession}
+                  workflows={input.visibleActiveWorkflows}
+                  requirementWorkflows={input.requirementWorkflows}
+                  doneWorkflows={input.doneWorkflows}
+                  sessions={input.sessions}
+                  jobs={input.jobs}
+                  queuedJobId={input.queuedJobId}
+                  autoRunState={input.autoRunState}
+                />
+              ),
+              github: (
+                <ThreePhaseWorkflowPanel
+                  projectId={project.projectId}
+                  selectedPhase="github"
+                  isInspectingIssueSession={input.isInspectingIssueSession}
+                  readyForArchitectPayload={input.readyForArchitectPayload}
+                  pmSession={input.pmSession}
+                  workflows={input.workflows}
+                  requirementWorkflows={input.requirementWorkflows}
+                  doneWorkflows={input.doneWorkflows}
+                  sessions={input.sessions}
+                  jobs={input.jobs}
+                  queuedJobId={input.queuedJobId}
+                  autoRunState={input.autoRunState}
+                />
+              ),
+              operations: (
+                <ThreePhaseWorkflowPanel
+                  projectId={project.projectId}
+                  selectedPhase="operations"
+                  isInspectingIssueSession={input.isInspectingIssueSession}
+                  readyForArchitectPayload={input.readyForArchitectPayload}
+                  pmSession={input.pmSession}
+                  workflows={input.visibleActiveWorkflows}
+                  requirementWorkflows={input.requirementWorkflows}
+                  doneWorkflows={input.doneWorkflows}
+                  sessions={input.sessions}
+                  jobs={input.jobs}
+                  queuedJobId={input.queuedJobId}
+                  autoRunState={input.autoRunState}
+                />
+              )
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="project-sidebar-footer">
+        <Group justify="space-between" align="center" gap="xs" wrap="nowrap">
+          <Group gap={8} wrap="nowrap" className="project-sidebar-user">
+            <UserCircle size={18} />
+            <div>
+              <Text size="xs" fw={760}>GitHub</Text>
+              <Text size="xs" c="dimmed" lineClamp={1}>{project.githubRepo.split("/")[0] || "not configured"}</Text>
+            </div>
+          </Group>
+          <Group gap={4} wrap="nowrap">
+            <ProjectSyncForm projectId={project.projectId} compact />
+            <Button
+              component="a"
+              href={`/projects/${project.projectId}/github-triage`}
+              variant="subtle"
+              size="compact-xs"
+              radius="xl"
+              title="GitHub triage"
+              aria-label="GitHub triage"
+            >
+              <ListTodo size={16} />
+            </Button>
+            <Button component="a" href="/settings" variant="subtle" size="compact-xs" radius="xl" title="Settings" aria-label="Settings">
+              <Settings size={16} />
+            </Button>
+          </Group>
+        </Group>
+      </div>
+    </aside>
+  );
+}
+
+function renderWorkflowSwitcher(projectId: string, workflows: WorkflowRecord[], jobs: JobRecord[], activeWorkflowId: string | null): ReactNode {
+  if (!workflows.length) return <Text size="xs" c="dimmed">No requirements yet.</Text>;
+  return workflows.slice(0, 12).map((workflow) => {
+    const planningJob = latestWorkflowJob(workflow.workflowId, jobs, "workflow_run");
+    const status = requirementStatus(workflow, planningJob);
+    const active = workflow.workflowId === activeWorkflowId;
+    return (
+      <a
+        key={workflow.workflowId}
+        href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`}
+        className={`workflow-switch-row${active ? " active" : ""}`}
+      >
+        <div className="workflow-switch-main">
+          <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+          <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+        </div>
+        <Badge size="xs" color={status.color} variant={active ? "filled" : "light"}>{status.label}</Badge>
+      </a>
+    );
+  });
 }
 
 function ThreePhaseWorkflowPanel(input: {
