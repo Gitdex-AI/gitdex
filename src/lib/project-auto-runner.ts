@@ -1,4 +1,4 @@
-import { runJobsById } from "@/lib/job-runner";
+import { runJobById } from "@/lib/job-runner";
 import { shouldCancelAutoRun, shouldPauseAutoRun, startAutoRunState, updateAutoRunState } from "@/lib/auto-run-control";
 import { canAutoRunDeveloper, canAutoRunQa, isClosedIssue } from "@/lib/auto-run-policy";
 import { addLabelsWithGh, commentIssueWithGh, getPullRequestHeadShaWithGh, removeLabelsWithGh } from "@/lib/github-local";
@@ -18,26 +18,24 @@ type AutoRunStep = {
   jobIds: string[];
 };
 
+type ActiveJobRuns = Map<string, Promise<void>>;
+
 export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[]; issueIds?: string[] } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
   if (!project.githubRepo) throw new Error("Project has no GitHub repo configured.");
   const workflowScope = new Set(options.workflowIds ?? []);
   const issueScope = new Set(options.issueIds ?? []);
   const runState = startAutoRunState(project.projectId, { workflowIds: [...workflowScope], issueIds: [...issueScope] });
   const steps: AutoRunStep[] = [];
+  const activeRuns: ActiveJobRuns = new Map();
 
   try {
-    for (let cycle = 0; cycle < 40; cycle += 1) {
+    for (let cycle = 0; cycle < 120; cycle += 1) {
       const controlResult = handleAutoRunControl(project.projectId, runState.runId, steps);
       if (controlResult) return controlResult;
 
       await syncProjectWorkflows(project, workflowScope);
       const workflows = filterWorkflows(await listProjectWorkflows(project.projectId), workflowScope);
       const jobs = filterJobsForIssueScope(await listJobs(project.projectId), workflows, issueScope);
-      if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
-        const message = "Auto Run paused because issue jobs are still running.";
-        updateAutoRunState(project.projectId, { runId: runState.runId, status: "paused", message });
-        return { completed: false, steps, message };
-      }
 
       const sessions = await listAgentSessions(project.projectId);
       const environmentBlocker = findEnvironmentBlockedIssue(workflows, issueScope);
@@ -48,13 +46,23 @@ export async function runProjectIssueAutoRun(project: ProjectRecord, options: { 
       }
       const batch = await findOrCreateNextBatch(project, workflows, sessions, jobs, issueScope);
       if (!batch.jobIds.length) {
+        if (activeRuns.size) {
+          await waitForNextActiveJob(activeRuns);
+          continue;
+        }
+        if (jobs.some((job) => job.status === "running" && autoRunnableJobTypes.includes(job.type))) {
+          const message = "Auto Run paused because existing issue jobs are still running.";
+          updateAutoRunState(project.projectId, { runId: runState.runId, status: "paused", message });
+          return { completed: false, steps, message };
+        }
         const message = "No runnable issue jobs remain.";
         updateAutoRunState(project.projectId, { runId: runState.runId, status: "completed", message });
         return { completed: true, steps, message };
       }
 
       steps.push(batch);
-      await runJobsById(batch.jobIds, project.projectId);
+      startActiveJobs(project.projectId, batch.jobIds, activeRuns);
+      await waitForNextActiveJob(activeRuns);
       const postRunControlResult = handleAutoRunControl(project.projectId, runState.runId, steps);
       if (postRunControlResult) return postRunControlResult;
     }
@@ -67,6 +75,24 @@ export async function runProjectIssueAutoRun(project: ProjectRecord, options: { 
     updateAutoRunState(project.projectId, { runId: runState.runId, status: "failed", message });
     throw error;
   }
+}
+
+function startActiveJobs(projectId: string, jobIds: string[], activeRuns: ActiveJobRuns): void {
+  for (const jobId of jobIds) {
+    if (activeRuns.has(jobId)) continue;
+    const run = runJobById(jobId, projectId)
+      .then(() => undefined)
+      .catch(() => undefined)
+      .finally(() => {
+        activeRuns.delete(jobId);
+      });
+    activeRuns.set(jobId, run);
+  }
+}
+
+async function waitForNextActiveJob(activeRuns: ActiveJobRuns): Promise<void> {
+  if (!activeRuns.size) return;
+  await Promise.race(activeRuns.values());
 }
 
 function handleAutoRunControl(projectId: string, runId: string, steps: AutoRunStep[]): { completed: boolean; steps: AutoRunStep[]; message: string } | null {
