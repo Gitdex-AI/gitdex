@@ -1,4 +1,4 @@
-import { appendAgentMessages } from "@/lib/store";
+import { appendAgentMessages, getAgentSession } from "@/lib/store";
 import type { AgentMessage, AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, Role, WorkflowRecord } from "@/lib/types";
 
 type RunMessageIssue = Pick<IssueRecord, "issueId" | "githubIssueNumber" | "githubIssueUrl" | "prUrl" | "ownedPaths">;
@@ -31,7 +31,8 @@ export async function appendAgentRunPlaceholder(input: {
   currentStep: string;
   sessionId?: string | null;
 }): Promise<void> {
-  const now = new Date().toISOString();
+  const existing = await getAgentSession(input.sessionKey);
+  const now = nextMessageTimestamp(existing?.messages.at(-1)?.createdAt);
   const message: AgentMessage = {
     messageId: agentJobMessageId(input.job.jobId),
     jobId: input.job.jobId,
@@ -60,4 +61,10 @@ export async function appendAgentRunPlaceholder(input: {
     labels: input.labels,
     messages: [message]
   });
+}
+
+function nextMessageTimestamp(previous?: string | null): string {
+  const now = Date.now();
+  const previousTime = previous ? Date.parse(previous) : NaN;
+  return new Date(Number.isFinite(previousTime) ? Math.max(now, previousTime + 1) : now).toISOString();
 }

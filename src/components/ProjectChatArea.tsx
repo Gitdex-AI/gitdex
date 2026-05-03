@@ -365,7 +365,10 @@ function MessageList({
   const messages = [
     ...sessions.flatMap((session) => timelineMessagesForSession(session)),
     ...(optimisticMessage ? [optimisticMessage] : [])
-  ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
+  ]
+    .map((message, index) => ({ message, index }))
+    .sort((left, right) => compareTimelineItems(left.message, right.message) || left.index - right.index)
+    .map((item) => item.message);
 
   const runningStatus = null;
 
@@ -421,6 +424,20 @@ function MessageList({
       {runningStatus}
     </Stack>
   );
+}
+
+function compareTimelineItems(left: TimelineMessage | TimelineExecutionLog, right: TimelineMessage | TimelineExecutionLog): number {
+  const timeDiff = new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+  if (timeDiff) return timeDiff;
+  const sessionDiff = left.sessionKey.localeCompare(right.sessionKey);
+  if (sessionDiff) return sessionDiff;
+  return timelinePriority(left) - timelinePriority(right);
+}
+
+function timelinePriority(item: TimelineMessage | TimelineExecutionLog): number {
+  if (item.kind === "message" && item.role === "user") return 0;
+  if (item.kind === "message") return 1;
+  return 2;
 }
 
 function timelineMessagesForSession(session: AgentSessionRecord): Array<TimelineMessage | TimelineExecutionLog> {
