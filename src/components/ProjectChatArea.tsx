@@ -155,6 +155,14 @@ export function ProjectChatArea({
 
   return (
     <>
+      {readOnly ? (
+        <div className="chat-session-status">
+          <Badge variant="outline">Read-only session</Badge>
+          <Text size="xs" c="dimmed">
+            Inspecting archived agent context
+          </Text>
+        </div>
+      ) : null}
       <div ref={scrollRef} className="chat-scroll">
         <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} workflows={workflows} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
       </div>

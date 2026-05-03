@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text } from "@mantine/core";
-import { Bot, GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
+import { GitBranch, Info, ListTodo, RefreshCw, RotateCcw } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
@@ -113,18 +113,6 @@ export default async function ProjectDetailPage({
       <ProjectAutoSync projectId={project.projectId} />
       <div className="project-chat-layout">
         <Paper className="chat-panel">
-          <div className="chat-header">
-            <div>
-              <Text fw={820}>{project.name}</Text>
-              <Text size="sm" c="dimmed">
-                {isInspectingIssueSession ? "Agent context" : "Agent chat"} · {project.githubRepo}
-              </Text>
-            </div>
-            <Group gap="xs">
-              <Badge variant="light" leftSection={<Bot size={12} />}>All agents</Badge>
-              {isInspectingIssueSession ? <Badge variant="outline">Read-only session</Badge> : null}
-            </Group>
-          </div>
           <ProjectChatArea projectId={project.projectId} sessions={sessions} jobs={jobs} workflows={workflows} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
         </Paper>
 

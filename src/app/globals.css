@@ -469,19 +469,6 @@ pre,
   overflow: hidden;
 }
 
-.chat-header {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.88);
-}
-
 .chat-scroll {
   flex: 1;
   min-height: 0;
@@ -493,6 +480,15 @@ pre,
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
     #f8fbff;
   scrollbar-gutter: stable;
+}
+
+.chat-session-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 10px 20px 0;
+  background: #f8fbff;
 }
 
 .chat-composer {
@@ -1370,15 +1366,17 @@ pre,
     padding: 14px;
   }
 
-  .chat-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .chat-composer-actions {
     align-items: stretch;
     flex-direction: column;
     padding-left: 4px;
+  }
+
+  .chat-session-status {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px 0;
   }
 
   .workflow-session-grid {
