@@ -225,7 +225,6 @@ function ProjectWorkspaceSidebar(input: {
         <div className="project-sidebar-header">
           <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
             <div className="project-sidebar-title">
-              <Text size="xs" c="dimmed" fw={780}>Project</Text>
               <ProjectSwitcher projects={input.switcherProjects} variant="sidebar" />
               <Text size="xs" c="dimmed" lineClamp={1}>{project.githubRepo}</Text>
             </div>
