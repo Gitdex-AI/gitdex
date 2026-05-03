@@ -291,6 +291,44 @@ function messageJobElapsed(message: TimelineMessage, jobs: JobRecord[]): string 
   return formatElapsed(startedAt);
 }
 
+function canResolveMessageJob(message: TimelineMessage, jobs: JobRecord[]): message is TimelineMessage & { jobId: string } {
+  if (message.role !== "assistant" || !message.jobId || (message.status !== "running" && message.status !== "pending")) return false;
+  const job = jobs.find((item) => item.jobId === message.jobId);
+  return job?.status === "running" && isTerminalSession(message.session);
+}
+
+function isTerminalSession(session: AgentSessionRecord | null): boolean {
+  return session?.status === "done" || session?.status === "blocked";
+}
+
+function ResolveJobStatusButton({ projectId, jobId, onResolved }: { projectId: string; jobId: string; onResolved: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function resolveStatus() {
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/jobs/${jobId}/resolve`, { method: "POST" });
+      if (!response.ok) throw new Error(await response.text());
+      onResolved();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Status resolve failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Group gap={4}>
+      <Button type="button" size="compact-xs" radius="xl" variant="light" color="green" loading={pending} onClick={resolveStatus}>
+        Resolve Status
+      </Button>
+      {error ? <Text size="xs" c="red" maw={220}>{error}</Text> : null}
+    </Group>
+  );
+}
+
 function findJobSession(job: JobRecord, sessions: AgentSessionRecord[]): AgentSessionRecord | null {
   if (!job.payload.issueId) {
     if (job.type === "workflow_run") return sessions.find((session) => session.role === "planner" && session.workflowId === job.payload.workflowId) ?? null;
@@ -370,6 +408,7 @@ function MessageList({
   optimisticMessage: TimelineMessage | null;
   pending: boolean;
 }) {
+  const router = useRouter();
   const messages = [
     ...sessions.flatMap((session) => timelineMessagesForSession(session)),
     ...(optimisticMessage ? [optimisticMessage] : [])
@@ -411,9 +450,12 @@ function MessageList({
                     {message.session?.issueId ? <Badge size="xs" variant="outline">{message.session.issueId}</Badge> : null}
                     {messageExecutionDuration(message) ? <Badge size="xs" color="gray" variant="light">{messageExecutionDuration(message)}</Badge> : null}
                   </Group>
-                  <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
-                    {formatMessageTime(message.createdAt)}
-                  </Text>
+                  <Group gap={6}>
+                    {canResolveMessageJob(message, jobs) ? <ResolveJobStatusButton projectId={projectId} jobId={message.jobId} onResolved={() => router.refresh()} /> : null}
+                    <Text component="time" dateTime={message.createdAt} size="xs" c="dimmed">
+                      {formatMessageTime(message.createdAt)}
+                    </Text>
+                  </Group>
                 </Group>
                 <Text size="sm" c={message.status === "running" || message.status === "pending" ? "dimmed" : undefined} className={message.status === "running" || message.status === "pending" ? "running-agent-line" : undefined} style={{ whiteSpace: "pre-wrap" }}>
                   {(message.status === "running" || message.status === "pending") ? <LoaderCircle size={13} className="chat-composer-spinner" /> : null}
