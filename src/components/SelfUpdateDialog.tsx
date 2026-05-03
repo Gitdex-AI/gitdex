@@ -14,7 +14,15 @@ type ApiFailure = {
   stderr?: string;
 };
 
-export function SelfUpdateDialog({ version }: { version: string }) {
+export function SelfUpdateDialog({
+  version,
+  triggerClassName = "topbar-version",
+  triggerLabel
+}: {
+  version: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
+}) {
   const [opened, setOpened] = useState(false);
   const [phase, setPhase] = useState<SelfUpdateDialogPhase>("idle");
   const [status, setStatus] = useState<SelfUpdateState | null>(null);
@@ -151,8 +159,8 @@ export function SelfUpdateDialog({ version }: { version: string }) {
 
   return (
     <>
-      <button className="topbar-version" type="button" aria-label={`Taskix version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
-        v{version}
+      <button className={triggerClassName} type="button" aria-label={`Taskix version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
+        {triggerLabel ?? `v${version}`}
       </button>
       <Modal
         opened={opened}

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Badge, Code, Group, Text } from "@mantine/core";
+import { Group, Text } from "@mantine/core";
 import { getSettings } from "@/lib/settings";
 import { listProjects, listWorkflows } from "@/lib/store";
+import { HeaderSecondaryActions } from "@/components/HeaderSecondaryActions";
 import { Providers } from "@/components/Providers";
-import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { ShellLayout } from "@/components/ShellLayout";
 import packageJson from "../../package.json";
 import "@mantine/core/styles.css";
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [settings, projects, workflows] = await Promise.all([getSettings(), listProjects(), listWorkflows()]);
+  const webhookUrl = `${settings.appBaseUrl.replace(/\/$/, "")}/telegram/webhook`;
 
   return (
     <html lang="en">
@@ -29,13 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Text>
             </Group>
             <Group className="topbar-actions" gap={6} justify="flex-start" wrap="nowrap">
-              <Badge color="dark" variant="light">
-                Model <Code>{settings.codexModel}</Code>
-              </Badge>
-              <Badge color="dark" variant="light">
-                Webhook <Code>{settings.appBaseUrl.replace(/\/$/, "")}/telegram/webhook</Code>
-              </Badge>
-              <SelfUpdateDialog version={packageJson.version} />
+              <HeaderSecondaryActions codexModel={settings.codexModel} webhookUrl={webhookUrl} version={packageJson.version} />
             </Group>
           </header>
           <div className="shell">

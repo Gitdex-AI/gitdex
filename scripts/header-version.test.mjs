@@ -12,8 +12,8 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /<SelfUpdateDialog version=\{packageJson\.version\} \/>/,
-  "Root layout should wire the package version into the self-update dialog entry point"
+  /<HeaderSecondaryActions[^>]*version=\{packageJson\.version\}[^>]*\/>/,
+  "Root layout should wire the package version into the compact header actions entry point"
 );
 
 assert.match(

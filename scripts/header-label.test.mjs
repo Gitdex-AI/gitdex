@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const layoutSource = await readFile(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
+const headerActionsSource = await readFile(new URL("../src/components/HeaderSecondaryActions.tsx", import.meta.url), "utf8");
 const globalStyles = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
 
 assert.match(
@@ -23,15 +24,21 @@ assert.match(
 );
 
 assert.match(
-  globalStyles,
-  /\.topbar-actions \.mantine-Badge-root\s*\{[^}]*flex:\s*0 0 auto;[^}]*max-width:\s*none;/s,
-  "Header badges should keep their full width in the scrollable action row"
+  headerActionsSource,
+  /aria-label="Open console details and actions"/,
+  "Compact header action menu should expose a clear accessible label"
+);
+
+assert.match(
+  headerActionsSource,
+  /Self-update v\$\{version\}/,
+  "Compact header action menu should keep the self-update action label clear"
 );
 
 assert.match(
   globalStyles,
-  /\.topbar-actions \.mantine-Badge-label\s*\{[^}]*overflow:\s*visible;[^}]*text-overflow:\s*clip;/s,
-  "Header badge labels should not ellipsize important control text"
+  /\.topbar-menu-trigger\s*\{[^}]*white-space:\s*nowrap;/s,
+  "Compact header menu trigger should keep its action label readable"
 );
 
 console.log("header label verification passed");
