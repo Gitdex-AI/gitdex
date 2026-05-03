@@ -9,6 +9,7 @@ import { addLabelsWithGh, commentIssueWithGh, commentPullRequestWithGh, createIs
 import { findDependencyIssue, isDependencySatisfied, normalizeIssueDependenciesToNumbers } from "@/lib/issue-dependencies";
 import { expectedDeveloperBaseBranch, expectedDeveloperBranch, isRecoverablePrBase, prRecoveryBranches } from "@/lib/issue-run-policy";
 import { getActiveJobId } from "@/lib/job-runtime";
+import { qaValidationInstruction } from "@/lib/qa-validation-instruction";
 import { getSettings } from "@/lib/settings";
 import { appendAgentMessages, cancelPendingJobs, createJob, getAgentSession, getJob, listJobs, listWorkflows, saveProject, saveWorkflow, getWorkflow } from "@/lib/store";
 import type { DeveloperIssueResult, IssueRecord, IssueSpec, ProjectRecord, QaPrReviewResult, WorkflowRecord } from "@/lib/types";
@@ -696,9 +697,7 @@ function deriveQaSessionStatus(labels: string[]): "active" | "blocked" | "done" 
   return null;
 }
 
-export function qaValidationInstruction(prUrl: string, issue: Pick<IssueRecord, "githubIssueNumber" | "title">, headSha?: string | null): string {
-  return `Validate PR ${prUrl} for issue #${issue.githubIssueNumber}: ${issue.title}${headSha ? `\nExpected head SHA: ${headSha}` : ""}`;
-}
+export { qaValidationInstruction };
 
 export function developerIssueInstruction(issue: Pick<IssueRecord, "githubIssueNumber" | "title">): string {
   return `Handle GitHub issue #${issue.githubIssueNumber}: ${issue.title}`;
