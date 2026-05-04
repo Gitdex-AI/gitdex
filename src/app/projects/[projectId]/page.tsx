@@ -10,6 +10,7 @@ import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectDetailPanel } from "@/components/ProjectDetailPanel";
 import { ProjectArchitectReviewButton } from "@/components/ProjectArchitectReviewButton";
 import { ProjectEscalateSessionButton } from "@/components/ProjectEscalateSessionButton";
+import { ProjectGitHubTriagePanel } from "@/components/ProjectGitHubTriagePanel";
 import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
 import { ProjectHandoffToQaButton } from "@/components/ProjectHandoffToQaButton";
 import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
@@ -187,7 +188,7 @@ type WorkflowPhase = "requirements" | "github" | "operations";
 type WorkspacePanel = ProjectWorkspacePanel;
 
 function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | null {
-  if (value === "tools" || value === "settings" || value === "requirements") return value;
+  if (value === "tools" || value === "settings" || value === "requirements" || value === "triage") return value;
   return null;
 }
 
@@ -212,6 +213,7 @@ function WorkspacePanelContent({ panel, project, projects, workflows, jobs, mess
       {panel === "tools" ? <ToolsPanel /> : null}
       {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`${workspaceHref}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
       {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
+      {panel === "triage" ? <ProjectGitHubTriagePanel project={project} /> : null}
     </div>
   );
 }
@@ -317,6 +319,7 @@ function ProjectWorkspaceSidebar(input: {
 }) {
   const project = input.project;
   const draftWorkflow = input.requirementWorkflows.find((workflow) => isDiscardableDraftWorkflow(project.projectId, workflow)) ?? null;
+  const triagePanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "triage", activePanel: input.activePanel });
   const requirementsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "requirements", activePanel: input.activePanel });
   const settingsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "settings", activePanel: input.activePanel });
 
@@ -331,10 +334,11 @@ function ProjectWorkspaceSidebar(input: {
             </div>
             <Group gap={4} wrap="nowrap">
               <Link
-                href={`/projects/${project.projectId}/github-triage`}
-                className="sidebar-icon-link"
+                href={triagePanelAction.href}
+                className={`sidebar-icon-link${triagePanelAction.active ? " active" : ""}`}
                 title="GitHub triage"
                 aria-label="GitHub triage"
+                data-nav-action={triagePanelAction.action}
               >
                 <ListTodo size={16} />
               </Link>

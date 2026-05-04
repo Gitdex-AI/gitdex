@@ -21,7 +21,7 @@ export type ConsoleNavAction = {
   action: "open" | "return";
 };
 
-export type ProjectWorkspacePanel = "tools" | "settings" | "requirements";
+export type ProjectWorkspacePanel = "tools" | "settings" | "requirements" | "triage";
 
 export const defaultConsoleReturnHref = "/";
 
