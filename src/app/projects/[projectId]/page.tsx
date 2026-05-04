@@ -92,9 +92,6 @@ export default async function ProjectDetailPage({
   const pmSession = findWorkflowPmSession(sessions, project.projectId, latestWorkflow);
   const roleSession = activeSession ?? pmSession ?? await getAgentSession(`${project.projectId}:${activeRole}`);
   const readyForPlannerPayload = findReadyForPlannerPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
-  const confirmablePmPayload = !isInspectingIssueSession && readyForPlannerPayload && (!latestWorkflow || !latestWorkflow.trackingCode)
-    ? readyForPlannerPayload
-    : null;
   const hasMatchingPmHandoffWorkflow = readyForPlannerPayload
     ? visibleWorkflows.some((workflow) => workflow.workflowId !== latestWorkflow?.workflowId && workflow.userRequirement === formatPmHandoffPayload(readyForPlannerPayload))
     : false;
@@ -117,7 +114,6 @@ export default async function ProjectDetailPage({
         <ProjectWorkspaceSidebar
           project={project}
           isInspectingIssueSession={isInspectingIssueSession}
-          readyForPlannerPayload={confirmablePmPayload}
           pmSession={pmSession}
           workflows={workflowPanelWorkflows}
           visibleActiveWorkflows={visibleActiveWorkflows}
@@ -291,7 +287,6 @@ function ArchiveRequirementPanelForm({ projectId, workflowId }: { projectId: str
 function ProjectWorkspaceSidebar(input: {
   project: ProjectRecord;
   isInspectingIssueSession: boolean;
-  readyForPlannerPayload: ProjectHandoffPayload;
   pmSession: AgentSessionRecord | undefined;
   workflows: WorkflowRecord[];
   visibleActiveWorkflows: WorkflowRecord[];
@@ -346,9 +341,8 @@ function ProjectWorkspaceSidebar(input: {
           {input.activeWorkflow && isDiscardableDraftWorkflow(project.projectId, input.activeWorkflow) ? (
             <div className="project-sidebar-draft">
               <Text size="xs" fw={820} tt="uppercase" c="dimmed">Draft</Text>
-              <Text size="xs" c="dimmed" lineClamp={1} mt={2}>Confirm to create issues.</Text>
+              <Text size="xs" c="dimmed" lineClamp={1} mt={2}>Continue in chat.</Text>
               <Stack gap={6} mt="xs">
-                {input.readyForPlannerPayload ? <ProjectHandoffForm projectId={project.projectId} payload={input.readyForPlannerPayload} workflowId={input.activeWorkflow.workflowId} /> : null}
                 <DiscardDraftRequirementForm projectId={project.projectId} workflowId={input.activeWorkflow.workflowId} />
               </Stack>
             </div>
