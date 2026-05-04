@@ -30,17 +30,21 @@ Prefer tests that exercise pure helpers in `src/lib`, for example `scripts/workf
 
 All development work should start from a GitHub issue. Create a feature branch from the latest `main` using a descriptive issue-based name such as `issue-12-add-retry-controls`, implement the change there, and open a pull request back to `main`. Do not commit feature work directly to `main` except for explicit repository setup or emergency maintenance.
 
-Developers implement the requested change, add repeatable test cases where feasible, run baseline checks, and create or update the GitHub issue with QA instructions. Treat QA as an independent validator, not as a code co-author. The QA issue should include the requirement, changed files, acceptance criteria, automated test commands, expected test cases, and any targeted browser scenarios to verify.
+Developers implement the requested change, add repeatable test cases where feasible, run baseline checks, and create or update the GitHub issue with QA instructions. Developer-owned tests are the reusable verification asset for fix, rebase, and merge-conflict retries. The PR summary or issue comment must list the test files added or updated, the exact commands QA should rerun, and any acceptance criteria that cannot reasonably be automated with a minimal manual scenario.
+
+Treat QA as an independent validator, not as a code co-author. QA should not make product or test-code changes in its temporary worktree as the way to pass a PR. If submitted tests are missing, stale, or do not cover the acceptance criteria, QA should fail the PR and ask Developer to add or update focused tests.
 
 Architect issue breakdown must include directly related test files in `ownedPaths` when the acceptance criteria affect existing automated checks. Developers may update tests that directly verify the issue acceptance criteria, even when those files live outside the primary implementation directory, and must mention that test-scope reason in the PR summary. This exception does not allow broad refactors or unrelated test churn.
 
-QA should validate the submitted test cases first, then perform focused web UI checks for the user-visible path. Manual clicking is not a substitute for repeatable tests; it is used to confirm that the tested behavior is wired correctly in the browser. The main Gitdex server normally occupies `127.0.0.1:8000`, so QA worktrees should use the preview URL assigned in the QA prompt. For example, if assigned `http://127.0.0.1:8103`, run `DATA_DIR=/private/tmp/gitdex-qa-<issue>-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p 8103`, then visit the affected project page, trigger the relevant controls, and confirm the visible next action matches the issue acceptance criteria.
+QA should validate the submitted test cases first, assess whether they cover each acceptance criterion, then perform focused web UI checks only for user-visible behavior that automated tests cannot reasonably cover. Manual clicking is not a substitute for repeatable tests; it is used to confirm that the tested behavior is wired correctly in the browser. After developer fixes or rebases, QA should primarily rerun the recorded test commands, adding focused browser smoke only when conflict resolution or UI wiring changed. The main Gitdex server normally occupies `127.0.0.1:8000`, so QA worktrees should use the preview URL assigned in the QA prompt. For example, if assigned `http://127.0.0.1:8103`, run `DATA_DIR=/private/tmp/gitdex-qa-<issue>-dev-data ./node_modules/.bin/next dev -H 127.0.0.1 -p 8103`, then visit the affected project page, trigger the relevant controls, and confirm the visible next action matches the issue acceptance criteria.
 
 QA should test from user-visible behavior and leave a GitHub issue comment with:
 
 - `Status: pass`, `fail`, or `blocked`.
 - Commands run, including `npm test`, `npm run typecheck`, and `npm run build`.
 - Automated test cases covered and their result.
+- QA assessment of whether submitted tests cover each acceptance criterion; if coverage is missing, fail with the missing test coverage as an implementation finding.
+- Whether future rechecks after developer fixes or rebases can be test-only, or which focused manual smoke remains required.
 - Manual browser scenarios tested.
 - For UI or interaction changes, browser validation run from the QA worktree at the assigned preview URL, using an isolated `DATA_DIR` under `/private/tmp`.
 - Pages visited, controls clicked, and observed results for browser validation.
