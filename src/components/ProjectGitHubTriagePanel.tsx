@@ -49,7 +49,7 @@ const triageGroups: Array<{
   }
 ];
 
-export async function ProjectGitHubTriagePanel({ project, showBack = false }: { project: ProjectRecord; showBack?: boolean }) {
+export async function ProjectGitHubTriagePanel({ project, ghUserLogin, showBack = false }: { project: ProjectRecord; ghUserLogin?: string | null; showBack?: boolean }) {
   const triage = await getGitHubTriage(project.projectId, project.githubRepo);
 
   return (
@@ -68,6 +68,10 @@ export async function ProjectGitHubTriagePanel({ project, showBack = false }: { 
           <Text c="dimmed" size="sm">
             Live read-only GitHub queue for operators.
           </Text>
+          <Group gap="xs" mt="xs">
+            <Badge variant="outline">gh account</Badge>
+            <Text size="sm" c="dimmed">{ghUserLogin ?? "not connected"}</Text>
+          </Group>
         </div>
         <ProjectGitHubTriageRefreshButton projectId={project.projectId} />
       </Group>

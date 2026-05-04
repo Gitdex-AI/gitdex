@@ -29,7 +29,7 @@ import { getAutoRunState } from "@/lib/auto-run-control";
 import { canAutoRunDeveloper } from "@/lib/auto-run-policy";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { isDiscardableDraftWorkflow } from "@/lib/draft-workflow";
-import { checkGhStatus, getCachedGhStatus, saveGhStatus } from "@/lib/gh-status";
+import { resolveGhUserLogin } from "@/lib/gh-status";
 import { findReadyForPlannerPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { getIssueStage, type IssueStage } from "@/lib/issue-stage";
@@ -68,7 +68,7 @@ export default async function ProjectDetailPage({
     listJobs(project.projectId),
     getAgentSession(activeSessionKey),
     listProjects(),
-    getGhUserLogin()
+    resolveGhUserLogin()
   ]);
   const switcherProjects = projects.map(({ projectId, name, slug, githubAccount, githubRepo }) => ({
     projectId,
@@ -128,12 +128,11 @@ export default async function ProjectDetailPage({
           autorunEnabled={query.autorun === "1"}
           activePanel={activePanel}
           switcherProjects={switcherProjects}
-          ghUserLogin={ghUserLogin}
         />
 
         <main className="chat-panel">
           {activePanel ? (
-            <WorkspacePanelContent panel={activePanel} project={project} projects={projects} workflows={sortedWorkflows} jobs={jobs} message={query.message} error={query.error} />
+            <WorkspacePanelContent panel={activePanel} project={project} projects={projects} workflows={sortedWorkflows} jobs={jobs} ghUserLogin={ghUserLogin} message={query.message} error={query.error} />
           ) : (
             <ProjectChatArea projectId={project.projectId} sessions={chatSessions} jobs={workflowPanelJobs.length ? workflowPanelJobs : jobs} workflows={workflowPanelWorkflows.length ? workflowPanelWorkflows : workflows} activeWorkflowId={latestWorkflow?.workflowId ?? null} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
           )}
@@ -150,18 +149,6 @@ function buildProjectNextPath(projectId: string, query: { role?: string; session
   }
   const search = params.toString();
   return search ? `/projects/${projectId}?${search}` : `/projects/${projectId}`;
-}
-
-async function getGhUserLogin(): Promise<string | null> {
-  const cached = getCachedGhStatus();
-  if (cached?.ok && cached.user.output.trim()) return cached.user.output.trim();
-  try {
-    const status = await checkGhStatus();
-    saveGhStatus(status);
-    return status.ok && status.user.output.trim() ? status.user.output.trim() : null;
-  } catch {
-    return null;
-  }
 }
 
 function sortWorkflowsLatestFirst(workflows: WorkflowRecord[]): WorkflowRecord[] {
@@ -192,7 +179,7 @@ function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | nu
   return null;
 }
 
-function WorkspacePanelContent({ panel, project, projects, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; projects: ProjectRecord[]; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
+function WorkspacePanelContent({ panel, project, projects, workflows, jobs, ghUserLogin, message, error }: { panel: WorkspacePanel; project: ProjectRecord; projects: ProjectRecord[]; workflows: WorkflowRecord[]; jobs: JobRecord[]; ghUserLogin: string | null; message?: string; error?: string }) {
   const workspaceHref = `/projects/${encodeURIComponent(project.projectId)}`;
   const returnTo = `${workspaceHref}?panel=${panel}`;
   const guardSettingsReturn = shouldGuardWorkspaceSettingsReturn({ panel });
@@ -213,7 +200,7 @@ function WorkspacePanelContent({ panel, project, projects, workflows, jobs, mess
       {panel === "tools" ? <ToolsPanel /> : null}
       {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`${workspaceHref}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
       {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
-      {panel === "triage" ? <ProjectGitHubTriagePanel project={project} /> : null}
+      {panel === "triage" ? <ProjectGitHubTriagePanel project={project} ghUserLogin={ghUserLogin} /> : null}
     </div>
   );
 }
@@ -315,7 +302,6 @@ function ProjectWorkspaceSidebar(input: {
   autorunEnabled: boolean;
   activePanel: WorkspacePanel | null;
   switcherProjects: ComponentProps<typeof ProjectSwitcher>["projects"];
-  ghUserLogin: string | null;
 }) {
   const project = input.project;
   const draftWorkflow = input.requirementWorkflows.find((workflow) => isDiscardableDraftWorkflow(project.projectId, workflow)) ?? null;
@@ -402,8 +388,8 @@ function ProjectWorkspaceSidebar(input: {
           <Group gap={8} wrap="nowrap" className="project-sidebar-user">
             <UserCircle size={18} />
             <div>
-              <Text size="xs" fw={760}>{input.ghUserLogin ?? "GitHub not connected"}</Text>
-              <Text size="xs" c="dimmed" lineClamp={1}>gh account</Text>
+              <Text size="xs" fw={760}>admin</Text>
+              <Text size="xs" c="dimmed" lineClamp={1}>signed in</Text>
             </div>
           </Group>
           <Group gap={4} wrap="nowrap">

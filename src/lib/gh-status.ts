@@ -39,6 +39,18 @@ export function saveGhStatus(status: GhStatus): void {
   setJsonValue("gh_status", status);
 }
 
+export async function resolveGhUserLogin(): Promise<string | null> {
+  const cached = getCachedGhStatus();
+  if (cached?.ok && cached.user.output.trim()) return cached.user.output.trim();
+  try {
+    const status = await checkGhStatus();
+    saveGhStatus(status);
+    return status.ok && status.user.output.trim() ? status.user.output.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 function skipped(command: string, error: string): CheckResult {
   return { ok: false, command, output: "", error };
 }
