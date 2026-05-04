@@ -373,30 +373,32 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
     const active = workflow.workflowId === activeWorkflow?.workflowId;
     return (
       <div key={workflow.workflowId} className={`requirement-tree-item${active ? " active" : ""}`}>
-        <a
-          href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`}
-          className="requirement-tree-link"
-        >
-          <div className="workflow-switch-main">
-            <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
-            <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
-          </div>
-          <Badge size="xs" color={status.color} variant={active ? "filled" : "light"}>{status.label}</Badge>
-        </a>
+        <div className="requirement-tree-link">
+          <a
+            href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`}
+            className="requirement-tree-main-link"
+          >
+            <div className="workflow-switch-main">
+              <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+              <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+            </div>
+          </a>
+          <Group gap={6} justify="flex-end" wrap="nowrap">
+            <Badge size="xs" color={status.color} variant={active ? "filled" : "light"}>{status.label}</Badge>
+            {active ? <ArchiveRequirementForm projectId={projectId} workflowId={workflow.workflowId} /> : null}
+          </Group>
+        </div>
         {active ? (
           <div className="requirement-tree-issues">
             <Group justify="space-between" align="center" gap="xs" mb="xs" wrap="nowrap">
               <Text size="xs" fw={820} tt="uppercase" c="dimmed">Issues</Text>
-              <Group gap={6} wrap="nowrap">
-                <ArchiveRequirementForm projectId={projectId} workflowId={workflow.workflowId} />
-                <ProjectAutoRunIssuesButton
-                  projectId={projectId}
-                  workflowIds={[workflow.workflowId]}
-                  issueIds={workflow.issues.map((issue) => issue.issueId)}
-                  initialState={autoRunState}
-                  runningLabel={activeAutoRunLabel(jobs, [workflow])}
-                />
-              </Group>
+              <ProjectAutoRunIssuesButton
+                projectId={projectId}
+                workflowIds={[workflow.workflowId]}
+                issueIds={workflow.issues.map((issue) => issue.issueId)}
+                initialState={autoRunState}
+                runningLabel={activeAutoRunLabel(jobs, [workflow])}
+              />
             </Group>
             {renderGithubIssueRows(projectId, [workflow], sessions, jobs, queuedJobId, autoRunState)}
           </div>

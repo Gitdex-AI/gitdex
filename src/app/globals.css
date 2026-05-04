@@ -601,12 +601,17 @@ body.workspace-mode-body .topbar {
   min-height: 46px;
   padding: 8px 10px;
   color: inherit;
-  text-decoration: none;
   border-radius: 8px;
 }
 
 .requirement-tree-link:hover {
   background: #f8fafc;
+}
+
+.requirement-tree-main-link {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
 }
 
 .requirement-tree-issues {
