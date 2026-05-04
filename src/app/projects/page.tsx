@@ -1,4 +1,4 @@
-import { ProjectsPanel } from "@/components/ProjectsPanel";
+import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ message?: string; error?: string }> }) {
