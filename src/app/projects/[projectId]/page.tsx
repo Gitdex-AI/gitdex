@@ -358,9 +358,12 @@ function ProjectWorkspaceSidebar(input: {
         <div className="project-sidebar-section">
           <Group justify="space-between" gap="xs" mb="xs" wrap="nowrap">
             <Text size="xs" fw={820} tt="uppercase" c="dimmed">Requirements</Text>
-            <Button component={Link} href={`/projects/${project.projectId}?panel=requirements`} variant={input.activePanel === "requirements" ? "light" : "subtle"} size="compact-xs" radius="xl">
+            <Link
+              href={`/projects/${project.projectId}?panel=requirements`}
+              className={`sidebar-pill-link${input.activePanel === "requirements" ? " active" : ""}`}
+            >
               View all
-            </Button>
+            </Link>
           </Group>
           <RequirementIssueTree
             projectId={project.projectId}
@@ -385,42 +388,38 @@ function ProjectWorkspaceSidebar(input: {
           </Group>
           <Group gap={4} wrap="nowrap">
             <ProjectSyncForm projectId={project.projectId} compact />
-            <Button
-              component={Link}
+            <Link
               href={`/projects/${project.projectId}?panel=projects`}
-              variant={input.activePanel === "projects" ? "light" : "subtle"}
-              size="compact-xs"
-              radius="xl"
+              className={`sidebar-icon-link${input.activePanel === "projects" ? " active" : ""}`}
               title="Projects"
               aria-label="Projects"
             >
               <FolderKanban size={16} />
-            </Button>
-            <Button
-              component={Link}
+            </Link>
+            <Link
               href={`/projects/${project.projectId}?panel=tools`}
-              variant={input.activePanel === "tools" ? "light" : "subtle"}
-              size="compact-xs"
-              radius="xl"
+              className={`sidebar-icon-link${input.activePanel === "tools" ? " active" : ""}`}
               title="Tools"
               aria-label="Tools"
             >
               <Wrench size={16} />
-            </Button>
-            <Button
-              component={Link}
+            </Link>
+            <Link
               href={`/projects/${project.projectId}/github-triage`}
-              variant="subtle"
-              size="compact-xs"
-              radius="xl"
+              className="sidebar-icon-link"
               title="GitHub triage"
               aria-label="GitHub triage"
             >
               <ListTodo size={16} />
-            </Button>
-            <Button component={Link} href={`/projects/${project.projectId}?panel=settings`} variant={input.activePanel === "settings" ? "light" : "subtle"} size="compact-xs" radius="xl" title="Settings" aria-label="Settings">
+            </Link>
+            <Link
+              href={`/projects/${project.projectId}?panel=settings`}
+              className={`sidebar-icon-link${input.activePanel === "settings" ? " active" : ""}`}
+              title="Settings"
+              aria-label="Settings"
+            >
               <Settings size={16} />
-            </Button>
+            </Link>
           </Group>
         </Group>
       </div>
@@ -676,18 +675,14 @@ function renderStepRecovery(input: {
         <Group gap={6} mt="xs">
           {failedJobs.map((job) => <ProjectRetryJobButton key={job.jobId} projectId={input.projectId} jobId={job.jobId} />)}
           {blockedSessions.map((session) => (
-            <Button
+            <Link
               key={session.sessionKey}
-              component={Link}
               href={`/projects/${input.projectId}?session=${encodeURIComponent(session.sessionKey)}`}
-              variant="light"
-              color="red"
-              size="compact-xs"
-              radius="xl"
-              leftSection={<RotateCcw size={14} />}
+              className="action-pill-link danger"
             >
+              <RotateCcw size={14} />
               Open blocked session
-            </Button>
+            </Link>
           ))}
         </Group>
       ) : null}
@@ -796,15 +791,12 @@ function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]
         <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
       </div>
       <Group gap={6} wrap="nowrap">
-        <Button
-          component={Link}
+        <Link
           href={`/projects/${projectId}/workflows/${workflow.workflowId}`}
-          variant="light"
-          size="compact-xs"
-          radius="xl"
+          className="action-pill-link"
         >
           Open
-        </Button>
+        </Link>
         {workflow.status !== "done" ? <WorkflowPauseButton workflowId={workflow.workflowId} paused={Boolean(workflow.paused)} /> : null}
       </Group>
     </div>
