@@ -49,6 +49,19 @@ test("return destination uses stable fallback when no prior page or project chat
   });
 });
 
+test("return destination ignores invalid prior page before checking recent project chat", () => {
+  const destination = resolveConsoleReturnDestination({
+    currentHref: "/settings",
+    priorDestination: "https://example.com/projects/external",
+    recentProjectChats: [{ projectId: "project-a", createdAt: "2026-05-01T10:00:00.000Z" }]
+  });
+
+  assert.deepEqual(destination, {
+    href: "/projects/project-a",
+    source: "recent-project-chat"
+  });
+});
+
 test("non-chat views do not replace the prior chat return target", () => {
   assert.equal(shouldRecordPriorConsoleDestination("/projects/project-a"), true);
   assert.equal(shouldRecordPriorConsoleDestination("/projects/project-a?workflow=wf-1"), true);

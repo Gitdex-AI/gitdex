@@ -1,18 +1,22 @@
 import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, Paper, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
 import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
+import { SettingsReturnNavigation } from "@/components/settings/SettingsReturnNavigation";
 import { getSettings } from "@/lib/settings";
+import type { RecentProjectChat } from "@/lib/return-navigation";
 
 export async function SettingsPanel({
   message,
   error,
   returnTo,
-  toolsHref = "/tools"
+  toolsHref = "/tools",
+  recentProjectChats = []
 }: {
   message?: string;
   error?: string;
   returnTo?: string;
   toolsHref?: string;
+  recentProjectChats?: RecentProjectChat[];
 }) {
   const settings = await getSettings();
   const hasGitHubKey = Boolean(settings.githubUsername && settings.githubSshPrivateKeyPath && settings.githubSshPublicKey);
@@ -20,6 +24,9 @@ export async function SettingsPanel({
   return (
     <>
       <PageTitle title="Settings" />
+      <Group justify="flex-start" mb="md">
+        <SettingsReturnNavigation recentProjectChats={recentProjectChats} />
+      </Group>
       {(message || error) && (
         <Alert color={error ? "red" : "blue"} icon={<Info size={16} />} mb="md">
           {message ?? error}
@@ -51,7 +58,7 @@ export async function SettingsPanel({
           </div>
         </Group>
         <div className="panel-body">
-          <form method="post" action="/api/github/account">
+          <form method="post" action="/api/github/account" data-settings-form>
             <ReturnToInput returnTo={returnTo} />
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               <TextInput name="githubUsername" label="GitHub Owner" description="User or organization, for example octocat or my-org." defaultValue={settings.githubUsername} placeholder="owner-or-org" required />
@@ -94,7 +101,7 @@ export async function SettingsPanel({
           </div>
         </Group>
         <div className="panel-body">
-          <form method="post" action="/api/settings">
+          <form method="post" action="/api/settings" data-settings-form>
             <ReturnToInput returnTo={returnTo} />
             <Text className="section-title">App</Text>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
