@@ -45,7 +45,6 @@ export function ProjectChatArea({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
   const [optimisticMessage, setOptimisticMessage] = useState<TimelineMessage | null>(null);
   const [liveJobs, setLiveJobs] = useState(jobs);
@@ -174,7 +173,6 @@ export function ProjectChatArea({
     const scroll = scrollRef.current;
     if (!scroll) return;
     scroll.scrollTo({ top: scroll.scrollHeight, behavior });
-    bottomRef.current?.scrollIntoView({ block: "end", behavior });
     stickToBottomRef.current = true;
     setShowScrollToBottom(false);
   }
@@ -191,7 +189,7 @@ export function ProjectChatArea({
       ) : null}
       <div ref={scrollRef} className="chat-scroll" onScroll={updateScrollPosition}>
         <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} workflows={workflows} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
-        <div ref={bottomRef} aria-hidden="true" />
+        <div aria-hidden="true" />
       </div>
       {!readOnly && (
         <div className="chat-composer">
