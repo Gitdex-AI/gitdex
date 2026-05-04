@@ -202,6 +202,12 @@ curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/insta
 
 安装脚本会把 Gitdex 安装到 `~/.gitdex/app`，把 `gitdex` 命令链接到 `~/.local/bin`，安装依赖并构建应用。可以用 `GITDEX_INSTALL_DIR` 修改安装目录，用 `GITDEX_BIN_DIR` 修改命令目录。
 
+如果希望安装时直接作为后台服务启动：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/install.sh | GITDEX_INSTALL_SERVICE=1 bash
+```
+
 克隆仓库：
 
 ```bash
@@ -238,7 +244,13 @@ gitdex build
 gitdex start
 gitdex update
 gitdex status
+gitdex install-service
+gitdex service-status
+gitdex service-logs
+gitdex uninstall-service
 ```
+
+`gitdex install-service` 会安装用户级服务。macOS 写入 `~/Library/LaunchAgents/ai.gitdex.next.plist`，Linux 写入 `~/.config/systemd/user/gitdex.service`。服务日志保存在 `data/logs/`。
 
 ## 配置
 

@@ -202,6 +202,12 @@ curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/insta
 
 The script installs Gitdex into `~/.gitdex/app`, links `gitdex` into `~/.local/bin`, installs dependencies, and builds the app. The install location can be changed with `GITDEX_INSTALL_DIR`, and the command directory can be changed with `GITDEX_BIN_DIR`.
 
+To install and start Gitdex as a background service during installation:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/install.sh | GITDEX_INSTALL_SERVICE=1 bash
+```
+
 Clone the repository:
 
 ```bash
@@ -238,7 +244,13 @@ gitdex build
 gitdex start
 gitdex update
 gitdex status
+gitdex install-service
+gitdex service-status
+gitdex service-logs
+gitdex uninstall-service
 ```
+
+`gitdex install-service` installs a per-user service. On macOS it writes `~/Library/LaunchAgents/ai.gitdex.next.plist`; on Linux it writes `~/.config/systemd/user/gitdex.service`. Service logs are stored under `data/logs/`.
 
 ## Configuration
 

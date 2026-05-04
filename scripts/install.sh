@@ -5,6 +5,7 @@ repo_url="${GITDEX_REPO_URL:-https://github.com/Gitdex-AI/gitdex.git}"
 install_dir="${GITDEX_INSTALL_DIR:-$HOME/.gitdex/app}"
 bin_dir="${GITDEX_BIN_DIR:-$HOME/.local/bin}"
 build="${GITDEX_SKIP_BUILD:-0}"
+install_service="${GITDEX_INSTALL_SERVICE:-0}"
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -44,6 +45,13 @@ echo "Command: $bin_dir/gitdex"
 echo "Run: gitdex doctor"
 echo "Start dev server: gitdex dev"
 echo "Open: http://127.0.0.1:8000"
+
+if [ "$install_service" = "1" ]; then
+  "$bin_dir/gitdex" install-service --no-build
+  echo "Service installed. Check it with: gitdex service-status"
+else
+  echo "Install as a background service: $bin_dir/gitdex install-service"
+fi
 
 case ":$PATH:" in
   *":$bin_dir:"*) ;;
