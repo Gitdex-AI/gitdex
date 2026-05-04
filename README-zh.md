@@ -194,6 +194,14 @@ Gitdex 要求宿主机上的 `codex exec` 和 `gh` 操作可以正常工作。
 
 ## 安装
 
+快速安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/install.sh | bash
+```
+
+安装脚本会把 Gitdex 安装到 `~/.gitdex/app`，把 `gitdex` 命令链接到 `~/.local/bin`，安装依赖并构建应用。可以用 `GITDEX_INSTALL_DIR` 修改安装目录，用 `GITDEX_BIN_DIR` 修改命令目录。
+
 克隆仓库：
 
 ```bash
@@ -210,7 +218,7 @@ npm install
 启动开发服务：
 
 ```bash
-npm run dev
+gitdex dev
 ```
 
 打开：
@@ -220,6 +228,17 @@ http://127.0.0.1:8000
 ```
 
 开发服务绑定到 `127.0.0.1:8000`。
+
+常用 CLI 命令：
+
+```bash
+gitdex doctor
+gitdex dev
+gitdex build
+gitdex start
+gitdex update
+gitdex status
+```
 
 ## 配置
 
@@ -252,11 +271,10 @@ GITDEX_NEXT_SERVICE_NAME=gitdex-next
 ## 项目设置
 
 1. 打开 Settings，验证 Codex 和 GitHub CLI 状态。
-2. 配置 GitHub 账号或组织。
-3. 如有需要，生成或注册 SSH key。
-4. 创建项目，并绑定到 GitHub 仓库。
-5. 允许 Gitdex 更新仓库中的 `AGENTS.md` workflow 区块。
-6. 打开项目页面，从 PM 聊天开始。
+2. 创建项目，并为该项目输入 GitHub owner 或 organization。
+3. 从该 owner 的仓库列表中选择 repository。
+4. 如有需要，允许 Gitdex 更新仓库中的 `AGENTS.md` workflow 区块。
+5. 打开项目页面，从 PM 聊天开始。
 
 Gitdex 会保留 `AGENTS.md` 中托管区块以外的内容。
 

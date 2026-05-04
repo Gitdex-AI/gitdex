@@ -194,6 +194,14 @@ Gitdex expects `codex exec` and `gh` operations to work on the host machine.
 
 ## Installation
 
+Quick install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/main/scripts/install.sh | bash
+```
+
+The script installs Gitdex into `~/.gitdex/app`, links `gitdex` into `~/.local/bin`, installs dependencies, and builds the app. The install location can be changed with `GITDEX_INSTALL_DIR`, and the command directory can be changed with `GITDEX_BIN_DIR`.
+
 Clone the repository:
 
 ```bash
@@ -210,7 +218,7 @@ npm install
 Start the development server:
 
 ```bash
-npm run dev
+gitdex dev
 ```
 
 Open:
@@ -220,6 +228,17 @@ http://127.0.0.1:8000
 ```
 
 The dev server binds to `127.0.0.1:8000`.
+
+Useful CLI commands:
+
+```bash
+gitdex doctor
+gitdex dev
+gitdex build
+gitdex start
+gitdex update
+gitdex status
+```
 
 ## Configuration
 
@@ -252,11 +271,10 @@ GITDEX_NEXT_SERVICE_NAME=gitdex-next
 ## Project Setup
 
 1. Open Settings and verify Codex and GitHub CLI status.
-2. Configure a GitHub account or organization.
-3. Generate or register the SSH key if needed.
-4. Create a project and bind it to a GitHub repository.
-5. Let Gitdex update the repo's `AGENTS.md` workflow section.
-6. Open the project page and start from the PM chat.
+2. Create a project and enter the GitHub owner or organization for that project.
+3. Select the repository from the owner-specific repository list.
+4. Let Gitdex update the repo's `AGENTS.md` workflow section if desired.
+5. Open the project page and start from the PM chat.
 
 Gitdex preserves content outside its managed `AGENTS.md` block.
 
