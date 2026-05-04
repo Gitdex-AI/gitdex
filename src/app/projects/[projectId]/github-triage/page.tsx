@@ -3,8 +3,8 @@ import { AlertCircle, ArrowLeft, ExternalLink, GitBranch, GitPullRequest, Inbox,
 import { notFound } from "next/navigation";
 import { ProjectGitHubTriageRefreshButton } from "@/components/ProjectGitHubTriageRefreshButton";
 import { requireConsolePageAuth } from "@/lib/console-auth";
-import { getProjectTriageWithGh } from "@/lib/github-local";
-import { getProject } from "@/lib/store";
+import { getProjectTriageFromWorkflows, projectTriageGroups } from "@/lib/project-triage";
+import { getProject, listProjectWorkflows } from "@/lib/store";
 import type { ProjectTriageGroup, ProjectTriageItem, ProjectTriageResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,7 @@ export default async function ProjectGitHubTriagePage({
             Live read-only GitHub queue for operators.
           </Text>
         </div>
-        <ProjectGitHubTriageRefreshButton />
+        <ProjectGitHubTriageRefreshButton projectId={project.projectId} />
       </Group>
 
       {"error" in triage ? (
@@ -93,7 +93,7 @@ export default async function ProjectGitHubTriagePage({
               <div>
                 <Text fw={760}>GitHub data could not be loaded</Text>
                 <Text size="sm" c="dimmed">
-                  The triage console stays read-only and can be retried with Refresh.
+                  The triage console stays read-only and can be retried with Sync.
                 </Text>
               </div>
             </Group>
@@ -108,7 +108,7 @@ export default async function ProjectGitHubTriagePage({
             <Group justify="space-between" p="md" className="section-header" align="flex-start">
               <div>
                 <Text fw={760}>Repository</Text>
-                <Text size="sm" c="dimmed">Live GitHub state grouped by Gitdex workflow state.</Text>
+                <Text size="sm" c="dimmed">Cached GitHub state from local workflow sync, grouped by Gitdex workflow state.</Text>
               </div>
               <Stack gap={4} align="flex-end">
                 <Anchor href={`https://github.com/${triage.repo}`} target="_blank" rel="noreferrer" size="sm">
@@ -118,7 +118,8 @@ export default async function ProjectGitHubTriagePage({
                     <ExternalLink size={12} />
                   </Group>
                 </Anchor>
-                <Text size="xs" c="dimmed">Fetched {formatDateTime(triage.generatedAt)}</Text>
+                <Text size="xs" c="dimmed">Rendered {formatDateTime(triage.generatedAt)}</Text>
+                <Text size="xs" c="dimmed">Last synced {triage.lastSyncedAt ? formatDateTime(triage.lastSyncedAt) : "not recorded"}</Text>
               </Stack>
             </Group>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" p="md">
@@ -220,18 +221,8 @@ function TriageCard({ item }: { item: ProjectTriageItem }) {
 
 async function getGitHubTriage(projectId: string, repo: string): Promise<ProjectTriageResponse | { error: string }> {
   try {
-    const items = await getProjectTriageWithGh(repo);
-    const groups = Object.fromEntries(triageGroups.map((group) => [group.id, items.filter((item) => item.group === group.id)])) as ProjectTriageResponse["groups"];
-    const counts = Object.fromEntries(triageGroups.map((group) => [group.id, groups[group.id].length])) as ProjectTriageResponse["counts"];
-
-    return {
-      ok: true,
-      projectId,
-      repo,
-      generatedAt: new Date().toISOString(),
-      counts,
-      groups
-    };
+    const workflows = await listProjectWorkflows(projectId);
+    return getProjectTriageFromWorkflows({ projectId, repo, workflows });
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "GitHub triage failed."
@@ -240,7 +231,7 @@ async function getGitHubTriage(projectId: string, repo: string): Promise<Project
 }
 
 function totalItems(triage: ProjectTriageResponse): number {
-  return triageGroups.reduce((total, group) => total + triage.counts[group.id], 0);
+  return projectTriageGroups.reduce((total, group) => total + triage.counts[group], 0);
 }
 
 function groupTone(groupId: ProjectTriageGroup): string {

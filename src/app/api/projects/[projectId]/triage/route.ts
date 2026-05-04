@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { getProjectTriageWithGh } from "@/lib/github-local";
-import { getProject } from "@/lib/store";
-import type { ProjectTriageGroup, ProjectTriageResponse } from "@/lib/types";
+import { getProjectTriageFromWorkflows } from "@/lib/project-triage";
+import { getProject, listProjectWorkflows } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
-
-const triageGroups: ProjectTriageGroup[] = ["blocked", "needs_qa", "ready_to_merge", "in_progress", "done", "untracked"];
 
 export async function GET(_request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -21,18 +18,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
   }
 
   try {
-    const items = await getProjectTriageWithGh(repo);
-    const groups = Object.fromEntries(triageGroups.map((group) => [group, items.filter((item) => item.group === group)])) as ProjectTriageResponse["groups"];
-    const counts = Object.fromEntries(triageGroups.map((group) => [group, groups[group].length])) as ProjectTriageResponse["counts"];
-
-    return NextResponse.json({
-      ok: true,
-      projectId: project.projectId,
-      repo,
-      generatedAt: new Date().toISOString(),
-      counts,
-      groups
-    } satisfies ProjectTriageResponse);
+    const workflows = await listProjectWorkflows(project.projectId);
+    return NextResponse.json(getProjectTriageFromWorkflows({ projectId: project.projectId, repo, workflows }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "GitHub triage read failed.";
     return NextResponse.json({ ok: false, projectId: project.projectId, repo, error: message }, { status: 502 });

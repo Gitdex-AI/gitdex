@@ -180,6 +180,7 @@ export type ProjectTriageResponse = {
   projectId: string;
   repo: string;
   generatedAt: string;
+  lastSyncedAt?: string | null;
   counts: Record<ProjectTriageGroup, number>;
   groups: Record<ProjectTriageGroup, ProjectTriageItem[]>;
 };

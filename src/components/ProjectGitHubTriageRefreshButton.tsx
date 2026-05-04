@@ -3,16 +3,19 @@
 import { Button } from "@mantine/core";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState } from "react";
 
-export function ProjectGitHubTriageRefreshButton() {
+export function ProjectGitHubTriageRefreshButton({ projectId }: { projectId: string }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   function refresh() {
-    startTransition(() => {
-      router.refresh();
-    });
+    setPending(true);
+    void fetch(`/api/projects/${projectId}/sync`, { method: "POST" })
+      .finally(() => {
+        setPending(false);
+        router.refresh();
+      });
   }
 
   return (
@@ -23,9 +26,10 @@ export function ProjectGitHubTriageRefreshButton() {
       radius="xl"
       leftSection={<RefreshCw size={14} />}
       loading={pending}
+      disabled={pending}
       onClick={refresh}
     >
-      Refresh
+      Sync
     </Button>
   );
 }

@@ -61,24 +61,39 @@ export async function resolveGitHubRepoWithGh(repo: string): Promise<string> {
 }
 
 export async function getProjectTriageWithGh(repo: string): Promise<ProjectTriageItem[]> {
-  const { stdout } = await execFileAsync("gh", [
-    "issue",
-    "list",
-    "--repo",
-    repo,
-    "--state",
-    "all",
-    "--limit",
-    "100",
-    "--json",
-    "number,url,state,labels"
+  const [{ stdout: issueStdout }, { stdout: prStdout }] = await Promise.all([
+    execFileAsync("gh", [
+      "issue",
+      "list",
+      "--repo",
+      repo,
+      "--state",
+      "all",
+      "--limit",
+      "100",
+      "--json",
+      "number,url,state,labels"
+    ]),
+    execFileAsync("gh", [
+      "pr",
+      "list",
+      "--repo",
+      repo,
+      "--state",
+      "all",
+      "--limit",
+      "100",
+      "--json",
+      "number,url,state,labels,mergeStateStatus,closingIssuesReferences"
+    ])
   ]);
-  const issues = JSON.parse(stdout) as GhTriageIssue[];
-  return Promise.all(issues.map((issue) => getTriageItemWithGh(repo, issue)));
+  const issues = JSON.parse(issueStdout) as GhTriageIssue[];
+  const prs = JSON.parse(prStdout) as GhTriagePr[];
+  return issues.map((issue) => getTriageItemFromLinkedPullRequests(issue, prs));
 }
 
-async function getTriageItemWithGh(repo: string, issue: GhTriageIssue): Promise<ProjectTriageItem> {
-  const prs = await listLinkedPullRequestsWithGh(repo, issue.number);
+function getTriageItemFromLinkedPullRequests(issue: GhTriageIssue, allPullRequests: GhTriagePr[]): ProjectTriageItem {
+  const prs = allPullRequests.filter((pr) => pr.closingIssuesReferences?.some((linkedIssue) => linkedIssue.number === issue.number));
   const primaryPr = pickPrimaryPullRequest(prs);
   const issueLabels = issue.labels.map((label) => label.name);
   const primaryLinkedPrLabels = primaryPr?.labels.map((label) => label.name) ?? [];
