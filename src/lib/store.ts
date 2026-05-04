@@ -147,6 +147,10 @@ export async function saveWorkflow(workflow: WorkflowRecord): Promise<void> {
     .run(workflow.workflowId, workflow.createdAt, JSON.stringify(workflow));
 }
 
+export async function deleteWorkflow(workflowId: string): Promise<void> {
+  getDb().prepare("DELETE FROM workflows WHERE workflow_id = ?").run(workflowId);
+}
+
 export async function listProjectWorkflows(projectId: string): Promise<WorkflowRecord[]> {
   return (await listWorkflows()).filter((workflow) => workflow.projectId === projectId);
 }
@@ -370,6 +374,10 @@ export async function saveAgentSession(session: AgentSessionRecord): Promise<voi
       "INSERT INTO agent_sessions (session_key, project_id, role, updated_at, payload) VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_key) DO UPDATE SET project_id = excluded.project_id, role = excluded.role, updated_at = excluded.updated_at, payload = excluded.payload"
     )
     .run(session.sessionKey, session.projectId, session.role, session.updatedAt, JSON.stringify(session));
+}
+
+export async function deleteAgentSession(sessionKey: string): Promise<void> {
+  getDb().prepare("DELETE FROM agent_sessions WHERE session_key = ?").run(sessionKey);
 }
 
 export async function appendAgentMessages(input: {

@@ -768,6 +768,13 @@ body.workspace-mode-body .topbar {
   border-style: dashed;
 }
 
+.draft-discard-form {
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+}
+
 .handoff-json {
   max-height: 180px;
   margin: 10px 0 0;

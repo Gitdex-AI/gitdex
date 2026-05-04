@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Stack, Text } from "@mantine/core";
-import { FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, UserCircle, Wrench } from "lucide-react";
+import { FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
@@ -28,6 +28,7 @@ import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { getAutoRunState } from "@/lib/auto-run-control";
 import { canAutoRunDeveloper } from "@/lib/auto-run-policy";
 import { requireConsolePageAuth } from "@/lib/console-auth";
+import { isDiscardableDraftWorkflow } from "@/lib/draft-workflow";
 import { checkGhStatus, getCachedGhStatus, saveGhStatus } from "@/lib/gh-status";
 import { findReadyForArchitectPayload, formatPmHandoffPayload } from "@/lib/pm-handoff";
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
@@ -479,6 +480,7 @@ function ThreePhaseWorkflowPanel(input: {
       <section className="phase-panel">
         <Stack gap="xs">
           <Text size="xs" c="dimmed">PM confirms scope, then planner creates GitHub issues.</Text>
+          {input.activeWorkflow && isDiscardableDraftWorkflow(input.projectId, input.activeWorkflow) ? <DiscardDraftRequirementForm projectId={input.projectId} workflowId={input.activeWorkflow.workflowId} /> : null}
           {!input.isInspectingIssueSession && input.readyForArchitectPayload ? <ProjectHandoffForm projectId={input.projectId} payload={input.readyForArchitectPayload} workflowId={input.activeWorkflow?.workflowId ?? null} /> : null}
           {renderRequirementRows(input.projectId, input.requirementWorkflows, input.jobs)}
         </Stack>
@@ -529,6 +531,22 @@ function ThreePhaseWorkflowPanel(input: {
           <CompletedWorkflowHistory projectId={input.projectId} workflows={input.doneWorkflows} />
         </Stack>
       </section>
+  );
+}
+
+function DiscardDraftRequirementForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
+  return (
+    <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/discard`} className="draft-discard-form">
+      <Group justify="space-between" gap="sm" wrap="nowrap">
+        <div>
+          <Text size="sm" fw={760}>Draft requirement</Text>
+          <Text size="xs" c="dimmed">Discard this unconfirmed draft and remove its PM chat.</Text>
+        </div>
+        <Button type="submit" variant="light" color="red" size="compact-xs" radius="xl" leftSection={<Trash2 size={14} />}>
+          Discard Draft
+        </Button>
+      </Group>
+    </form>
   );
 }
 

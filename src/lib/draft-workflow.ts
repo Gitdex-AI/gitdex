@@ -7,6 +7,10 @@ export function isReusableDraftWorkflow(projectId: string, workflow: WorkflowRec
     && workflow.issues.length === 0;
 }
 
+export function isDiscardableDraftWorkflow(projectId: string, workflow: WorkflowRecord): boolean {
+  return isReusableDraftWorkflow(projectId, workflow);
+}
+
 export function latestReusableDraftWorkflow(projectId: string, workflows: WorkflowRecord[]): WorkflowRecord | null {
   return workflows
     .filter((workflow) => isReusableDraftWorkflow(projectId, workflow))

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { latestReusableDraftWorkflow } from "../src/lib/draft-workflow.ts";
+import { isDiscardableDraftWorkflow, latestReusableDraftWorkflow } from "../src/lib/draft-workflow.ts";
 
 const workflow = (overrides = {}) => ({
   workflowId: "wf",
@@ -34,4 +34,11 @@ test("latestReusableDraftWorkflow ignores drafts that already entered workflow e
   ]);
 
   assert.equal(selected, null);
+});
+
+test("isDiscardableDraftWorkflow allows only unconfirmed empty project drafts", () => {
+  assert.equal(isDiscardableDraftWorkflow("project-a", workflow()), true);
+  assert.equal(isDiscardableDraftWorkflow("project-a", workflow({ trackingCode: "WF-20260501-001" })), false);
+  assert.equal(isDiscardableDraftWorkflow("project-a", workflow({ issues: [{ issueId: "issue-1" }] })), false);
+  assert.equal(isDiscardableDraftWorkflow("project-a", workflow({ projectId: "project-b" })), false);
 });
