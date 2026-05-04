@@ -890,6 +890,10 @@ pre,
   width: min(880px, 100%);
 }
 
+.project-new-panel {
+  width: min(880px, 100%);
+}
+
 .settings-page-heading {
   margin-bottom: 18px;
 }
@@ -963,6 +967,10 @@ pre,
   gap: 10px;
   min-height: 36px;
   padding-top: 26px;
+}
+
+.project-new-checkboxes {
+  padding-top: 0;
 }
 
 .chat-scroll {

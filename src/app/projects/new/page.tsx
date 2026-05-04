@@ -1,6 +1,5 @@
-import { Alert, Badge, Button, Checkbox, Group, NativeSelect, Paper, SimpleGrid, Text, TextInput, ThemeIcon } from "@mantine/core";
-import { ArrowLeft, FolderPlus, GitBranch, Info, KeyRound, ShieldCheck } from "lucide-react";
-import { PageTitle } from "@/components/PageTitle";
+import { Alert, Badge, Button, Checkbox, Group, NativeSelect, SimpleGrid, Text, TextInput } from "@mantine/core";
+import { ArrowLeft, FolderPlus, Info, KeyRound, ShieldCheck } from "lucide-react";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { listLocalGitHubRepos } from "@/lib/github-local";
 import { getSettings } from "@/lib/settings";
@@ -13,35 +12,35 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   const hasGitHubAccount = Boolean(settings.githubUsername && settings.githubSshPublicKey);
 
   return (
-    <>
+    <div className="project-new-panel">
       <Button component="a" href="/" variant="subtle" size="compact-sm" leftSection={<ArrowLeft size={14} />} mb="sm">
         Back to workspace
       </Button>
-      <PageTitle title="Add Project" />
+      <div className="settings-page-heading">
+        <Text className="settings-page-title">Add Project</Text>
+        <Text size="sm" c="dimmed">
+          Connect a GitHub repository to a Gitdex workspace.
+        </Text>
+      </div>
       {error && (
         <Alert color="red" icon={<Info size={16} />} mb="md">
           {error}
         </Alert>
       )}
-      <Paper>
-        <Group justify="space-between" p="md" className="section-header">
+      <section className="settings-section">
+        <div className="settings-section-heading">
           <div>
-            <Group gap="sm">
-              <ThemeIcon variant="light" color="dark" radius="md">
-                <GitBranch size={16} />
-              </ThemeIcon>
-              <Text fw={760}>Connect GitHub</Text>
-              <Badge variant="light" color="blue">
+            <Group gap="xs" align="center">
+              <Text className="settings-section-title">GitHub Repository</Text>
+              <Badge variant="light" color="blue" size="sm">
                 Required
               </Badge>
             </Group>
-            <Text size="sm" c="dimmed">
-              Select a repository from the GitHub user or organization configured in Settings.
-            </Text>
+            <Text className="settings-row-description">Select a repository from the configured GitHub user or organization.</Text>
           </div>
-        </Group>
+        </div>
         {!hasGitHubAccount && (
-          <Alert color="yellow" icon={<Info size={16} />} m="md">
+          <Alert color="yellow" icon={<Info size={16} />} mb="md">
             <Text size="sm" mb="sm">
               No usable GitHub owner is configured yet. Enter a GitHub user or organization and generate an SSH key before adding a project.
             </Text>
@@ -56,48 +55,46 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             </form>
           </Alert>
         )}
-        <form className="project-form" method="post" action="/api/projects">
+        <form className="settings-form" method="post" action="/api/projects">
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <TextInput name="projectName" label="Project Name" placeholder="Mobile App" required />
             <TextInput name="githubAccount" label="GitHub Owner" defaultValue={settings.githubUsername || "not configured"} readOnly />
             <NativeSelect
               name="githubRepo"
               label="GitHub Repo"
-              description="Loaded from local gh login."
               data={repos.length ? repos.map((repo) => ({ value: repo.nameWithOwner, label: `${repo.nameWithOwner}${repo.isPrivate ? " private" : ""}` })) : [{ value: "", label: "No repositories available" }]}
               required
             />
             <TextInput
               name="agentsFilePath"
               label="Agent Instructions File"
-              description="Used only when AGENTS update is enabled. Existing content outside Gitdex's managed block is preserved."
               defaultValue="AGENTS.md"
               required
             />
           </SimpleGrid>
-          <Checkbox
-            name="updateAgentsFile"
-            value="true"
-            mt="md"
-            label="Update AGENTS.md in the selected repository"
-            description="Enable only when you want Gitdex to commit or update the managed workflow section in the remote repo."
-          />
-          <Checkbox
-            name="autoDeploy"
-            value="true"
-            mt="md"
-            label="Enable automatic deployment after QA passes and architect approves merge"
-            description="Leave disabled if the architect should stop at merge readiness and wait for manual deployment approval."
-          />
-          <Alert color="gray" icon={<ShieldCheck size={16} />} mt="md">
+          <div className="settings-checkbox-stack project-new-checkboxes">
+            <Checkbox
+              name="updateAgentsFile"
+              value="true"
+              label="Update AGENTS.md in the selected repository"
+            />
+            <Checkbox
+              name="autoDeploy"
+              value="true"
+              label="Enable automatic deployment after QA passes and architect approves merge"
+            />
+          </div>
+          <Alert color="gray" icon={<ShieldCheck size={16} />}>
             Project creation always verifies the repository with your local gh login. Updating AGENTS.md is optional and may modify the remote repository.
           </Alert>
-          <Button type="submit" disabled={!hasGitHubAccount || !repos.length} leftSection={<FolderPlus size={16} />} w={{ base: "100%", sm: "fit-content" }}>
-            Connect GitHub & Add Project
-          </Button>
+          <Group className="form-actions">
+            <Button type="submit" disabled={!hasGitHubAccount || !repos.length} leftSection={<FolderPlus size={16} />}>
+              Add Project
+            </Button>
+          </Group>
         </form>
-      </Paper>
-    </>
+      </section>
+    </div>
   );
 }
 
