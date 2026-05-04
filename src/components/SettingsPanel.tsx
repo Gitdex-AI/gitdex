@@ -1,7 +1,6 @@
 import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
 import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
 import packageJson from "../../package.json";
-import { PageTitle } from "@/components/PageTitle";
 import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
 import { getSettings } from "@/lib/settings";
@@ -22,7 +21,6 @@ export async function SettingsPanel({
 
   return (
     <div className="settings-panel">
-      <PageTitle title="Settings" />
       <div className="settings-page-heading">
         <Text className="settings-page-title">Settings</Text>
         <Text size="sm" c="dimmed">
