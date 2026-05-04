@@ -853,8 +853,14 @@ pre,
 }
 
 .workspace-panel-content {
+  flex: 1 1 auto;
+  min-height: 0;
   width: min(1120px, 100%);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px clamp(18px, 5vw, 72px) 48px;
+  scrollbar-gutter: stable;
 }
 
 .chat-scroll {
