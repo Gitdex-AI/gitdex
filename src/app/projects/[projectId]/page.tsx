@@ -23,6 +23,7 @@ import { RequirementDetailPanel } from "@/components/RequirementDetailPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { shouldGuardWorkspaceSettingsReturn } from "@/components/settings/settings-return-policy";
 import { ToolsPanel } from "@/components/ToolsPanel";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { getAutoRunState } from "@/lib/auto-run-control";
@@ -195,11 +196,18 @@ function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | nu
 function WorkspacePanelContent({ panel, project, projects, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; projects: ProjectRecord[]; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
   const workspaceHref = `/projects/${encodeURIComponent(project.projectId)}`;
   const returnTo = `${workspaceHref}?panel=${panel}`;
+  const guardSettingsReturn = shouldGuardWorkspaceSettingsReturn({ panel });
   const recentProjectChats = projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }));
   return (
     <div className="workspace-panel-content">
       <Group justify="flex-start" mb="md">
-        <Button component="a" href={workspaceHref} variant="subtle" leftSection={<ArrowLeft size={16} />}>
+        <Button
+          component="a"
+          href={workspaceHref}
+          variant="subtle"
+          leftSection={<ArrowLeft size={16} />}
+          data-settings-return-action={guardSettingsReturn ? true : undefined}
+        >
           Back to workspace
         </Button>
       </Group>

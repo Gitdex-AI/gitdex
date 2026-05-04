@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   shouldAllowBrowserSettingsReturnNavigation,
   settingsReturnDirtyPrompt,
+  shouldGuardWorkspaceSettingsReturn,
   shouldAllowSettingsReturnNavigation
 } from "../src/components/settings/settings-return-policy.ts";
 
@@ -42,6 +43,14 @@ test("settings return navigation proceeds when unsaved confirmation is accepted"
   });
 
   assert.equal(allowed, true);
+});
+
+test("workspace settings back control is guarded by dirty settings confirmation", () => {
+  assert.equal(shouldGuardWorkspaceSettingsReturn({ panel: "settings" }), true);
+  assert.equal(shouldGuardWorkspaceSettingsReturn({ panel: "tools" }), false);
+  assert.equal(shouldGuardWorkspaceSettingsReturn({ panel: "projects" }), false);
+  assert.equal(shouldGuardWorkspaceSettingsReturn({ panel: "requirements" }), false);
+  assert.equal(shouldGuardWorkspaceSettingsReturn({ panel: null }), false);
 });
 
 test("browser settings return confirmation preserves the window receiver", () => {
