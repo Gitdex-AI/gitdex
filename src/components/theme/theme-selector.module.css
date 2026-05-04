@@ -11,7 +11,7 @@
   background: color-mix(in srgb, var(--app-shell) 92%, transparent);
   border: 1px solid var(--app-border);
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 28px var(--app-shadow-md);
   backdrop-filter: blur(12px);
 }
 
@@ -40,29 +40,24 @@
 }
 
 .option:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--app-focus-ring);
   outline-offset: 1px;
 }
 
 .option[data-selected="true"] {
-  color: #ffffff;
-  background: #1f2937;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
-}
-
-:global(html[data-theme="dark"]) .option[data-selected="true"] {
-  color: #111827;
-  background: #f8fafc;
+  color: var(--app-text-inverted);
+  background: var(--app-interactive-active);
+  box-shadow: 0 4px 12px var(--app-shadow-interactive);
 }
 
 :global(html[data-theme="dark"] body) {
   background:
-    linear-gradient(180deg, rgba(20, 184, 166, 0.08), rgba(15, 23, 42, 0) 260px),
+    linear-gradient(180deg, var(--app-bg-wash), rgb(var(--app-bg-rgb) / 0) 260px),
     var(--app-bg);
 }
 
 :global(html[data-theme="dark"] .layout.workspace-mode) {
-  background: #0f172a;
+  background: var(--app-bg);
 }
 
 :global(html[data-theme="dark"] .auth-panel),
@@ -79,8 +74,8 @@
 
 :global(html[data-theme="dark"] .project-switcher-trigger.sidebar:hover),
 :global(html[data-theme="dark"] .project-switcher-trigger.sidebar:focus-visible) {
-  color: #f8fafc;
-  background: #1e293b;
+  color: var(--app-text-strong);
+  background: var(--app-surface-subtle);
 }
 
 @media (max-width: 560px) {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   createThemePreferenceState,
@@ -6,10 +7,13 @@ import {
   persistThemeMode,
   readStoredThemeMode,
   resolveEffectiveTheme,
+  themePalettes,
   themeStorageKey,
   updateSystemThemePreference,
   updateThemeMode
 } from "../src/components/theme/theme-state.ts";
+
+const themeSelectorCss = readFileSync(new URL("../src/components/theme/theme-selector.module.css", import.meta.url), "utf8");
 
 function createStorageMock(initialValue = null) {
   const writes = [];
@@ -29,6 +33,49 @@ function createStorageMock(initialValue = null) {
 }
 
 describe("theme state helpers", () => {
+  it("keeps theme selector interaction colors on shared tokens", () => {
+    assert.match(themeSelectorCss, /\.option:focus-visible\s*\{[\s\S]*var\(--app-focus-ring\)/);
+    assert.match(themeSelectorCss, /\.option\[data-selected="true"\]\s*\{[\s\S]*var\(--app-text-inverted\)/);
+    assert.match(themeSelectorCss, /\.option\[data-selected="true"\]\s*\{[\s\S]*var\(--app-interactive-active\)/);
+    assert.doesNotMatch(themeSelectorCss, /#[0-9a-fA-F]{3,8}/);
+  });
+
+  it("exposes matching shared UI tokens for bootstrap and client theme switching", () => {
+    const requiredTokens = [
+      "--app-bg",
+      "--app-bg-rgb",
+      "--app-bg-wash",
+      "--app-shell",
+      "--app-surface",
+      "--app-surface-muted",
+      "--app-surface-subtle",
+      "--app-border",
+      "--app-border-muted",
+      "--app-text",
+      "--app-text-strong",
+      "--app-text-muted",
+      "--app-text-inverted",
+      "--app-control-bg",
+      "--app-control-bg-muted",
+      "--app-control-bg-hover",
+      "--app-control-border",
+      "--app-focus-ring",
+      "--app-interactive",
+      "--app-interactive-hover",
+      "--app-interactive-active",
+      "--app-shadow-md",
+      "--app-shadow-interactive"
+    ];
+
+    assert.deepEqual(Object.keys(themePalettes.light).sort(), Object.keys(themePalettes.dark).sort());
+
+    for (const theme of ["light", "dark"]) {
+      for (const token of requiredTokens) {
+        assert.match(themePalettes[theme][token], /\S/, `Expected ${token} in ${theme} theme palette.`);
+      }
+    }
+  });
+
   it("accepts only supported stored theme modes", () => {
     assert.equal(normalizeThemeMode("system"), "system");
     assert.equal(normalizeThemeMode("light"), "light");
