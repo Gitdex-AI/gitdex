@@ -4,21 +4,11 @@ import { PageTitle } from "@/components/PageTitle";
 import { ProjectsTable } from "@/components/Tables";
 import { listProjects, listWorkflows } from "@/lib/store";
 import { ProjectListHeaderActions } from "./ProjectListReturnControls";
+import { projectsWithLatestChatActivity } from "./recent-project-chats";
 
 export async function ProjectsPanel({ message, error }: { message?: string; error?: string }) {
   const [projects, workflows] = await Promise.all([listProjects(), listWorkflows()]);
-  const latestWorkflowByProject = new Map<string, string>();
-  for (const workflow of workflows) {
-    if (!workflow.projectId) continue;
-    const current = latestWorkflowByProject.get(workflow.projectId);
-    if (!current || workflow.createdAt > current) latestWorkflowByProject.set(workflow.projectId, workflow.createdAt);
-  }
-  const projectsWithLatest = projects
-    .map((project) => ({
-      ...project,
-      latestAt: latestWorkflowByProject.get(project.projectId) ?? project.createdAt
-    }))
-    .sort((a, b) => b.latestAt.localeCompare(a.latestAt));
+  const projectsWithLatest = projectsWithLatestChatActivity(projects, workflows);
   const recentProjectChats = projectsWithLatest.map((project) => ({
     projectId: project.projectId,
     latestAt: project.latestAt,

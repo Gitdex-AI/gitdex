@@ -1,10 +1,11 @@
 import { Badge, Group, Paper, SimpleGrid, Text, ThemeIcon } from "@mantine/core";
 import { CheckCircle2, FolderGit2, GitBranch, PlayCircle, Terminal } from "lucide-react";
+import type { ReactNode } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { CodexStatusPanel } from "@/components/CodexStatusPanel";
 import { GhStatusPanel } from "@/components/GhStatusPanel";
 
-export function ToolsPanel() {
+export function ToolsPanel({ headerActions }: { headerActions?: ReactNode }) {
   return (
     <>
       <PageTitle title="Tools" />
@@ -16,7 +17,10 @@ export function ToolsPanel() {
               Confirm these prerequisites before creating projects or running workflows.
             </Text>
           </div>
-          <Badge variant="light">local setup</Badge>
+          <Group gap="xs" wrap="nowrap">
+            {headerActions}
+            <Badge variant="light">local setup</Badge>
+          </Group>
         </Group>
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm" p="md">
           <ChecklistItem icon={<Terminal size={16} />} title="Codex CLI" detail="`codex exec` works with the configured model." />
