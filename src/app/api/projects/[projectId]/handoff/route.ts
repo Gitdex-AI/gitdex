@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { runJobById } from "@/lib/job-runner";
 import { confirmWorkflowRequirement, createWorkflow } from "@/lib/orchestrator";
 import { findReadyForArchitectPayload, formatPmHandoffPayload, parseReadyForArchitectPayload } from "@/lib/pm-handoff";
 import { createJob, getAgentSession, getProject, getWorkflow } from "@/lib/store";
@@ -15,6 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const workflowId = String(form.get("workflowId") ?? "").trim();
   const submittedPayload = parseReadyForArchitectPayload(String(form.get("payload") ?? ""));
   const directRequirement = String(form.get("requirement") ?? "").trim();
+  const runPlanner = String(form.get("runPlanner") ?? "") === "1";
   const selectedWorkflow = workflowId ? await getWorkflow(workflowId) : null;
   const selectedPmSession = selectedWorkflow?.projectId === project.projectId
     ? await getAgentSession(`${project.projectId}:workflow:${selectedWorkflow.workflowId}:product_manager`)
@@ -35,10 +37,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       type: "workflow_run",
       payload: { workflowId: workflow.workflowId }
     });
+    if (runPlanner) await runJobById(job.jobId, project.projectId);
     const next = new URL(`/projects/${project.projectId}`, request.url);
     next.searchParams.set("role", "product_manager");
-    next.searchParams.set("phase", "requirements");
-    next.searchParams.set("queued", "1");
+    next.searchParams.set("phase", runPlanner ? "github" : "requirements");
+    if (!runPlanner) next.searchParams.set("queued", "1");
     next.searchParams.set("workflow", workflow.workflowId);
     next.searchParams.set("job", job.jobId);
     return NextResponse.redirect(next, { status: 303 });

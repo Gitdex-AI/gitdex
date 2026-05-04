@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { chatRoleLabel, parseChatTarget, type ChatTargetRole } from "@/lib/chat-routing";
-import { parseStartNewRequirementAction, type PmStartNewRequirementAction } from "@/lib/pm-handoff";
+import { parseReadyForArchitectPayload, parseStartNewRequirementAction, type PmHandoffPayload, type PmStartNewRequirementAction } from "@/lib/pm-handoff";
 import type { AgentMessage, AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 
 type TimelineMessage = AgentMessage & {
@@ -558,6 +558,7 @@ function MessageList({
                   <span>{messageDisplayContent(message, jobs)}</span>
                 </Text>
                 {isMessageActivelyRunning(message, jobs) ? <MessageLiveOutput message={message} jobs={jobs} /> : null}
+                <PmReadyForArchitectAction projectId={projectId} workflowId={message.session?.workflowId ?? null} workflowConfirmed={Boolean(findWorkflow(message.session?.workflowId, workflows)?.trackingCode)} payload={message.role === "assistant" && message.sourceRole === "product_manager" ? parseReadyForArchitectPayload(message.content) : null} />
                 <PmNewRequirementAction projectId={projectId} workflowId={message.session?.workflowId ?? null} action={message.role === "assistant" && message.sourceRole === "product_manager" ? parseStartNewRequirementAction(message.content) : null} />
                 {message.executionLogs?.length ? <InlineExecutionLogs logs={message.executionLogs} /> : null}
               </div>
@@ -583,6 +584,26 @@ function MessageList({
       )}
       {runningStatus}
     </Stack>
+  );
+}
+
+function PmReadyForArchitectAction({ projectId, workflowId, workflowConfirmed, payload }: { projectId: string; workflowId: string | null; workflowConfirmed: boolean; payload: PmHandoffPayload | null }) {
+  if (!payload || workflowConfirmed) return null;
+
+  return (
+    <div className="pm-action-box">
+      <Text size="sm" fw={760}>Ready to hand this requirement to Planner?</Text>
+      <Text size="xs" c="dimmed" mt={2}>Confirming assigns a requirement number and starts issue breakdown.</Text>
+      <Text size="sm" fw={720} mt="xs" lineClamp={2}>{payload.requirement}</Text>
+      <form method="post" action={`/api/projects/${projectId}/handoff`}>
+        {workflowId ? <input type="hidden" name="workflowId" value={workflowId} /> : null}
+        <input type="hidden" name="payload" value={JSON.stringify(payload)} />
+        <input type="hidden" name="runPlanner" value="1" />
+        <Button type="submit" size="compact-sm" radius="xl" variant="filled" mt="sm">
+          Confirm and Run Planner
+        </Button>
+      </form>
+    </div>
   );
 }
 
