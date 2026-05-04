@@ -700,7 +700,7 @@ body.workspace-mode-body .topbar {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 24px clamp(18px, 5vw, 72px) 36px;
+  padding: 24px clamp(18px, 5vw, 72px) 72px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
     #f8fbff;
