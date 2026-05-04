@@ -14,6 +14,9 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
 
   return (
     <>
+      <Button component="a" href="/projects" variant="subtle" size="compact-sm" leftSection={<ArrowLeft size={14} />} mb="sm">
+        Back to workspace
+      </Button>
       <PageTitle title="Add Project" />
       {error && (
         <Alert color="red" icon={<Info size={16} />} mb="md">
@@ -36,9 +39,6 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
               Select a repository from the GitHub user or organization configured in Settings.
             </Text>
           </div>
-          <Button component="a" href="/projects" variant="subtle" leftSection={<ArrowLeft size={16} />}>
-            Back to Projects
-          </Button>
         </Group>
         {!hasGitHubAccount && (
           <Alert color="yellow" icon={<Info size={16} />} m="md">
