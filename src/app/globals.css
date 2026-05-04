@@ -445,23 +445,30 @@ pre,
 }
 
 .requirement-tree-item {
-  border-radius: 0;
+  border: 1px solid #e6edf5;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .requirement-tree-item.active {
   background: transparent;
+  border-color: transparent;
 }
 
 .requirement-tree-link {
   min-height: 46px;
   padding: 8px 10px 8px 12px;
   color: inherit;
-  border-radius: 8px;
+  border-radius: 7px;
   border-left: 3px solid transparent;
 }
 
 .requirement-tree-link:hover {
-  background: #f8fafc;
+  background: #f8fbff;
+}
+
+.requirement-tree-item:not(.active):hover {
+  border-color: #dbeafe;
 }
 
 .requirement-tree-item.active .requirement-tree-link {
