@@ -379,12 +379,15 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
             className="requirement-tree-main-link"
           >
             <div className="workflow-switch-main">
-              <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+              <Group gap={6} wrap="nowrap" align="center" className="requirement-tree-title">
+                <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+                <Badge size="xs" color={status.color} variant="light">{status.label}</Badge>
+              </Group>
               <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
             </div>
           </a>
           <Group gap={6} justify="flex-end" wrap="nowrap">
-            <Badge size="xs" color={status.color} variant={active ? "filled" : "light"}>{status.label}</Badge>
+            {active ? renderRequirementRunAction(projectId, planningJob) : null}
             {active ? <ArchiveRequirementForm projectId={projectId} workflowId={workflow.workflowId} /> : null}
           </Group>
         </div>
