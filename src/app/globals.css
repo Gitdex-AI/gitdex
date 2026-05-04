@@ -1,8 +1,60 @@
 :root {
   --app-bg: #f4f7fb;
+  --app-bg-rgb: 244 247 251;
+  --app-bg-wash: rgba(37, 99, 235, 0.06);
+  --app-bg-wash-rgb: 37 99 235;
   --app-shell: #ffffff;
+  --app-shell-rgb: 255 255 255;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fbff;
+  --app-surface-subtle: #f8fafc;
+  --app-surface-raised: #ffffff;
+  --app-surface-danger: #fff7f7;
+  --app-surface-danger-muted: #fef2f2;
+  --app-surface-success: #f0fdf4;
+  --app-surface-info: #eff6ff;
+  --app-surface-running: #f0f9ff;
+  --app-surface-blocked: #fff1f2;
   --app-border: #dde5ee;
+  --app-border-strong: #c8d1df;
+  --app-border-muted: #e0e7f0;
+  --app-border-subtle: #edf2f7;
+  --app-border-info: #bfdbfe;
+  --app-border-danger: #fecaca;
+  --app-border-success: #bbf7d0;
   --app-ink: #172033;
+  --app-text: #172033;
+  --app-text-strong: #111827;
+  --app-text-muted: #64748b;
+  --app-text-subtle: #475569;
+  --app-text-inverted: #ffffff;
+  --app-text-danger: #b42318;
+  --app-text-link: #1d4ed8;
+  --app-text-link-hover: #1e40af;
+  --app-control-bg: #ffffff;
+  --app-control-bg-muted: #eff6ff;
+  --app-control-bg-hover: #dbeafe;
+  --app-control-bg-active: #eff6ff;
+  --app-control-border: #bfdbfe;
+  --app-control-border-hover: #93c5fd;
+  --app-control-text: #1d4ed8;
+  --app-control-text-hover: #1e40af;
+  --app-focus-ring: #93c5fd;
+  --app-interactive: #2563eb;
+  --app-interactive-hover: #1d4ed8;
+  --app-interactive-active: #1e40af;
+  --app-interactive-muted: #eff6ff;
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+  --app-running: #0284c7;
+  --app-shadow-sm: rgba(15, 23, 42, 0.04);
+  --app-shadow-md: rgba(15, 23, 42, 0.08);
+  --app-shadow-interactive: rgba(37, 99, 235, 0.14);
+  --app-code-bg: #0f172a;
+  --app-code-border: #1e293b;
+  --app-code-text: #dbeafe;
+  --app-scrollbar: #64748b;
+  --app-scrollbar-hover: #94a3b8;
   --font-ui: "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-reading: "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -20,6 +72,133 @@
   --weight-semibold: 700;
   --weight-bold: 780;
   --weight-heavy: 850;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --app-bg: #0f172a;
+    --app-bg-rgb: 15 23 42;
+    --app-bg-wash: rgba(56, 189, 248, 0.08);
+    --app-bg-wash-rgb: 56 189 248;
+    --app-shell: #172033;
+    --app-shell-rgb: 23 32 51;
+    --app-surface: #172033;
+    --app-surface-muted: #111827;
+    --app-surface-subtle: #1e293b;
+    --app-surface-raised: #1f2a44;
+    --app-surface-danger: #331a22;
+    --app-surface-danger-muted: #3f1d24;
+    --app-surface-success: #123225;
+    --app-surface-info: #172c4f;
+    --app-surface-running: #113147;
+    --app-surface-blocked: #3a1821;
+    --app-border: #334155;
+    --app-border-strong: #475569;
+    --app-border-muted: #334155;
+    --app-border-subtle: #26344c;
+    --app-border-info: #1d4ed8;
+    --app-border-danger: #7f1d1d;
+    --app-border-success: #166534;
+    --app-ink: #e5edf8;
+    --app-text: #e5edf8;
+    --app-text-strong: #f8fafc;
+    --app-text-muted: #94a3b8;
+    --app-text-subtle: #cbd5e1;
+    --app-text-inverted: #0f172a;
+    --app-text-danger: #fca5a5;
+    --app-text-link: #93c5fd;
+    --app-text-link-hover: #bfdbfe;
+    --app-control-bg: #1f2a44;
+    --app-control-bg-muted: #172c4f;
+    --app-control-bg-hover: #1e3a66;
+    --app-control-bg-active: #172c4f;
+    --app-control-border: #1d4ed8;
+    --app-control-border-hover: #60a5fa;
+    --app-control-text: #bfdbfe;
+    --app-control-text-hover: #dbeafe;
+    --app-focus-ring: #60a5fa;
+    --app-interactive: #60a5fa;
+    --app-interactive-hover: #93c5fd;
+    --app-interactive-active: #bfdbfe;
+    --app-interactive-muted: #172c4f;
+    --app-danger: #f87171;
+    --app-success: #4ade80;
+    --app-running: #38bdf8;
+    --app-shadow-sm: rgba(0, 0, 0, 0.24);
+    --app-shadow-md: rgba(0, 0, 0, 0.32);
+    --app-shadow-interactive: rgba(96, 165, 250, 0.22);
+    --app-code-bg: #020617;
+    --app-code-border: #1e293b;
+    --app-code-text: #dbeafe;
+    --app-scrollbar: #64748b;
+    --app-scrollbar-hover: #94a3b8;
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --app-bg: #0f172a;
+  --app-bg-rgb: 15 23 42;
+  --app-bg-wash: rgba(56, 189, 248, 0.08);
+  --app-bg-wash-rgb: 56 189 248;
+  --app-shell: #172033;
+  --app-shell-rgb: 23 32 51;
+  --app-surface: #172033;
+  --app-surface-muted: #111827;
+  --app-surface-subtle: #1e293b;
+  --app-surface-raised: #1f2a44;
+  --app-surface-danger: #331a22;
+  --app-surface-danger-muted: #3f1d24;
+  --app-surface-success: #123225;
+  --app-surface-info: #172c4f;
+  --app-surface-running: #113147;
+  --app-surface-blocked: #3a1821;
+  --app-border: #334155;
+  --app-border-strong: #475569;
+  --app-border-muted: #334155;
+  --app-border-subtle: #26344c;
+  --app-border-info: #1d4ed8;
+  --app-border-danger: #7f1d1d;
+  --app-border-success: #166534;
+  --app-ink: #e5edf8;
+  --app-text: #e5edf8;
+  --app-text-strong: #f8fafc;
+  --app-text-muted: #94a3b8;
+  --app-text-subtle: #cbd5e1;
+  --app-text-inverted: #0f172a;
+  --app-text-danger: #fca5a5;
+  --app-text-link: #93c5fd;
+  --app-text-link-hover: #bfdbfe;
+  --app-control-bg: #1f2a44;
+  --app-control-bg-muted: #172c4f;
+  --app-control-bg-hover: #1e3a66;
+  --app-control-bg-active: #172c4f;
+  --app-control-border: #1d4ed8;
+  --app-control-border-hover: #60a5fa;
+  --app-control-text: #bfdbfe;
+  --app-control-text-hover: #dbeafe;
+  --app-focus-ring: #60a5fa;
+  --app-interactive: #60a5fa;
+  --app-interactive-hover: #93c5fd;
+  --app-interactive-active: #bfdbfe;
+  --app-interactive-muted: #172c4f;
+  --app-danger: #f87171;
+  --app-success: #4ade80;
+  --app-running: #38bdf8;
+  --app-shadow-sm: rgba(0, 0, 0, 0.24);
+  --app-shadow-md: rgba(0, 0, 0, 0.32);
+  --app-shadow-interactive: rgba(96, 165, 250, 0.22);
+  --app-code-bg: #020617;
+  --app-code-border: #1e293b;
+  --app-code-text: #dbeafe;
+  --app-scrollbar: #64748b;
+  --app-scrollbar-hover: #94a3b8;
+  color-scheme: dark;
 }
 
 * {
@@ -28,9 +207,9 @@
 
 body {
   margin: 0;
-  color: var(--app-ink);
+  color: var(--app-text);
   background:
-    linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(244, 247, 251, 0) 240px),
+    linear-gradient(180deg, var(--app-bg-wash), rgb(var(--app-bg-rgb) / 0) 240px),
     var(--app-bg);
   font-family: var(--font-ui);
   font-feature-settings: "ss01", "cv05";
@@ -69,7 +248,7 @@ pre,
   min-height: 30px;
   max-width: 100%;
   padding: 0;
-  color: #172033;
+  color: var(--app-text);
   background: transparent;
   border-color: transparent;
   font-size: 15px;
@@ -78,7 +257,7 @@ pre,
 
 .project-switcher-trigger.sidebar:hover,
 .project-switcher-trigger.sidebar:focus-visible {
-  color: #111827;
+  color: var(--app-text-strong);
   background: #f1f5f9;
 }
 
@@ -90,12 +269,12 @@ pre,
 
 .project-switcher-trigger:hover,
 .project-switcher-trigger:focus-visible {
-  color: #ffffff;
+  color: var(--app-text-inverted);
   background: rgba(255, 255, 255, 0.14);
 }
 
 .project-switcher-trigger:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--app-focus-ring);
   outline-offset: 2px;
 }
 
@@ -108,9 +287,9 @@ pre,
 .self-update-trigger {
   min-height: 24px;
   padding: 0 9px;
-  color: #1d4ed8;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: var(--app-text-link);
+  background: var(--app-control-bg-muted);
+  border: 1px solid var(--app-control-border);
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -125,7 +304,7 @@ pre,
 }
 
 .layout.workspace-mode {
-  background: #f8fbff;
+  background: var(--app-surface-muted);
 }
 
 .layout.workspace-mode .content {
@@ -146,7 +325,7 @@ pre,
 .auth-panel {
   width: min(100%, 380px);
   padding: 28px;
-  background: #ffffff;
+  background: var(--app-surface);
   border: 1px solid #d9e1ec;
   border-radius: 8px;
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
@@ -176,14 +355,14 @@ pre,
   height: 40px;
   padding: 0 10px;
   color: var(--app-ink);
-  border: 1px solid #c8d1df;
+  border: 1px solid var(--app-border-strong);
   border-radius: 6px;
   font: inherit;
 }
 
 .auth-form button {
   height: 42px;
-  color: #ffffff;
+  color: var(--app-text-inverted);
   background: #1f2937;
   border: 0;
   border-radius: 6px;
@@ -200,14 +379,14 @@ pre,
 .auth-message {
   min-height: 20px;
   margin: 0;
-  color: #b42318;
+  color: var(--app-text-danger);
   font-size: var(--text-sm);
 }
 
 .auth-panel a {
   display: inline-block;
   margin-top: 16px;
-  color: #1d4ed8;
+  color: var(--app-text-link);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
 }
@@ -241,7 +420,7 @@ pre,
 }
 
 .dashboard-stat-card:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--app-interactive);
   outline-offset: 2px;
 }
 
@@ -294,8 +473,8 @@ pre,
   min-height: 0;
   margin: 0;
   overflow: hidden;
-  background: #f8fbff;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border-muted);
   border-radius: 0;
 }
 
@@ -307,8 +486,8 @@ pre,
   min-width: 0;
   height: 100%;
   min-height: 0;
-  background: #ffffff;
-  border-right: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-border-muted);
   border-radius: 0;
 }
 
@@ -323,7 +502,7 @@ pre,
 
 .project-sidebar-header {
   padding-bottom: 12px;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--app-border-subtle);
 }
 
 .project-sidebar-title {
@@ -332,7 +511,7 @@ pre,
 
 .project-sidebar-section {
   padding: 12px 0;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--app-border-subtle);
 }
 
 .sidebar-pill-link,
@@ -344,7 +523,7 @@ pre,
   gap: 6px;
   min-height: 24px;
   padding: 0 10px;
-  color: #2563eb;
+  color: var(--app-interactive);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -360,9 +539,9 @@ pre,
 .action-pill-link:hover,
 .sidebar-pill-link.active,
 .sidebar-icon-link.active {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #dbeafe;
+  color: var(--app-text-link);
+  background: var(--app-control-bg-muted);
+  border-color: var(--app-control-bg-hover);
 }
 
 .sidebar-icon-link {
@@ -372,14 +551,14 @@ pre,
 }
 
 .action-pill-link {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: var(--app-control-bg-muted);
+  border-color: var(--app-control-border);
 }
 
 .action-pill-link.danger {
-  color: #dc2626;
-  background: #fef2f2;
-  border-color: #fecaca;
+  color: var(--app-danger);
+  background: var(--app-surface-danger-muted);
+  border-color: var(--app-border-danger);
 }
 
 .project-sidebar-stage {
@@ -400,13 +579,13 @@ pre,
 }
 
 .workflow-switch-row:hover {
-  background: #f8fafc;
-  border-color: #e0e7f0;
+  background: var(--app-surface-subtle);
+  border-color: var(--app-border-muted);
 }
 
 .workflow-switch-row.active {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: var(--app-control-bg-muted);
+  border-color: var(--app-control-border);
 }
 
 .workflow-switch-main {
@@ -416,7 +595,7 @@ pre,
 .project-sidebar-draft {
   margin-top: 8px;
   padding: 8px 0 0;
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid var(--app-border-subtle);
 }
 
 .project-sidebar-draft .handoff-box,
@@ -441,13 +620,13 @@ pre,
 }
 
 .draft-requirement-link:hover {
-  color: #1d4ed8;
+  color: var(--app-text-link);
 }
 
 .requirement-tree-item {
   border: 1px solid #e6edf5;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--app-surface);
 }
 
 .requirement-tree-item.active {
@@ -464,16 +643,16 @@ pre,
 }
 
 .requirement-tree-link:hover {
-  background: #f8fbff;
+  background: var(--app-surface-muted);
 }
 
 .requirement-tree-item:not(.active):hover {
-  border-color: #dbeafe;
+  border-color: var(--app-control-bg-hover);
 }
 
 .requirement-tree-item.active .requirement-tree-link {
-  background: #eff6ff;
-  border-left-color: #2563eb;
+  background: var(--app-control-bg-muted);
+  border-left-color: var(--app-interactive);
   border-radius: 8px;
 }
 
@@ -527,7 +706,7 @@ pre,
   margin: 4px 0 0 14px;
   padding: 2px 0 2px 10px;
   background: transparent;
-  border-left: 1px solid #dbeafe;
+  border-left: 1px solid var(--app-control-bg-hover);
   border-radius: 0;
 }
 
@@ -540,14 +719,14 @@ pre,
 }
 
 .requirement-tree-issues .github-issue-row:hover {
-  background: #f8fafc;
+  background: var(--app-surface-subtle);
 }
 
 .project-sidebar-footer {
   flex: 0 0 auto;
   padding: 10px 12px;
-  background: #ffffff;
-  border-top: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border-top: 1px solid var(--app-border-muted);
 }
 
 .project-sidebar-user {
@@ -606,7 +785,7 @@ pre,
 
 .requirement-detail-section {
   padding: 12px;
-  background: #ffffff;
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 8px;
 }
@@ -618,8 +797,8 @@ pre,
 
 .requirement-detail-issue {
   padding: 10px;
-  background: #f8fafc;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-muted);
   border-radius: 8px;
 }
 
@@ -629,7 +808,7 @@ pre,
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #f8fbff;
+  background: var(--app-surface-muted);
   border-radius: 0;
 }
 
@@ -647,7 +826,7 @@ pre,
   padding: 24px clamp(18px, 5vw, 72px) 72px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
-    #f8fbff;
+    var(--app-surface-muted);
 }
 
 .chat-session-status {
@@ -656,7 +835,7 @@ pre,
   gap: 10px;
   flex: 0 0 auto;
   padding: 10px 20px 0;
-  background: #f8fbff;
+  background: var(--app-surface-muted);
 }
 
 .chat-composer {
@@ -666,7 +845,7 @@ pre,
   flex: 0 0 auto;
   padding: 10px clamp(18px, 5vw, 72px) 18px;
   border-top: 0;
-  background: #f8fbff;
+  background: var(--app-surface-muted);
 }
 
 .chat-composer::before {
@@ -693,19 +872,19 @@ pre,
   top: -34px;
   left: calc(50% - 19px);
   z-index: 2;
-  color: #1d4ed8;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: var(--app-text-link);
+  background: var(--app-control-bg-muted);
+  border: 1px solid var(--app-control-border);
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.14);
 }
 
 .chat-scroll-bottom-button:hover {
-  color: #1e40af;
-  background: #dbeafe;
+  color: var(--app-text-link-hover);
+  background: var(--app-control-bg-hover);
 }
 
 .chat-scroll-bottom-button:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--app-focus-ring);
   outline-offset: 2px;
 }
 
@@ -715,8 +894,8 @@ pre,
   max-width: 980px;
   margin: 0 auto;
   padding: 12px;
-  background: #ffffff;
-  border: 1px solid #d8e3f2;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
   border-radius: 24px;
   box-shadow:
     0 14px 34px rgba(15, 23, 42, 0.08),
@@ -729,7 +908,7 @@ pre,
   background: transparent;
   border: 0;
   box-shadow: none;
-  color: #111827;
+  color: var(--app-text-strong);
   font-family: var(--font-reading);
   font-size: var(--text-chat);
   line-height: var(--leading-reading);
@@ -756,7 +935,7 @@ pre,
 }
 
 .chat-composer-spinner {
-  color: #2563eb;
+  color: var(--app-interactive);
   animation: spin 0.9s linear infinite;
 }
 
@@ -766,23 +945,23 @@ pre,
 
 .handoff-box {
   padding: 12px;
-  border: 1px solid #d8e3f2;
+  border: 1px solid var(--app-border);
   border-radius: 18px;
   background:
     radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.09), transparent 38%),
-    #f8fbff;
+    var(--app-surface-muted);
 }
 
 .handoff-box.muted {
-  background: #ffffff;
+  background: var(--app-surface);
   border-style: dashed;
 }
 
 .draft-discard-form {
   padding: 10px 12px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--app-border-danger);
   border-radius: 8px;
-  background: #fff7f7;
+  background: var(--app-surface-danger);
 }
 
 .handoff-json {
@@ -792,7 +971,7 @@ pre,
   overflow: auto;
   color: #1f2937;
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid #dbe5f3;
+  border: 1px solid var(--app-border);
   border-radius: 12px;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -806,29 +985,29 @@ pre,
 
 .workflow-progress-summary {
   padding: 10px 12px;
-  background: #f8fbff;
+  background: var(--app-surface-muted);
   border-left: 4px solid #cbd5e1;
   border-radius: 8px;
 }
 
 .workflow-progress-summary.current {
-  background: #eff6ff;
-  border-left-color: #2563eb;
+  background: var(--app-control-bg-muted);
+  border-left-color: var(--app-interactive);
 }
 
 .workflow-progress-summary.running {
-  background: #f0f9ff;
-  border-left-color: #0284c7;
+  background: var(--app-surface-running);
+  border-left-color: var(--app-running);
 }
 
 .workflow-progress-summary.blocked {
-  background: #fff1f2;
-  border-left-color: #dc2626;
+  background: var(--app-surface-blocked);
+  border-left-color: var(--app-danger);
 }
 
 .workflow-progress-summary.complete {
-  background: #f0fdf4;
-  border-left-color: #16a34a;
+  background: var(--app-surface-success);
+  border-left-color: var(--app-success);
 }
 
 .workflow-progress-controls {
@@ -853,19 +1032,19 @@ pre,
   left: 22px;
   width: 2px;
   content: "";
-  background: #dbe5f3;
+  background: var(--app-border);
 }
 
 .workflow-progress-step.current {
-  background: #eff6ff;
+  background: var(--app-control-bg-muted);
 }
 
 .workflow-progress-step.running {
-  background: #f0f9ff;
+  background: var(--app-surface-running);
 }
 
 .workflow-progress-step.blocked {
-  background: #fff1f2;
+  background: var(--app-surface-blocked);
 }
 
 .workflow-progress-marker {
@@ -876,8 +1055,8 @@ pre,
   width: 30px;
   height: 30px;
   margin-top: 0;
-  color: #64748b;
-  background: #ffffff;
+  color: var(--app-text-muted);
+  background: var(--app-surface);
   border: 2px solid #cbd5e1;
   border-radius: 50%;
   font-size: 12px;
@@ -885,29 +1064,29 @@ pre,
 }
 
 .workflow-progress-step.complete .workflow-progress-marker {
-  color: #ffffff;
-  background: #16a34a;
-  border-color: #16a34a;
+  color: var(--app-text-inverted);
+  background: var(--app-success);
+  border-color: var(--app-success);
 }
 
 .workflow-progress-step.current .workflow-progress-marker {
-  color: #ffffff;
-  background: #2563eb;
-  border-color: #bfdbfe;
-  box-shadow: 0 0 0 3px #dbeafe;
+  color: var(--app-text-inverted);
+  background: var(--app-interactive);
+  border-color: var(--app-control-border);
+  box-shadow: 0 0 0 3px var(--app-control-bg-hover);
 }
 
 .workflow-progress-step.running .workflow-progress-marker {
-  color: #ffffff;
-  background: #0284c7;
+  color: var(--app-text-inverted);
+  background: var(--app-running);
   border-color: #bae6fd;
   box-shadow: 0 0 0 3px #e0f2fe;
 }
 
 .workflow-progress-step.blocked .workflow-progress-marker {
-  color: #ffffff;
-  background: #dc2626;
-  border-color: #fecaca;
+  color: var(--app-text-inverted);
+  background: var(--app-danger);
+  border-color: var(--app-border-danger);
   box-shadow: 0 0 0 3px #fee2e2;
 }
 
@@ -923,7 +1102,7 @@ pre,
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  color: #1d4ed8;
+  color: var(--app-text-link);
   cursor: pointer;
   font-size: 12px;
   font-weight: 760;
@@ -947,15 +1126,15 @@ pre,
 .workflow-progress-detail-body {
   margin-top: 8px;
   padding: 2px 0 2px 10px;
-  border-left: 2px solid #dbe5f3;
+  border-left: 2px solid var(--app-border);
 }
 
 .workflow-summary-card,
 .workflow-issue-card,
 .workflow-job-row {
   padding: 12px;
-  background: #ffffff;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-muted);
   border-radius: 16px;
 }
 
@@ -970,8 +1149,8 @@ pre,
   width: 100%;
   min-width: 0;
   padding: 10px;
-  background: #f8fafc;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-muted);
   border-radius: 8px;
   color: inherit;
   cursor: pointer;
@@ -981,16 +1160,16 @@ pre,
 }
 
 .phase-stat.active {
-  background: #eff6ff;
-  border-color: #93c5fd;
-  box-shadow: 0 1px 0 #bfdbfe;
+  background: var(--app-control-bg-muted);
+  border-color: var(--app-focus-ring);
+  box-shadow: 0 1px 0 var(--app-control-border);
 }
 
 .phase-panel {
   margin-top: 8px;
   padding: 10px 0 0;
   background: transparent;
-  border-top: 2px solid #bfdbfe;
+  border-top: 2px solid var(--app-control-border);
   border-radius: 0;
   box-shadow: none;
 }
@@ -1005,23 +1184,23 @@ pre,
 
 .github-issue-row {
   padding: 10px;
-  background: #f8fafc;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-muted);
   border-radius: 8px;
 }
 
 .requirement-row {
   display: block;
   padding: 10px;
-  background: #f8fafc;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-border-muted);
   border-radius: 8px;
   color: inherit;
   text-decoration: none;
 }
 
 .requirement-row:hover {
-  border-color: #bfdbfe;
+  border-color: var(--app-control-border);
 }
 
 .requirement-row-link {
@@ -1064,7 +1243,7 @@ pre,
 }
 
 .workflow-recovery-panel svg {
-  color: #dc2626;
+  color: var(--app-danger);
   flex: 0 0 auto;
 }
 
@@ -1111,8 +1290,8 @@ pre,
 
 .completed-workflows {
   padding: 10px 12px;
-  background: #f8fafc;
-  border: 1px dashed #dbe5f3;
+  background: var(--app-surface-subtle);
+  border: 1px dashed var(--app-border);
   border-radius: 16px;
 }
 
@@ -1120,7 +1299,7 @@ pre,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #475569;
+  color: var(--app-text-subtle);
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
@@ -1136,8 +1315,8 @@ pre,
   padding: 9px 10px;
   color: inherit;
   text-decoration: none;
-  background: #ffffff;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-muted);
   border-radius: 12px;
 }
 
@@ -1164,8 +1343,8 @@ pre,
   padding: 10px 11px;
   color: inherit;
   text-decoration: none;
-  background: #f8fbff;
-  border: 1px solid #dbe5f3;
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
   border-radius: 14px;
   transition:
     border-color 140ms ease,
@@ -1181,7 +1360,7 @@ pre,
 
 .workflow-session-link.empty {
   color: inherit;
-  background: #f8fafc;
+  background: var(--app-surface-subtle);
   border-style: dashed;
   box-shadow: none;
   transform: none;
@@ -1198,7 +1377,7 @@ pre,
   left: 10px;
   width: 2px;
   content: "";
-  background: #dbe5f3;
+  background: var(--app-border);
 }
 
 .session-row {
@@ -1206,8 +1385,8 @@ pre,
   padding: 10px 11px;
   color: inherit;
   text-decoration: none;
-  background: #ffffff;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-muted);
   border-radius: 14px;
   transition:
     border-color 140ms ease,
@@ -1223,7 +1402,7 @@ pre,
 
 .session-row.archived {
   opacity: 0.72;
-  background: #f8fafc;
+  background: var(--app-surface-subtle);
   border-style: dashed;
 }
 
@@ -1231,14 +1410,14 @@ pre,
   max-width: 860px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.82);
-  border: 1px solid #dbe5f3;
+  border: 1px solid var(--app-border);
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
 .running-agent-bubble {
   border-color: #d7e5f7;
-  background: #f8fbff;
+  background: var(--app-surface-muted);
 }
 
 .running-agent-line {
@@ -1262,9 +1441,9 @@ pre,
   margin: 6px 0 0 19px;
   padding: 8px 10px;
   overflow: auto;
-  color: #dbeafe;
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  color: var(--app-code-text);
+  background: var(--app-code-bg);
+  border: 1px solid var(--app-code-border);
   border-radius: 8px;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -1272,7 +1451,7 @@ pre,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
-  scrollbar-color: #64748b transparent;
+  scrollbar-color: var(--app-scrollbar) transparent;
   scrollbar-width: thin;
 }
 
@@ -1286,22 +1465,22 @@ pre,
 }
 
 .running-agent-log::-webkit-scrollbar-thumb {
-  background: #64748b;
-  border: 2px solid #0f172a;
+  background: var(--app-scrollbar);
+  border: 2px solid var(--app-code-bg);
   border-radius: 999px;
 }
 
 .running-agent-log::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--app-scrollbar-hover);
 }
 
 .blocked-session-alert {
-  border: 1px solid #fecaca;
+  border: 1px solid var(--app-border-danger);
   border-radius: 16px;
 }
 
 .runtime-link {
-  color: #1d4ed8;
+  color: var(--app-text-link);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   text-decoration: none;
@@ -1355,8 +1534,8 @@ pre,
   place-items: center;
   width: 34px;
   height: 34px;
-  color: #ffffff;
-  background: #111827;
+  color: var(--app-text-inverted);
+  background: var(--app-text-strong);
   border-radius: 50%;
   font-family: var(--font-display);
   font-size: var(--text-sm);
@@ -1368,8 +1547,8 @@ pre,
   max-width: none;
   padding: 12px 14px;
   overflow-wrap: anywhere;
-  background: #ffffff;
-  border: 1px solid #e0e7f0;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-muted);
   border-radius: 16px;
   font-family: var(--font-reading);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -1391,8 +1570,8 @@ pre,
 .pm-action-box {
   margin-top: 12px;
   padding: 10px;
-  background: #ffffff;
-  border: 1px solid #d8e3f2;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
   border-radius: 8px;
 }
 
@@ -1438,9 +1617,9 @@ pre,
   margin: 12px 0 0;
   padding: 12px;
   overflow: auto;
-  color: #dbeafe;
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  color: var(--app-code-text);
+  background: var(--app-code-bg);
+  border: 1px solid var(--app-code-border);
   border-radius: 12px;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -1448,7 +1627,7 @@ pre,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
-  scrollbar-color: #64748b transparent;
+  scrollbar-color: var(--app-scrollbar) transparent;
   scrollbar-width: thin;
 }
 
@@ -1462,13 +1641,13 @@ pre,
 }
 
 .execution-log-content::-webkit-scrollbar-thumb {
-  background: #64748b;
-  border: 2px solid #0f172a;
+  background: var(--app-scrollbar);
+  border: 2px solid var(--app-code-bg);
   border-radius: 999px;
 }
 
 .execution-log-content::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--app-scrollbar-hover);
 }
 
 .project-context {
@@ -1510,7 +1689,7 @@ pre,
     min-height: 0;
     max-height: none;
     border-right: 0;
-    border-bottom: 1px solid #e0e7f0;
+    border-bottom: 1px solid var(--app-border-muted);
     border-radius: 0;
   }
 
