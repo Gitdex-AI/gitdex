@@ -20,6 +20,8 @@ test("auto-run runner can continue from an already persisted state", () => {
 
 test("auto-run resume restarts the background runner with persisted scope", () => {
   assert.match(controlRouteSource, /const currentState = getAutoRunState\(project\.projectId\);/);
+  assert.match(controlRouteSource, /currentState\.status === "running" \|\| currentState\.status === "cancel_requested"/);
+  assert.doesNotMatch(controlRouteSource, /currentState\.status === "pause_requested"/);
   assert.match(controlRouteSource, /workflowIds: currentState\.workflowIds,/);
   assert.match(controlRouteSource, /issueIds: currentState\.issueIds,/);
   assert.match(controlRouteSource, /void runProjectIssueAutoRun\(project, \{ workflowIds: state\.workflowIds, issueIds: state\.issueIds, initialState: state \}\)\.catch/);

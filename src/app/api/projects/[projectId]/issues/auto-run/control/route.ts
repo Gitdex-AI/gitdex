@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     if (!currentState || !currentState.issueIds.length) {
       return NextResponse.json({ error: "Auto Run has no resumable issue scope." }, { status: 409 });
     }
-    if (currentState.status === "running" || currentState.status === "pause_requested" || currentState.status === "cancel_requested") {
+    if (currentState.status === "running" || currentState.status === "cancel_requested") {
       return NextResponse.json({ error: "Auto Run is already active.", state: currentState }, { status: 409 });
     }
     const state = updateAutoRunState(project.projectId, {
