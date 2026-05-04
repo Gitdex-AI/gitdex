@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, Code, Drawer, Group, Stack, Text } from "@mantine/core";
+import { ActionIcon, Badge, Code, Drawer, Group, Stack, Text } from "@mantine/core";
 import { Info, X } from "lucide-react";
 import { useState } from "react";
 import { ProjectDeleteForm } from "@/components/ProjectDeleteForm";
@@ -23,16 +23,18 @@ export function ProjectDetailPanel({
 
   return (
     <>
-      <Button
+      <ActionIcon
         type="button"
-        variant="light"
+        variant="subtle"
+        color="gray"
         size="xs"
         radius="xl"
-        leftSection={<Info size={14} />}
+        title="Project details"
+        aria-label="Project details"
         onClick={() => setOpened(true)}
       >
-        Project details
-      </Button>
+        <Info size={14} />
+      </ActionIcon>
       <Drawer
         opened={opened}
         onClose={() => setOpened(false)}
