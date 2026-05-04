@@ -764,7 +764,7 @@ pre,
 
 .project-sidebar-footer {
   flex: 0 0 auto;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 54px;
   background: var(--app-surface);
   border-top: 1px solid var(--app-border-muted);
 }

@@ -1,53 +1,39 @@
-.selector {
+.toggle {
   position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 40;
-  display: inline-grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: min(312px, calc(100vw - 24px));
-  min-height: 38px;
-  padding: 3px;
-  background: color-mix(in srgb, var(--app-shell) 92%, transparent);
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  box-shadow: 0 10px 28px var(--app-shadow-md);
-  backdrop-filter: blur(12px);
-}
-
-.option {
+  left: 12px;
+  bottom: 12px;
+  z-index: 50;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  min-height: 30px;
-  gap: 5px;
-  padding: 0 7px;
-  color: color-mix(in srgb, var(--app-ink) 72%, transparent);
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
+  width: 34px;
+  height: 34px;
+  color: var(--app-control-text);
+  background: color-mix(in srgb, var(--app-shell) 92%, transparent);
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  box-shadow: 0 8px 22px var(--app-shadow-md);
+  backdrop-filter: blur(12px);
   cursor: pointer;
 }
 
-.option:hover,
-.option:focus-visible {
-  color: var(--app-ink);
-  background: color-mix(in srgb, var(--app-ink) 8%, transparent);
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--app-control-text-hover);
+  background: var(--app-control-bg-hover);
+  border-color: var(--app-control-border-hover);
 }
 
-.option:focus-visible {
+.toggle:focus-visible {
   outline: 2px solid var(--app-focus-ring);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-.option[data-selected="true"] {
-  color: var(--app-text-inverted);
+.toggle[data-mode="dark"] {
+  color: var(--app-filled-control-text);
   background: var(--app-interactive-active);
-  box-shadow: 0 4px 12px var(--app-shadow-interactive);
+  border-color: var(--app-interactive-active);
+  box-shadow: 0 8px 22px var(--app-shadow-interactive);
 }
 
 :global(html[data-theme="dark"] body) {
@@ -80,18 +66,4 @@
 :global(html[data-theme="dark"] .project-switcher-trigger.sidebar:focus-visible) {
   color: var(--app-text-strong);
   background: var(--app-surface-subtle);
-}
-
-@media (max-width: 560px) {
-  .selector {
-    top: auto;
-    right: 10px;
-    bottom: 10px;
-    width: min(300px, calc(100vw - 20px));
-  }
-
-  .option span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }

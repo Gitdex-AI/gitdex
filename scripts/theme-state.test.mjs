@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   createThemePreferenceState,
+  nextThemeMode,
   normalizeThemeMode,
   persistThemeMode,
   readStoredThemeMode,
@@ -62,9 +63,9 @@ function contrastRatio(foreground, background) {
 
 describe("theme state helpers", () => {
   it("keeps theme selector interaction colors on shared tokens", () => {
-    assert.match(themeSelectorCss, /\.option:focus-visible\s*\{[\s\S]*var\(--app-focus-ring\)/);
-    assert.match(themeSelectorCss, /\.option\[data-selected="true"\]\s*\{[\s\S]*var\(--app-text-inverted\)/);
-    assert.match(themeSelectorCss, /\.option\[data-selected="true"\]\s*\{[\s\S]*var\(--app-interactive-active\)/);
+    assert.match(themeSelectorCss, /\.toggle:focus-visible\s*\{[\s\S]*var\(--app-focus-ring\)/);
+    assert.match(themeSelectorCss, /\.toggle\[data-mode="dark"\]\s*\{[\s\S]*var\(--app-filled-control-text\)/);
+    assert.match(themeSelectorCss, /\.toggle\[data-mode="dark"\]\s*\{[\s\S]*var\(--app-interactive-active\)/);
     assert.match(themeSelectorCss, /:global\(html\[data-theme="dark"\] \.auth-form button\)\s*\{[\s\S]*var\(--app-filled-control-text\)/);
     assert.doesNotMatch(themeSelectorCss, /#[0-9a-fA-F]{3,8}/);
   });
@@ -250,6 +251,12 @@ describe("theme state helpers", () => {
       prefersDark: true,
       effectiveTheme: "dark"
     });
+  });
+
+  it("cycles the single theme toggle through system, light, and dark", () => {
+    assert.equal(nextThemeMode("system"), "light");
+    assert.equal(nextThemeMode("light"), "dark");
+    assert.equal(nextThemeMode("dark"), "system");
   });
 
   it("uses a namespaced storage key", () => {

@@ -169,6 +169,11 @@ export function updateThemeMode(
   return createThemePreferenceState(mode, state.prefersDark);
 }
 
+export function nextThemeMode(mode: ThemeMode): ThemeMode {
+  const currentIndex = themeModes.indexOf(mode);
+  return themeModes[(currentIndex + 1) % themeModes.length] ?? "system";
+}
+
 export function updateSystemThemePreference(
   state: ThemePreferenceState,
   prefersDark: boolean

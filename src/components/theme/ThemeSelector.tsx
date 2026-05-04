@@ -1,7 +1,7 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
-import { type ThemeMode, themeModes } from "./theme-state";
+import { nextThemeMode, type ThemeMode } from "./theme-state";
 import { useTheme } from "./ThemeProvider";
 import styles from "./theme-selector.module.css";
 
@@ -19,34 +19,21 @@ const themeIcons = {
 
 export function ThemeSelector() {
   const { mode, setMode } = useTheme();
+  const nextMode = nextThemeMode(mode);
+  const Icon = themeIcons[mode];
+  const label = `${themeLabels[mode]} theme`;
+  const nextLabel = themeLabels[nextMode];
 
   return (
-    <div
-      aria-label="Theme mode"
-      className={styles.selector}
-      role="radiogroup"
+    <button
+      aria-label={`${label}. Switch to ${nextLabel} theme`}
+      className={styles.toggle}
+      data-mode={mode}
+      onClick={() => setMode(nextMode)}
+      title={`${label}. Switch to ${nextLabel}`}
+      type="button"
     >
-      {themeModes.map((themeMode) => {
-        const Icon = themeIcons[themeMode];
-        const selected = mode === themeMode;
-
-        return (
-          <button
-            aria-checked={selected}
-            aria-label={`${themeLabels[themeMode]} theme`}
-            className={styles.option}
-            data-selected={selected ? "true" : undefined}
-            key={themeMode}
-            onClick={() => setMode(themeMode)}
-            role="radio"
-            title={`${themeLabels[themeMode]} theme`}
-            type="button"
-          >
-            <Icon aria-hidden="true" size={15} strokeWidth={2.2} />
-            <span>{themeLabels[themeMode]}</span>
-          </button>
-        );
-      })}
-    </div>
+      <Icon aria-hidden="true" size={17} strokeWidth={2.25} />
+    </button>
   );
 }
