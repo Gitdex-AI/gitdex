@@ -1,12 +1,13 @@
 import { ToolsPanel } from "@/components/ToolsPanel";
+import { recentProjectChatsFromActivity } from "@/components/projects/recent-project-chats";
 import { ToolsReturnControl } from "@/components/tools/ToolsReturnControls";
 import { requireConsolePageAuth } from "@/lib/console-auth";
-import { listProjects } from "@/lib/store";
+import { listProjects, listWorkflows } from "@/lib/store";
 
 export default async function ToolsPage() {
   await requireConsolePageAuth("/tools");
-  const projects = await listProjects();
-  const recentProjectChats = projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }));
+  const [projects, workflows] = await Promise.all([listProjects(), listWorkflows()]);
+  const recentProjectChats = recentProjectChatsFromActivity(projects, workflows);
 
   return <ToolsPanel headerActions={<ToolsReturnControl recentProjectChats={recentProjectChats} />} />;
 }
