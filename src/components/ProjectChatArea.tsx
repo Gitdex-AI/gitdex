@@ -51,6 +51,7 @@ export function ProjectChatArea({
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const liveJobsRef = useRef(jobs);
   const stickToBottomRef = useRef(true);
+  const jumpingToBottomRef = useRef<number | null>(null);
   const visibleSessions = readOnly && inspectedSession ? [inspectedSession] : sessions;
 
   useEffect(() => {
@@ -60,6 +61,10 @@ export function ProjectChatArea({
   useEffect(() => {
     liveJobsRef.current = liveJobs;
   }, [liveJobs]);
+
+  useEffect(() => () => {
+    if (jumpingToBottomRef.current) window.clearTimeout(jumpingToBottomRef.current);
+  }, []);
 
   useEffect(() => {
     setPending(false);
@@ -163,6 +168,7 @@ export function ProjectChatArea({
   function updateScrollPosition() {
     const scroll = scrollRef.current;
     if (!scroll) return;
+    if (jumpingToBottomRef.current) return;
     const distanceFromBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight;
     const scrolledUp = distanceFromBottom > 96;
     stickToBottomRef.current = !scrolledUp;
@@ -172,6 +178,11 @@ export function ProjectChatArea({
   function scrollToBottom(behavior: ScrollBehavior = "smooth") {
     const scroll = scrollRef.current;
     if (!scroll) return;
+    if (jumpingToBottomRef.current) window.clearTimeout(jumpingToBottomRef.current);
+    jumpingToBottomRef.current = window.setTimeout(() => {
+      jumpingToBottomRef.current = null;
+      updateScrollPosition();
+    }, behavior === "smooth" ? 450 : 0);
     scroll.scrollTo({ top: scroll.scrollHeight, behavior });
     stickToBottomRef.current = true;
     setShowScrollToBottom(false);
