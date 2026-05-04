@@ -25,7 +25,7 @@ export type ProjectWorkspacePanel = "tools" | "settings" | "requirements" | "tri
 
 export const defaultConsoleReturnHref = "/";
 
-const nonChatConsolePaths = new Set(["/projects", "/projects/new", "/settings", "/tools"]);
+const nonChatConsolePaths = new Set(["/projects/new"]);
 
 export function resolveConsoleReturnDestination(input: {
   currentHref?: string | null;

@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const unauthorized = await requireConsoleApiAuth();
   if (unauthorized) return unauthorized;
   const form = await request.formData();
-  const next = safeNextPath(form.get("next"), "/settings");
+  const next = safeNextPath(form.get("next"), "/");
   const current = await getSettings();
   const settings: Settings = {
     appBaseUrl: String(form.get("appBaseUrl") ?? "http://localhost:8000").trim(),

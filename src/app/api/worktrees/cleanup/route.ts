@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const unauthorized = await requireConsoleApiAuth();
   if (unauthorized) return unauthorized;
   const form = await request.formData().catch(() => null);
-  const next = safeNextPath(form?.get("next") ?? null, "/settings");
+  const next = safeNextPath(form?.get("next") ?? null, "/");
   const settings = await getSettings();
   const result = await cleanupInactiveWorktrees(settings.worktreeRetentionDays);
   const redirectTo = new URL(next, request.url);

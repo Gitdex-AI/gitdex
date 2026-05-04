@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const unauthorized = await requireConsoleApiAuth();
   if (unauthorized) return unauthorized;
   const form = await request.formData();
-  const next = safeNextPath(form.get("next"), "/settings");
+  const next = safeNextPath(form.get("next"), "/");
   const owner = String(form.get("githubUsername") ?? "").trim();
   if (!owner) {
     return redirectWithMessage(request, next, "error", "GitHub owner is required.");

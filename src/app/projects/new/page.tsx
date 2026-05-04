@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, Checkbox, Group, NativeSelect, Paper, SimpleGrid, Text, TextInput, ThemeIcon } from "@mantine/core";
-import { ArrowLeft, FolderPlus, GitBranch, Info, Settings, ShieldCheck } from "lucide-react";
+import { ArrowLeft, FolderPlus, GitBranch, Info, KeyRound, ShieldCheck } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { listLocalGitHubRepos } from "@/lib/github-local";
@@ -42,10 +42,18 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
         </Group>
         {!hasGitHubAccount && (
           <Alert color="yellow" icon={<Info size={16} />} m="md">
-            No usable GitHub owner is configured yet. Go to Settings, enter a GitHub user or organization, generate an SSH key, and add it to GitHub.
-            <Button component="a" href="/settings" variant="light" mt="sm" leftSection={<Settings size={16} />}>
-              Open Settings
-            </Button>
+            <Text size="sm" mb="sm">
+              No usable GitHub owner is configured yet. Enter a GitHub user or organization and generate an SSH key before adding a project.
+            </Text>
+            <form method="post" action="/api/github/account">
+              <input type="hidden" name="next" value="/projects/new" />
+              <Group align="flex-end" gap="sm">
+                <TextInput name="githubUsername" label="GitHub Owner" placeholder="owner-or-org" required />
+                <Button type="submit" variant="light" leftSection={<KeyRound size={16} />}>
+                  Ensure SSH Key
+                </Button>
+              </Group>
+            </form>
           </Alert>
         )}
         <form className="project-form" method="post" action="/api/projects">

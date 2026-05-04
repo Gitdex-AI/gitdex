@@ -21,21 +21,12 @@ Use the preview URL assigned to the QA run if it differs from `http://127.0.0.1:
 6. Open settings again and click the in-page Back to workspace control.
 7. Confirm the browser returns to `/projects/<projectId>`.
 
-## Project Redirect Return
-
-1. Visit `/projects/<projectId>`.
-2. Visit `/projects`.
-3. Confirm the browser redirects to the latest project workspace, or to `/projects/new` when no project exists.
-
 ## Tools Return
 
 1. Visit `/projects/<projectId>`.
-2. Open Tools from the project workspace sidebar or visit `/tools`.
+2. Open Tools from the project workspace Settings panel.
 3. Click the in-page Back control.
 4. Confirm the browser returns to the prior project chat page.
-5. In a fresh browser session with no session storage, visit `/tools`.
-6. Click the in-page Back control.
-7. Confirm the browser falls back to the most recent project chat.
 
 ## Unsaved Settings Confirmation
 

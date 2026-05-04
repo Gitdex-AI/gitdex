@@ -11,7 +11,7 @@ import {
 
 test("return destination prefers known prior page state", () => {
   const destination = resolveConsoleReturnDestination({
-    currentHref: "/settings",
+    currentHref: "/projects/project-a?panel=settings",
     priorDestination: "/projects/project-a?workflow=wf-1",
     recentProjectChats: [{ projectId: "project-b", createdAt: "2026-05-01T10:00:00.000Z" }]
   });
@@ -24,8 +24,8 @@ test("return destination prefers known prior page state", () => {
 
 test("return destination skips the current page and falls back to most recent project chat", () => {
   const destination = resolveConsoleReturnDestination({
-    currentHref: "/settings",
-    priorDestination: "/settings",
+    currentHref: "/projects/project-a?panel=settings",
+    priorDestination: "/projects/project-a?panel=settings",
     recentProjectChats: [
       { projectId: "older", createdAt: "2026-05-01T10:00:00.000Z" },
       { projectId: "newer", createdAt: "2026-05-03T10:00:00.000Z" }
@@ -40,7 +40,7 @@ test("return destination skips the current page and falls back to most recent pr
 
 test("return destination uses stable fallback when no prior page or project chat is known", () => {
   const destination = resolveConsoleReturnDestination({
-    currentHref: "/tools",
+    currentHref: "/projects/project-a?panel=tools",
     recentProjectChats: []
   });
 
@@ -52,7 +52,7 @@ test("return destination uses stable fallback when no prior page or project chat
 
 test("return destination ignores invalid prior page before checking recent project chat", () => {
   const destination = resolveConsoleReturnDestination({
-    currentHref: "/settings",
+    currentHref: "/projects/project-a?panel=settings",
     priorDestination: "https://example.com/projects/external",
     recentProjectChats: [{ projectId: "project-a", createdAt: "2026-05-01T10:00:00.000Z" }]
   });
@@ -66,7 +66,7 @@ test("return destination ignores invalid prior page before checking recent proje
 test("non-chat views do not replace the prior chat return target", () => {
   assert.equal(shouldRecordPriorConsoleDestination("/projects/project-a"), true);
   assert.equal(shouldRecordPriorConsoleDestination("/projects/project-a?workflow=wf-1"), true);
-  assert.equal(shouldRecordPriorConsoleDestination("/settings"), false);
+  assert.equal(shouldRecordPriorConsoleDestination("/projects/new"), false);
   assert.equal(shouldRecordPriorConsoleDestination("/projects/project-a?panel=tools"), false);
   assert.equal(shouldRecordPriorConsoleDestination("/api/projects"), false);
 });
@@ -75,7 +75,7 @@ test("project chat and non-chat paths are classified independently", () => {
   assert.equal(isProjectChatHref("/projects/project-a"), true);
   assert.equal(isProjectChatHref("/projects/project-a?panel=settings"), false);
   assert.equal(isNonChatConsoleHref("/projects/project-a?panel=settings"), true);
-  assert.equal(isNonChatConsoleHref("/tools"), true);
+  assert.equal(isNonChatConsoleHref("/projects/new"), true);
 });
 
 test("active left-bottom navigation re-click resolves to shared return action", () => {

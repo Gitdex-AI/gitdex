@@ -8,7 +8,7 @@ export async function SettingsPanel({
   message,
   error,
   returnTo,
-  toolsHref = "/tools"
+  toolsHref = "/"
 }: {
   message?: string;
   error?: string;

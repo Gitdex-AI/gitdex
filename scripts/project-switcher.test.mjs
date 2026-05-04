@@ -25,17 +25,17 @@ const projects = [
 ];
 
 assert.equal(projectIdFromPathname("/projects/alpha-1"), "alpha-1", "Project detail routes should expose the project id");
-assert.equal(projectIdFromPathname("/projects/alpha-1/requirements"), "alpha-1", "Nested project routes should expose the project id");
+assert.equal(projectIdFromPathname("/projects/alpha-1?panel=requirements"), "alpha-1", "Project workspace panel URLs should expose the project id");
 assert.equal(projectIdFromPathname("/projects"), null, "The project index should not expose a current project id");
 assert.equal(projectIdFromPathname("/projects/new"), null, "The new-project route should not expose a current project id");
 assert.equal(projectIdFromPathname("/workflows"), null, "Non-project routes should not expose a current project id");
 
-assert.equal(currentProjectFromPathname(projects, "/projects/alpha-1/requirements")?.name, "Dispatch", "Known project routes should resolve the current project");
+assert.equal(currentProjectFromPathname(projects, "/projects/alpha-1?panel=requirements")?.name, "Dispatch", "Known project workspace URLs should resolve the current project");
 assert.equal(currentProjectFromPathname(projects, "/projects/missing"), null, "Unknown project ids should not render a current project");
 assert.equal(projectHref("beta-2"), "/projects/beta-2", "Switch targets should use existing project detail routes");
 assert.equal(projectContextLabel(projects[1]), "Gitdex-AI/DispatchBeta", "Project entries should include repository context for similar names");
 assert.equal(isProjectWorkspacePathname("/projects/alpha-1"), true, "Project detail routes should use workspace mode");
-assert.equal(isProjectWorkspacePathname("/projects/alpha-1/requirements"), false, "Nested project utility pages keep the global header");
+assert.equal(isProjectWorkspacePathname("/projects/alpha-1?panel=requirements"), true, "Project workspace panel URLs use workspace mode");
 assert.equal(isProjectWorkspacePathname("/projects/new"), false, "New project page keeps the global header");
 
 console.log("project switcher verification passed");

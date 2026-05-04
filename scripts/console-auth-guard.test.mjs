@@ -29,7 +29,7 @@ describe("console auth guard", () => {
     assert.equal(isPublicConsoleApiPath("/api/projects"), false);
     assert.equal(isConsoleApiPath("/telegram/webhook"), false);
     assert.equal(isConsolePagePath("/projects"), true);
-    assert.equal(isConsolePagePath("/settings"), true);
+    assert.equal(isConsolePagePath("/projects/new"), true);
     assert.equal(isConsolePagePath("/_next/static/chunk.js"), false);
     assert.equal(isConsolePagePath("/favicon.ico"), false);
   });
