@@ -633,6 +633,17 @@ body.workspace-mode-body .topbar {
   text-transform: none;
 }
 
+.requirement-tree-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.requirement-tree-title-actions > .mantine-ActionIcon-root {
+  flex: 0 0 auto;
+}
+
 .requirement-tree-summary-link {
   display: block;
   color: inherit;
@@ -715,6 +726,25 @@ body.workspace-mode-body .topbar {
 
 .project-detail-danger-zone {
   margin-top: 0;
+}
+
+.requirement-detail-section {
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+}
+
+.requirement-detail-body {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+.requirement-detail-issue {
+  padding: 10px;
+  background: #f8fafc;
+  border: 1px solid #e0e7f0;
+  border-radius: 8px;
 }
 
 .chat-panel {

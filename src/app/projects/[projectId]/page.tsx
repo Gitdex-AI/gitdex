@@ -18,6 +18,7 @@ import { ProjectRunDeveloperIssueButton } from "@/components/ProjectRunDeveloper
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
 import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
+import { RequirementDetailPanel } from "@/components/RequirementDetailPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -453,13 +454,16 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
       <div key={workflow.workflowId} className={`requirement-tree-item${active ? " active" : ""}`}>
         <div className="requirement-tree-link">
           <div className="requirement-tree-topline">
-            <a
-              href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`}
-              className="requirement-tree-main-link"
-            >
-              <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
-              <Badge size="xs" color={status.color} variant="light">{status.label}</Badge>
-            </a>
+            <div className="requirement-tree-title-actions">
+              <a
+                href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`}
+                className="requirement-tree-main-link"
+              >
+                <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
+                <Badge size="xs" color={status.color} variant="light">{status.label}</Badge>
+              </a>
+              <RequirementDetailPanel projectId={projectId} workflow={workflow} status={status} planningJob={planningJob} />
+            </div>
             <Group gap={6} justify="flex-end" wrap="nowrap">
               {planningAction}
               {active && !planningAction && workflow.issues.length ? (
