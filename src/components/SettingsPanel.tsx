@@ -1,6 +1,8 @@
 import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
 import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
+import packageJson from "../../package.json";
 import { PageTitle } from "@/components/PageTitle";
+import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
 import { getSettings } from "@/lib/settings";
 
@@ -51,6 +53,16 @@ export async function SettingsPanel({
           <Button component="a" href={toolsHref} variant="light" leftSection={<Wrench size={16} />}>
             Open Tools
           </Button>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-row">
+          <div className="settings-row-copy">
+            <Text className="settings-row-title">Gitdex Update</Text>
+            <Text className="settings-row-description">Current version v{packageJson.version}. Pull, build, and restart Gitdex when self-update is enabled.</Text>
+          </div>
+          <SelfUpdateDialog version={packageJson.version} triggerLabel="Update Gitdex" />
         </div>
       </section>
 
