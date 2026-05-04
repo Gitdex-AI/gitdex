@@ -4,10 +4,10 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   type EffectiveTheme,
   type ThemeMode,
-  normalizeThemeMode,
+  persistThemeMode,
+  readStoredThemeMode,
   resolveEffectiveTheme,
-  themePalettes,
-  themeStorageKey
+  themePalettes
 } from "./theme-state";
 import { ThemeSelector } from "./ThemeSelector";
 
@@ -24,17 +24,11 @@ function getPrefersDark() {
 }
 
 function getStoredThemeMode() {
-  try {
-    return normalizeThemeMode(window.localStorage.getItem(themeStorageKey));
-  } catch (error) {
-    return "system";
-  }
+  return readStoredThemeMode(window.localStorage);
 }
 
 function storeThemeMode(mode: ThemeMode) {
-  try {
-    window.localStorage.setItem(themeStorageKey, mode);
-  } catch (error) {}
+  persistThemeMode(window.localStorage, mode);
 }
 
 function applyDocumentTheme(mode: ThemeMode, effectiveTheme: EffectiveTheme) {
