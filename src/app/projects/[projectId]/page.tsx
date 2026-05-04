@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { Archive, ArrowLeft, FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
+import { Archive, ArrowLeft, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
@@ -21,7 +21,8 @@ import { ProjectRunJobsForm } from "@/components/ProjectRunJobsForm";
 import { ProjectSyncForm } from "@/components/ProjectSyncForm";
 import { RequirementDetailPanel } from "@/components/RequirementDetailPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { ProjectsPanel } from "@/components/ProjectsPanel";
+import { ProjectListSidebarLink } from "@/components/projects/ProjectListReturnControls";
+import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { ToolsPanel } from "@/components/ToolsPanel";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
@@ -311,7 +312,6 @@ function ProjectWorkspaceSidebar(input: {
 }) {
   const project = input.project;
   const draftWorkflow = input.requirementWorkflows.find((workflow) => isDiscardableDraftWorkflow(project.projectId, workflow)) ?? null;
-  const projectsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "projects", activePanel: input.activePanel });
   const toolsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "tools", activePanel: input.activePanel });
   const settingsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "settings", activePanel: input.activePanel });
 
@@ -388,15 +388,11 @@ function ProjectWorkspaceSidebar(input: {
           </Group>
           <Group gap={4} wrap="nowrap">
             <ProjectSyncForm projectId={project.projectId} compact />
-            <Link
-              href={projectsPanelAction.href}
-              className={`sidebar-icon-link${projectsPanelAction.active ? " active" : ""}`}
-              title="Projects"
-              aria-label="Projects"
-              data-nav-action={projectsPanelAction.action}
-            >
-              <FolderKanban size={16} />
-            </Link>
+            <ProjectListSidebarLink
+              active={input.activePanel === "projects"}
+              projectId={project.projectId}
+              recentProjectChats={[{ projectId: project.projectId, createdAt: project.createdAt }]}
+            />
             <Link
               href={toolsPanelAction.href}
               className={`sidebar-icon-link${toolsPanelAction.active ? " active" : ""}`}

@@ -8,6 +8,7 @@ import { syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { allocateQaPreviewPort, qaPreviewUrl } from "@/lib/qa-preview-port";
 import { cancelPendingJobs, createJob, listAgentSessions, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, JobType, ProjectRecord, WorkflowRecord } from "@/lib/types";
+import type { AutoRunState } from "@/lib/auto-run-control";
 
 const autoRunnableJobTypes: JobType[] = ["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"];
 type AutoRunStep = {
@@ -17,11 +18,11 @@ type AutoRunStep = {
 
 type ActiveJobRuns = Map<string, Promise<void>>;
 
-export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[]; issueIds?: string[] } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
+export async function runProjectIssueAutoRun(project: ProjectRecord, options: { workflowIds?: string[]; issueIds?: string[]; initialState?: AutoRunState } = {}): Promise<{ completed: boolean; steps: AutoRunStep[]; message: string }> {
   if (!project.githubRepo) throw new Error("Project has no GitHub repo configured.");
   const workflowScope = new Set(options.workflowIds ?? []);
   const issueScope = new Set(options.issueIds ?? []);
-  const runState = startAutoRunState(project.projectId, { workflowIds: [...workflowScope], issueIds: [...issueScope] });
+  const runState = options.initialState ?? startAutoRunState(project.projectId, { workflowIds: [...workflowScope], issueIds: [...issueScope] });
   const steps: AutoRunStep[] = [];
   const activeRuns: ActiveJobRuns = new Map();
 
