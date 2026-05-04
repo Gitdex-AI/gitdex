@@ -23,6 +23,7 @@ import { RequirementDetailPanel } from "@/components/RequirementDetailPanel";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ProjectsPanel } from "@/components/ProjectsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { ProjectSettingsSidebarLink } from "@/components/settings/SettingsReturnNavigation";
 import { ToolsPanel } from "@/components/ToolsPanel";
 import { WorkflowPauseButton } from "@/components/WorkflowPauseButton";
 import { getAutoRunState } from "@/lib/auto-run-control";
@@ -127,12 +128,13 @@ export default async function ProjectDetailPage({
           autorunEnabled={query.autorun === "1"}
           activePanel={activePanel}
           switcherProjects={switcherProjects}
+          recentProjectChats={projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }))}
           ghUserLogin={ghUserLogin}
         />
 
         <main className="chat-panel">
           {activePanel ? (
-            <WorkspacePanelContent panel={activePanel} project={project} workflows={sortedWorkflows} jobs={jobs} message={query.message} error={query.error} />
+            <WorkspacePanelContent panel={activePanel} project={project} projects={projects} workflows={sortedWorkflows} jobs={jobs} message={query.message} error={query.error} />
           ) : (
             <ProjectChatArea projectId={project.projectId} sessions={chatSessions} jobs={workflowPanelJobs.length ? workflowPanelJobs : jobs} workflows={workflowPanelWorkflows.length ? workflowPanelWorkflows : workflows} activeWorkflowId={latestWorkflow?.workflowId ?? null} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
           )}
@@ -191,13 +193,14 @@ function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | nu
   return null;
 }
 
-function WorkspacePanelContent({ panel, project, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
+function WorkspacePanelContent({ panel, project, projects, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; projects: ProjectRecord[]; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
   const returnTo = `/projects/${project.projectId}?panel=${panel}`;
+  const recentProjectChats = projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }));
   return (
     <div className="workspace-panel-content">
       {panel === "projects" ? <ProjectsPanel message={message} error={error} /> : null}
       {panel === "tools" ? <ToolsPanel /> : null}
-      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${project.projectId}?panel=tools`} /> : null}
+      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${project.projectId}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
       {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
     </div>
   );
@@ -300,6 +303,7 @@ function ProjectWorkspaceSidebar(input: {
   autorunEnabled: boolean;
   activePanel: WorkspacePanel | null;
   switcherProjects: ComponentProps<typeof ProjectSwitcher>["projects"];
+  recentProjectChats: { projectId: string; createdAt?: string | null }[];
   ghUserLogin: string | null;
 }) {
   const project = input.project;
@@ -402,14 +406,13 @@ function ProjectWorkspaceSidebar(input: {
             >
               <ListTodo size={16} />
             </Link>
-            <Link
-              href={`/projects/${project.projectId}?panel=settings`}
-              className={`sidebar-icon-link${input.activePanel === "settings" ? " active" : ""}`}
-              title="Settings"
-              aria-label="Settings"
+            <ProjectSettingsSidebarLink
+              projectId={project.projectId}
+              active={input.activePanel === "settings"}
+              recentProjectChats={input.recentProjectChats}
             >
               <Settings size={16} />
-            </Link>
+            </ProjectSettingsSidebarLink>
           </Group>
         </Group>
       </div>
