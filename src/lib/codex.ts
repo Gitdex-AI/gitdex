@@ -130,6 +130,7 @@ export class CodexClient {
     githubRepo: string;
     message: string;
     projectMemory?: string | null;
+    workflowConfirmed?: boolean;
     sessionId?: string | null;
   }): Promise<CodexTextResult> {
     const prompt = `${rolePrompts.product_manager}
@@ -147,6 +148,19 @@ Conversation rules:
 - Do not ask multiple questions in one reply.
 - Do not output the ready_for_architect JSON while any material requirement detail is still unclear.
 - If the user gives a free-form answer, incorporate it, then ask the next single question with three options.
+- If this chat is already tied to a confirmed requirement and the user describes a clearly separate new requirement, do not fold it into the current requirement. Ask one decision question with exactly three options and include one JSON object in a fenced code block using this exact shape:
+{
+  "status": "needs_user_decision",
+  "action": "start_new_requirement",
+  "reason": "why this is separate from the current requirement",
+  "question": "This looks like a new requirement. How should I handle it?",
+  "options": [
+    { "id": "start_new_requirement", "label": "Start new requirement", "draftMessage": "concise initial message for the new requirement chat" },
+    { "id": "keep_current", "label": "Keep in current chat" },
+    { "id": "clarify", "label": "Clarify first" }
+  ]
+}
+- Only use the start_new_requirement action when Current requirement state is "confirmed".
 - If the user explicitly confirms the requirement is complete or asks to proceed, first provide a one-sentence summary, then include one JSON object in a fenced code block.
 - The JSON object must use this exact shape:
 {
@@ -158,6 +172,8 @@ Conversation rules:
 }
 - Only set status to "ready_for_architect" when no blocking open questions remain.
 - If there are still open questions, do not output JSON.
+
+Current requirement state: ${input.workflowConfirmed ? "confirmed" : "draft or project-level chat"}
 
 User message:
 ${input.message}`;

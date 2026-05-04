@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
         : project.devopsSessionId;
   const codexStartedAt = Date.now();
   const result = role === "product_manager"
-    ? await codex.projectManagerChat({ projectName: project.name, githubRepo: project.githubRepo, message, projectMemory, sessionId: currentSessionId ?? existing?.sessionId })
+    ? await codex.projectManagerChat({ projectName: project.name, githubRepo: project.githubRepo, message, projectMemory, workflowConfirmed: Boolean(workflow?.trackingCode), sessionId: currentSessionId ?? existing?.sessionId })
     : role === "architect"
       ? await codex.architectChat({ projectName: project.name, githubRepo: project.githubRepo, message, sessionId: currentSessionId ?? existing?.sessionId })
       : await codex.devopsChat({ projectName: project.name, githubRepo: project.githubRepo, message, sessionId: currentSessionId ?? existing?.sessionId });

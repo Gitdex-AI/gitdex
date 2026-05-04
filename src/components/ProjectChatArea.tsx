@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { chatRoleLabel, parseChatTarget, type ChatTargetRole } from "@/lib/chat-routing";
+import { parseStartNewRequirementAction, type PmStartNewRequirementAction } from "@/lib/pm-handoff";
 import type { AgentMessage, AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 
 type TimelineMessage = AgentMessage & {
@@ -557,6 +558,7 @@ function MessageList({
                   <span>{messageDisplayContent(message, jobs)}</span>
                 </Text>
                 {isMessageActivelyRunning(message, jobs) ? <MessageLiveOutput message={message} jobs={jobs} /> : null}
+                <PmNewRequirementAction projectId={projectId} workflowId={message.session?.workflowId ?? null} action={message.role === "assistant" && message.sourceRole === "product_manager" ? parseStartNewRequirementAction(message.content) : null} />
                 {message.executionLogs?.length ? <InlineExecutionLogs logs={message.executionLogs} /> : null}
               </div>
             </div>
@@ -581,6 +583,35 @@ function MessageList({
       )}
       {runningStatus}
     </Stack>
+  );
+}
+
+function PmNewRequirementAction({ projectId, workflowId, action }: { projectId: string; workflowId: string | null; action: PmStartNewRequirementAction | null }) {
+  const startOption = action?.options.find((option) => option.id === "start_new_requirement" && option.draftMessage?.trim());
+  if (!action || !startOption?.draftMessage) return null;
+
+  return (
+    <div className="pm-action-box">
+      <Text size="sm" fw={760}>{action.question}</Text>
+      <Text size="xs" c="dimmed" mt={2}>{action.reason}</Text>
+      <Group gap="xs" mt="sm">
+        <form method="post" action={`/api/projects/${projectId}/requirements/start-from-action`}>
+          <input type="hidden" name="draftMessage" value={startOption.draftMessage} />
+          <Button type="submit" size="compact-sm" radius="xl" variant="filled">
+            {startOption.label}
+          </Button>
+        </form>
+        {action.options.filter((option) => option.id !== "start_new_requirement").map((option) => (
+          <form key={option.id} method="post" action={`/api/projects/${projectId}/chat`}>
+            {workflowId ? <input type="hidden" name="workflowId" value={workflowId} /> : null}
+            <input type="hidden" name="message" value={option.id === "keep_current" ? "Keep this in the current requirement chat." : "Clarify this before deciding whether it is a new requirement."} />
+            <Button type="submit" size="compact-sm" radius="xl" variant="light">
+              {option.label}
+            </Button>
+          </form>
+        ))}
+      </Group>
+    </div>
   );
 }
 

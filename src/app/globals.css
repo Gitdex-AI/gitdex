@@ -1444,6 +1444,14 @@ body.workspace-mode-body .topbar {
   max-width: 100%;
 }
 
+.pm-action-box {
+  margin-top: 12px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #d8e3f2;
+  border-radius: 8px;
+}
+
 .chat-bubble time,
 .chat-bubble .mantine-Badge-root {
   font-family: var(--font-ui);
