@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, Text } from "@mantine/core";
-import { Check, ChevronsUpDown, FolderKanban } from "lucide-react";
+import { Check, ChevronsUpDown, FolderKanban, FolderPlus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   currentProjectFromPathname,
@@ -53,6 +53,17 @@ export function ProjectSwitcher({ projects, variant = "sidebar" }: { projects: P
             </Menu.Item>
           );
         })}
+        <Menu.Divider />
+        <Menu.Item
+          leftSection={<FolderPlus size={16} aria-hidden="true" />}
+          onClick={() => {
+            router.push("/projects/new");
+          }}
+        >
+          <Text component="span" size="sm" fw={700}>
+            Add Project
+          </Text>
+        </Menu.Item>
       </Menu.Dropdown>
     </Menu>
   );
