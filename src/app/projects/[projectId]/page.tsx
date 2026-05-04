@@ -425,7 +425,7 @@ function DiscardDraftRequirementForm({ projectId, workflowId }: { projectId: str
 function ArchiveRequirementForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
   return (
     <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/archive`}>
-      <Button type="submit" variant="light" color="gray" size="compact-xs" radius="xl" leftSection={<Archive size={14} />}>
+      <Button type="submit" variant="light" color="red" size="compact-xs" radius="xl" leftSection={<Archive size={14} />}>
         Archive
       </Button>
     </form>
