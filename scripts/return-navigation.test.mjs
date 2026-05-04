@@ -134,6 +134,20 @@ test("active project workspace panel nav preserves encoded project id", () => {
   });
 });
 
+test("active project workspace projects nav ignores stale prior destinations", () => {
+  const action = resolveProjectWorkspacePanelNavAction({
+    projectId: "project-a",
+    panel: "projects",
+    activePanel: "projects"
+  });
+
+  assert.deepEqual(action, {
+    href: "/projects/project-a",
+    active: true,
+    action: "return"
+  });
+});
+
 test("inactive project workspace panel nav opens the requested panel for the same project", () => {
   const action = resolveProjectWorkspacePanelNavAction({
     projectId: "project-a",
