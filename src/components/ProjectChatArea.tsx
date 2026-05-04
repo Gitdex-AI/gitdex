@@ -665,15 +665,12 @@ function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
       <div className="chat-bubble execution-log-bubble">
         <details>
           <summary>
-            <Group gap="xs" justify="space-between" wrap="nowrap">
+            <Group gap="xs" wrap="nowrap">
               <Group gap={6}>
                 <Badge variant="light">{log.sourceLabel}</Badge>
                 <Badge size="xs" color={log.status === "failed" ? "red" : "green"} variant="light">execution log</Badge>
                 {executionLogDuration(log) ? <Badge size="xs" color="gray" variant="light">{executionLogDuration(log)}</Badge> : null}
               </Group>
-              <Text component="time" dateTime={log.createdAt} size="xs" c="dimmed">
-                {formatMessageTime(log.createdAt)}
-              </Text>
             </Group>
             <Text size="sm" fw={760} mt={6}>{log.title}</Text>
           </summary>
@@ -690,14 +687,11 @@ function InlineExecutionLogs({ logs }: { logs: TimelineExecutionLog[] }) {
       {logs.map((log, index) => (
         <details key={`${log.createdAt}-${index}`}>
           <summary>
-            <Group gap="xs" justify="space-between" wrap="nowrap">
+            <Group gap="xs" wrap="nowrap">
               <Group gap={6}>
                 <Badge size="xs" color={log.status === "failed" ? "red" : "green"} variant="light">execution log</Badge>
                 <Text size="xs" c="dimmed" lineClamp={1}>{log.title}</Text>
               </Group>
-              <Text component="time" dateTime={log.createdAt} size="xs" c="dimmed">
-                {formatMessageTime(log.createdAt)}
-              </Text>
             </Group>
           </summary>
           <pre className="execution-log-content">{log.content || "No Codex execution output captured."}</pre>
