@@ -461,7 +461,7 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
                 <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
                 <Badge size="xs" color={status.color} variant="light">{status.label}</Badge>
               </Group>
-              <Text size="xs" c="dimmed" lineClamp={1}>{workflow.userRequirement}</Text>
+              <Text className="requirement-tree-summary" size="sm" c="dimmed" lineClamp={2}>{workflow.userRequirement}</Text>
             </div>
           </a>
           <Group gap={6} justify="flex-end" wrap="nowrap">

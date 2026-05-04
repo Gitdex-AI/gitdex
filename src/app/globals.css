@@ -626,6 +626,11 @@ body.workspace-mode-body .topbar {
   text-transform: none;
 }
 
+.requirement-tree-summary {
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
 .requirement-tree-issues {
   padding: 0 8px 8px 18px;
 }
