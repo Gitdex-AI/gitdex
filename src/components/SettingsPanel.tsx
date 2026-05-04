@@ -60,7 +60,7 @@ export async function SettingsPanel({
             <Text className="settings-row-title">Gitdex Update</Text>
             <Text className="settings-row-description">Current version v{packageJson.version}. Pull, build, and restart Gitdex when self-update is enabled.</Text>
           </div>
-          <SelfUpdateDialog version={packageJson.version} triggerLabel="Update Gitdex" />
+          <SelfUpdateDialog version={packageJson.version} triggerLabel="Update Gitdex" triggerVariant="button" />
         </div>
       </section>
 

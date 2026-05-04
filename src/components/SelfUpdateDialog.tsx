@@ -17,11 +17,13 @@ type ApiFailure = {
 export function SelfUpdateDialog({
   version,
   triggerClassName = "self-update-trigger",
-  triggerLabel
+  triggerLabel,
+  triggerVariant = "native"
 }: {
   version: string;
   triggerClassName?: string;
   triggerLabel?: string;
+  triggerVariant?: "native" | "button";
 }) {
   const [opened, setOpened] = useState(false);
   const [phase, setPhase] = useState<SelfUpdateDialogPhase>("idle");
@@ -159,9 +161,15 @@ export function SelfUpdateDialog({
 
   return (
     <>
-      <button className={triggerClassName} type="button" aria-label={`Gitdex version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
-        {triggerLabel ?? `v${version}`}
-      </button>
+      {triggerVariant === "button" ? (
+        <Button type="button" variant="light" leftSection={<RefreshCw size={16} />} aria-label={`Gitdex version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
+          {triggerLabel ?? `v${version}`}
+        </Button>
+      ) : (
+        <button className={triggerClassName} type="button" aria-label={`Gitdex version ${version}. Open self-update dialog`} onClick={() => setOpened(true)}>
+          {triggerLabel ?? `v${version}`}
+        </button>
+      )}
       <Modal
         opened={opened}
         onClose={() => {
