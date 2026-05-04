@@ -1,7 +1,7 @@
 import type { ArchitectPrReviewResult } from "@/lib/types";
 
 export type LabelPlan = {
-  decision: "ready_to_merge" | "blocked" | "changes_requested";
+  decision: "ready_to_merge" | "blocked" | "changes_requested" | "needs_developer_rebase";
   summary: string;
   labelsApplied: string[];
   labelsRemoved: string[];
@@ -35,6 +35,16 @@ export function manualDeployFinalLabelPlan(input: {
   prUrl: string;
   architectDecision: ArchitectPrReviewResult;
 }): LabelPlan {
+  if (input.architectDecision.decision === "needs_developer_rebase") {
+    return {
+      decision: "needs_developer_rebase",
+      summary: input.architectDecision.summary,
+      labelsApplied: [...new Set([...input.architectDecision.labelsApplied, "gd:rebase"])],
+      labelsRemoved: ["gd:review", "gd:merge"],
+      comments: input.architectDecision.comments
+    };
+  }
+
   if (input.architectDecision.decision !== "ready_to_merge") {
     return {
       decision: input.architectDecision.decision === "changes_requested" ? "changes_requested" : "blocked",

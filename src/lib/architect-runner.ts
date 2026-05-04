@@ -56,12 +56,21 @@ export async function runWorkflowArchitectReview(workflowId: string, issueId: st
 
   const now = new Date().toISOString();
   const passed = review.decision === "ready_to_merge";
+  const needsRebase = review.decision === "needs_developer_rebase";
+  const nextStage = passed ? "gd:merge" : needsRebase ? "gd:rebase" : "gd:fix";
+  const reviewStatus = passed ? "passed" : needsRebase ? "requires developer rebase" : "blocked";
 
-  await transitionIssueStage({ repo: project.githubRepo, issue, stage: passed ? "gd:merge" : "gd:fix", prUrl: issue.prUrl });
-  await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Reviewer code review ${passed ? "passed" : "blocked"}.\n\n${review.summary}`);
+  await transitionIssueStage({ repo: project.githubRepo, issue, stage: nextStage, prUrl: issue.prUrl });
+  await commentIssueWithGh(project.githubRepo, issue.githubIssueNumber, `Reviewer code review ${reviewStatus}.\n\n${review.summary}`);
 
-  workflow.status = passed ? "in_progress" : "blocked";
-  workflow.timeline.push(passed ? `Reviewer code review passed for ${issue.issueId}. Ready for merge.` : `Reviewer code review blocked ${issue.issueId}: ${review.summary}`);
+  workflow.status = passed || needsRebase ? "in_progress" : "blocked";
+  workflow.timeline.push(
+    passed
+      ? `Reviewer code review passed for ${issue.issueId}. Ready for merge.`
+      : needsRebase
+        ? `Reviewer returned ${issue.issueId} to developer for rebase: ${review.summary}`
+        : `Reviewer code review blocked ${issue.issueId}: ${review.summary}`
+  );
   await saveWorkflow(workflow);
   const activeJobId = getActiveJobId();
 

@@ -85,7 +85,7 @@ export type DeveloperIssueResult = {
   executionLog?: string;
 };
 
-export type ArchitectPrReviewDecision = "need_qa" | "ready_to_merge" | "changes_requested" | "merged" | "blocked";
+export type ArchitectPrReviewDecision = "need_qa" | "ready_to_merge" | "changes_requested" | "needs_developer_rebase" | "merged" | "blocked";
 
 export type ArchitectPrReviewResult = {
   decision: ArchitectPrReviewDecision;

@@ -67,6 +67,21 @@ assert.deepEqual(blocked.labelsApplied, ["gd:fix"]);
 assert.deepEqual(blocked.labelsRemoved, ["gd:review", "gd:merge"]);
 assert.match(blocked.summary, /QA has not passed/);
 
+const rebase = manualDeployFinalLabelPlan({
+  prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
+  architectDecision: {
+    decision: "needs_developer_rebase",
+    summary: "PR has merge conflicts against main.",
+    labelsApplied: [],
+    comments: ["Resolve conflicts on the PR branch."]
+  }
+});
+
+assert.equal(rebase.decision, "needs_developer_rebase");
+assert.deepEqual(rebase.labelsApplied, ["gd:rebase"]);
+assert.deepEqual(rebase.labelsRemoved, ["gd:review", "gd:merge"]);
+assert.match(rebase.summary, /merge conflicts/);
+
 const mergedBlocked = manualDeployArchitectPolicyDecision({
   prUrl: "https://github.com/Gitdex-AI/gitdex/pull/999",
   qaPassed: true,

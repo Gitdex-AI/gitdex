@@ -662,7 +662,7 @@ Return JSON with summary, blockedType, branch, prUrl, changedFiles, testsRun.`;
     qaPassed?: boolean;
   }): Promise<ArchitectPrReviewResult> {
     const schema = objectSchema({
-      decision: { type: "string", enum: ["need_qa", "ready_to_merge", "changes_requested", "blocked"] },
+      decision: { type: "string", enum: ["need_qa", "ready_to_merge", "changes_requested", "needs_developer_rebase", "blocked"] },
       summary: { type: "string" },
       labelsApplied: { type: "array", items: { type: "string" } },
       comments: { type: "array", items: { type: "string" } }
@@ -683,6 +683,7 @@ Hard rules:
 - Do not add/remove GitHub labels or comments. Gitdex server will apply labels/comments after your structured decision.
 - If QA is required before merge, return decision "need_qa".
 - If changes are required from developer, return decision "changes_requested" and include the required changes in comments.
+- If merge readiness is blocked by conflicts, mergeStateStatus DIRTY, mergeable CONFLICTING, non-fast-forward state, branch out of date, or any rebase-required condition, return decision "needs_developer_rebase". Do not ask the reviewer to resolve conflicts.
 - If QA is already passed or QA is not needed and the PR is acceptable, return decision "ready_to_merge".
 - Never merge the PR and never return a merged state during review.
 - If auto deploy is disabled, stop at decision "ready_to_merge"; Gitdex will move the issue to gd:merge.
@@ -706,7 +707,7 @@ Return JSON with decision, summary, labelsApplied, comments. Set labelsApplied t
   }): Promise<ArchitectPrReviewResult> {
     const workspaceDir = await this.prepareArchitectWorkspace(input.repo, `review-issue-${input.issueNumber}`);
     const schema = objectSchema({
-      decision: { type: "string", enum: ["ready_to_merge", "changes_requested", "blocked"] },
+      decision: { type: "string", enum: ["ready_to_merge", "changes_requested", "needs_developer_rebase", "blocked"] },
       summary: { type: "string" },
       labelsApplied: { type: "array", items: { type: "string" } },
       comments: { type: "array", items: { type: "string" } }
@@ -731,6 +732,7 @@ Hard rules:
 - Do not add or remove GitHub labels; Gitdex will apply labels after your structured decision.
 - Return "ready_to_merge" only when QA has passed and the PR satisfies the issue acceptance criteria.
 - Return "changes_requested" if implementation changes are required.
+- Return "needs_developer_rebase" if merge readiness is blocked by conflicts, mergeStateStatus DIRTY, mergeable CONFLICTING, non-fast-forward state, branch out of date, or any rebase-required condition. Do not resolve conflicts as reviewer.
 - Return "blocked" if readiness cannot be determined from available GitHub state.
 - Do not modify the current Gitdex app checkout or its .git directory.
 - The current working directory is the isolated architect clone: ${workspaceDir}.
