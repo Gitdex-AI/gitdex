@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (unauthorized) return unauthorized;
   const { projectId, workflowId } = await params;
   const [project, workflow] = await Promise.all([getProject(projectId), getWorkflow(workflowId)]);
-  if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);
+  if (!project) return redirect(request, `/?error=${encodeURIComponent("Project not found.")}`);
   if (!workflow) return redirect(request, `/projects/${project.projectId}?phase=requirements&error=${encodeURIComponent("Draft not found.")}`);
   if (!isDiscardableDraftWorkflow(project.projectId, workflow)) {
     return redirect(request, `/projects/${project.projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=requirements&error=${encodeURIComponent("Only unconfirmed draft requirements can be discarded.")}`);

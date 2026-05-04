@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   }
 
   const [project, settings] = await Promise.all([getProject(projectId), getSettings()]);
-  if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);
+  if (!project) return redirect(request, `/?error=${encodeURIComponent("Project not found.")}`);
 
   const role = target.role;
   const message = target.message;

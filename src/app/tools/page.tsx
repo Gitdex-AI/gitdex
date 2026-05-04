@@ -1,13 +1,16 @@
-import { ToolsPanel } from "@/components/ToolsPanel";
-import { recentProjectChatsFromActivity } from "@/components/projects/recent-project-chats";
-import { ToolsReturnControl } from "@/components/tools/ToolsReturnControls";
+import { redirect } from "next/navigation";
 import { requireConsolePageAuth } from "@/lib/console-auth";
-import { listProjects, listWorkflows } from "@/lib/store";
+import { listProjects } from "@/lib/store";
 
 export default async function ToolsPage() {
   await requireConsolePageAuth("/tools");
-  const [projects, workflows] = await Promise.all([listProjects(), listWorkflows()]);
-  const recentProjectChats = recentProjectChatsFromActivity(projects, workflows);
+  const latestProject = await latestProjectId();
+  redirect(latestProject ? `/projects/${latestProject}?panel=tools` : "/projects/new");
+}
 
-  return <ToolsPanel headerActions={<ToolsReturnControl recentProjectChats={recentProjectChats} />} />;
+async function latestProjectId(): Promise<string | null> {
+  const projects = await listProjects();
+  return projects
+    .slice()
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0]?.projectId ?? null;
 }

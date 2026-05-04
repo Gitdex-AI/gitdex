@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createJob, getAgentSession, getProject, getWorkflow, listJobs, saveAgentSession, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
+import { workflowWorkspaceHref } from "@/lib/workspace-url";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; sessionKey: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -40,6 +41,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     ok: true,
     jobId: job.jobId,
     runStatus: job.status,
-    redirectTo: `/projects/${project.projectId}/workflows/${session.workflowId}?autorun=1`
+    redirectTo: workflowWorkspaceHref({ projectId: project.projectId, workflowId: session.workflowId, autorun: true })
   });
 }

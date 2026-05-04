@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const { projectId, workflowId } = await params;
   const form = await request.formData();
   const [project, workflow, jobs] = await Promise.all([getProject(projectId), getWorkflow(workflowId), listJobs(projectId)]);
-  if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);
+  if (!project) return redirect(request, `/?error=${encodeURIComponent("Project not found.")}`);
   const returnTo = safeProjectReturnPath(project.projectId, String(form.get("returnTo") ?? ""));
   if (!workflow || workflow.projectId !== project.projectId) {
     return redirect(request, withMessage(returnTo, "error", "Requirement not found."));

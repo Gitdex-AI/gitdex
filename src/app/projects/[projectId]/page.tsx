@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { Archive, ArrowLeft, GitBranch, Info, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
+import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
 import { ProjectAutoSync } from "@/components/ProjectAutoSync";
@@ -37,6 +38,7 @@ import { getIssueQaStatus } from "@/lib/qa-status";
 import { resolveProjectWorkspacePanelNavAction, type ProjectWorkspacePanel } from "@/lib/return-navigation";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows, listProjects } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
+import { workflowWorkspaceHref } from "@/lib/workspace-url";
 import type { AutoRunState } from "@/lib/auto-run-control";
 import type { WorkflowProgressStep } from "@/lib/workflow-progress";
 import {
@@ -125,12 +127,16 @@ export default async function ProjectDetailPage({
           queuedJobId={queuedJobId}
           activeWorkflow={latestWorkflow}
           autoRunState={autoRunState}
-          autorunEnabled={query.autorun === "1"}
           activePanel={activePanel}
           switcherProjects={switcherProjects}
         />
 
         <main className="chat-panel">
+          <ProjectAutoRunJob
+            projectId={project.projectId}
+            enabled={query.autorun === "1"}
+            redirectTo={workflowWorkspaceHref({ projectId: project.projectId, workflowId: latestWorkflow?.workflowId ?? queuedWorkflowId, jobId: queuedJobId })}
+          />
           {activePanel ? (
             <WorkspacePanelContent panel={activePanel} project={project} projects={projects} workflows={sortedWorkflows} jobs={jobs} ghUserLogin={ghUserLogin} message={query.message} error={query.error} />
           ) : (
@@ -300,7 +306,6 @@ function ProjectWorkspaceSidebar(input: {
   queuedJobId: string | null;
   activeWorkflow: WorkflowRecord | null;
   autoRunState: AutoRunState | null;
-  autorunEnabled: boolean;
   activePanel: WorkspacePanel | null;
   switcherProjects: ComponentProps<typeof ProjectSwitcher>["projects"];
 }) {
@@ -710,7 +715,7 @@ function renderRequirementRows(projectId: string, workflows: WorkflowRecord[], j
       <div key={workflow.workflowId} className="requirement-row">
         <div className="requirement-row-body">
           <div className="requirement-row-main">
-            <Link href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row-link">
+            <Link href={workflowWorkspaceHref({ projectId, workflowId: workflow.workflowId })} className="requirement-row-link">
               <Text size="sm" fw={780} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
               <Text size="xs" c="dimmed" mt={3} lineClamp={2}>{workflow.userRequirement}</Text>
             </Link>
@@ -785,7 +790,7 @@ function renderWorkflowActionRows(projectId: string, workflows: WorkflowRecord[]
       </div>
       <Group gap={6} wrap="nowrap">
         <Link
-          href={`/projects/${projectId}/workflows/${workflow.workflowId}`}
+          href={workflowWorkspaceHref({ projectId, workflowId: workflow.workflowId })}
           className="action-pill-link"
         >
           Open
@@ -1101,7 +1106,7 @@ function renderMergeIssueRows(projectId: string, workflows: WorkflowRecord[]): R
 function renderCompletedWorkflowRows(projectId: string, workflows: WorkflowRecord[]): ReactNode {
   if (!workflows.length) return <Text size="xs" c="dimmed">No completed workflows yet.</Text>;
   return workflows.slice(0, 6).map((workflow) => (
-    <Link key={workflow.workflowId} href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="completed-workflow-row">
+    <Link key={workflow.workflowId} href={workflowWorkspaceHref({ projectId, workflowId: workflow.workflowId })} className="completed-workflow-row">
       <Group justify="space-between" wrap="nowrap">
         <Text size="sm" fw={700} lineClamp={1}>{workflow.trackingCode ?? workflow.workflowId}</Text>
         <Badge size="xs" variant="light">done</Badge>

@@ -10,7 +10,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
-  if (!project) return redirect(request, `/projects?error=${encodeURIComponent("Project not found.")}`);
+  if (!project) return redirect(request, `/?error=${encodeURIComponent("Project not found.")}`);
 
   const form = await request.formData();
   const workflowId = String(form.get("workflowId") ?? "").trim();

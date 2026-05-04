@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (unauthorized) return unauthorized;
   const { projectId } = await params;
   const project = await getProject(projectId);
-  if (!project) return NextResponse.redirect(new URL(`/projects?error=${encodeURIComponent("Project not found.")}`, request.url), { status: 303 });
+  if (!project) return NextResponse.redirect(new URL(`/?error=${encodeURIComponent("Project not found.")}`, request.url), { status: 303 });
 
   const workflow = await findOrCreateDraftWorkflow(project);
   const next = new URL(`/projects/${project.projectId}`, request.url);

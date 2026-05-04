@@ -10,7 +10,7 @@ const githubLocalSource = await readFile(new URL("../src/lib/github-local.ts", i
 const projectTriageSource = await readFile(new URL("../src/lib/project-triage.ts", import.meta.url), "utf8");
 
 test("GitHub triage page and API read local workflow cache instead of live gh", () => {
-  assert.match(triagePageSource, /ProjectGitHubTriagePanel/);
+  assert.match(triagePageSource, /panel=triage/);
   assert.match(triagePanelSource, /getProjectTriageFromWorkflows/);
   assert.match(triageApiSource, /getProjectTriageFromWorkflows/);
   assert.doesNotMatch(triagePanelSource, /getProjectTriageWithGh/);

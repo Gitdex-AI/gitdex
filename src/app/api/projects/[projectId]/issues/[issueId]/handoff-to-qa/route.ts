@@ -4,6 +4,7 @@ import { getIssueStage, transitionIssueStage } from "@/lib/issue-stage";
 import { allocateQaPreviewPort, qaPreviewUrl } from "@/lib/qa-preview-port";
 import { cancelPendingJobs, createJob, getProject, listJobs, listProjectWorkflows, saveWorkflow } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
+import { workflowWorkspaceHref } from "@/lib/workspace-url";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ projectId: string; issueId: string }> }) {
   const unauthorized = await requireConsoleApiAuth();
@@ -66,7 +67,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
     payload: { workflowId: workflow.workflowId, issueId: issue.issueId, prUrl: issue.prUrl, branch: issue.branch ?? null, headSha, qaAttempt, previewPort, previewUrl }
   });
 
-  return NextResponse.json({ ok: true, jobId: job.jobId, redirectTo: `/projects/${project.projectId}/workflows/${workflow.workflowId}?autorun=1` });
+  return NextResponse.json({ ok: true, jobId: job.jobId, redirectTo: workflowWorkspaceHref({ projectId: project.projectId, workflowId: workflow.workflowId, autorun: true }) });
 }
 
 function nextQaAttempt(jobs: Awaited<ReturnType<typeof listJobs>>, workflowId: string, issueId: string): number {
