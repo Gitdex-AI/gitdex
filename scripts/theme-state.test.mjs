@@ -13,8 +13,10 @@ import {
   updateSystemThemePreference,
   updateThemeMode
 } from "../src/components/theme/theme-state.ts";
+import { designTokens, staticTokens } from "../src/lib/design-tokens.ts";
 
 const themeSelectorCss = readFileSync(new URL("../src/components/theme/theme-selector.module.css", import.meta.url), "utf8");
+const globalsCss = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
 
 function createStorageMock(initialValue = null) {
   const writes = [];
@@ -59,6 +61,26 @@ function contrastRatio(foreground, background) {
   const darker = Math.min(foregroundLuminance, backgroundLuminance);
 
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+function extractCssVariables(source, selector) {
+  const start = source.indexOf(selector);
+  assert.notEqual(start, -1, `Expected ${selector} in globals.css.`);
+  const blockStart = source.indexOf("{", start);
+  let depth = 1;
+  let index = blockStart + 1;
+  for (; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) break;
+    }
+  }
+
+  return Object.fromEntries(
+    Array.from(source.slice(blockStart + 1, index).matchAll(/\s*(--[\w-]+):\s*([^;]+);/g))
+      .map(([, property, value]) => [property, value.trim()])
+  );
 }
 
 describe("theme state helpers", () => {
@@ -111,6 +133,27 @@ describe("theme state helpers", () => {
       for (const token of requiredTokens) {
         assert.match(themePalettes[theme][token], /\S/, `Expected ${token} in ${theme} theme palette.`);
       }
+    }
+  });
+
+  it("keeps the runtime palette sourced from design tokens", () => {
+    assert.deepEqual(themePalettes, {
+      light: Object.fromEntries(Object.entries(designTokens.light).filter(([token]) => token.startsWith("--app-"))),
+      dark: Object.fromEntries(Object.entries(designTokens.dark).filter(([token]) => token.startsWith("--app-")))
+    });
+  });
+
+  it("keeps globals.css app variables aligned with design tokens", () => {
+    const lightCssTokens = extractCssVariables(globalsCss, ":root");
+    const darkCssTokens = extractCssVariables(globalsCss, "html[data-theme=\"dark\"]");
+
+    for (const [token, value] of Object.entries(designTokens.light)) {
+      assert.equal(lightCssTokens[token], value, `Expected light ${token} to match design tokens.`);
+    }
+
+    for (const [token, value] of Object.entries(designTokens.dark)) {
+      if (token in staticTokens) continue;
+      assert.equal(darkCssTokens[token], value, `Expected dark ${token} to match design tokens.`);
     }
   });
 

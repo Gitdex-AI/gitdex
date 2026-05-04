@@ -15,14 +15,13 @@ test("non-chat return browser smoke plan covers required scenarios and commands"
   assert.match(smokePlan, /Click the active Settings icon again/);
   assert.match(smokePlan, /in-page Back to workspace control/);
 
-  assert.match(smokePlan, /Project Redirect Return/);
-  assert.match(smokePlan, /Visit `\/projects`/);
-  assert.match(smokePlan, /redirects to the latest project workspace/);
+  assert.doesNotMatch(smokePlan, /Project Redirect Return/);
+  assert.doesNotMatch(smokePlan, /Visit `\/projects`/);
 
   assert.match(smokePlan, /Tools Return/);
+  assert.match(smokePlan, /Open Tools from the project workspace Settings panel/);
   assert.match(smokePlan, /Click the in-page Back control/);
   assert.match(smokePlan, /returns to the prior project chat page/);
-  assert.match(smokePlan, /falls back to the most recent project chat/);
 
   assert.match(smokePlan, /Unsaved Settings Confirmation/);
   assert.match(smokePlan, /Cancel the browser confirmation/);

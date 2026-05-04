@@ -1,5 +1,4 @@
 import type { IssueRecord } from "./types.ts";
-// @ts-expect-error Node strip-types tests require the explicit source extension.
 import { getIssueStage } from "./issue-stage.ts";
 
 export function canAutoRunDeveloper(issue: IssueRecord): boolean {
