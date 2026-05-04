@@ -2,6 +2,13 @@ export const themeStorageKey = "gitdex.theme.mode";
 
 export type ThemeMode = "system" | "light" | "dark";
 export type EffectiveTheme = "light" | "dark";
+export type ThemeModeStorage = Pick<Storage, "getItem" | "setItem">;
+
+export type ThemePreferenceState = {
+  mode: ThemeMode;
+  prefersDark: boolean;
+  effectiveTheme: EffectiveTheme;
+};
 
 export const themeModes: ThemeMode[] = ["system", "light", "dark"];
 export const themePalettes: Record<EffectiveTheme, Record<string, string>> = {
@@ -36,4 +43,49 @@ export function resolveEffectiveTheme(
   }
 
   return mode;
+}
+
+export function createThemePreferenceState(
+  mode: ThemeMode,
+  prefersDark: boolean
+): ThemePreferenceState {
+  return {
+    mode,
+    prefersDark,
+    effectiveTheme: resolveEffectiveTheme(mode, prefersDark)
+  };
+}
+
+export function updateThemeMode(
+  state: ThemePreferenceState,
+  mode: ThemeMode
+): ThemePreferenceState {
+  return createThemePreferenceState(mode, state.prefersDark);
+}
+
+export function updateSystemThemePreference(
+  state: ThemePreferenceState,
+  prefersDark: boolean
+): ThemePreferenceState {
+  return createThemePreferenceState(state.mode, prefersDark);
+}
+
+export function readStoredThemeMode(storage: ThemeModeStorage): ThemeMode {
+  try {
+    return normalizeThemeMode(storage.getItem(themeStorageKey));
+  } catch (error) {
+    return "system";
+  }
+}
+
+export function persistThemeMode(
+  storage: ThemeModeStorage,
+  mode: ThemeMode
+): boolean {
+  try {
+    storage.setItem(themeStorageKey, mode);
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
