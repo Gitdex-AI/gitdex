@@ -373,7 +373,9 @@ function canResolveMessageJob(message: TimelineMessage, jobs: JobRecord[]): mess
   return job?.status === "running" && isTerminalSession(message.session);
 }
 
-function messageWorkflowLabel(message: TimelineMessage, workflows: WorkflowRecord[]): string | null {
+function messageContextLabel(message: TimelineMessage, workflows: WorkflowRecord[]): string | null {
+  const sessionId = message.session?.sessionId?.trim();
+  if (sessionId) return sessionId.slice(-8);
   const workflowId = message.session?.workflowId;
   if (!workflowId) return null;
   return findWorkflow(workflowId, workflows)?.trackingCode ?? workflowId;
@@ -539,7 +541,7 @@ function MessageList({
                 <Group gap="xs" mb={6} justify="space-between" align="center">
                   <Group gap={6}>
                     <Badge variant="light">{message.sourceLabel}</Badge>
-                    {messageWorkflowLabel(message, workflows) ? <Badge size="xs" variant="outline">{messageWorkflowLabel(message, workflows)}</Badge> : null}
+                    {messageContextLabel(message, workflows) ? <Badge size="xs" variant="outline">{messageContextLabel(message, workflows)}</Badge> : null}
                     {message.session?.issueId ? <Badge size="xs" variant="outline">{message.session.issueId}</Badge> : null}
                     {messageExecutionDuration(message) ? <Badge size="xs" color="gray" variant="light">{messageExecutionDuration(message)}</Badge> : null}
                   </Group>
