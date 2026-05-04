@@ -41,4 +41,10 @@ assert.match(
   "Completed or merged issues should not fall through to the completed-developer-job Run Dev fallback"
 );
 
+assert.match(
+  projectPageSource,
+  /const visibleWorkflows = sortedWorkflows\.filter\(\(workflow\) => !workflow\.archivedAt\);[\s\S]*const latestWorkflow = queuedWorkflow \?\? visibleActiveWorkflows\[0\] \?\? visibleWorkflows\[0\] \?\? null;/,
+  "Archived requirements should be hidden from the default sidebar workflow selection"
+);
+
 console.log("chat UI source verification passed");

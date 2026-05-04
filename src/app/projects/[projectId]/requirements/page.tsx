@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Badge, Button, Code, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { ArrowLeft } from "lucide-react";
+import { Archive, ArrowLeft } from "lucide-react";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { getProject, listProjectWorkflows } from "@/lib/store";
 import type { WorkflowRecord } from "@/lib/types";
@@ -16,6 +16,7 @@ export default async function ProjectRequirementsPage({
   if (!project) notFound();
 
   const workflows = (await listProjectWorkflows(project.projectId)).sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const archivedCount = workflows.filter((workflow) => workflow.archivedAt).length;
 
   return (
     <Stack gap="lg">
@@ -27,6 +28,7 @@ export default async function ProjectRequirementsPage({
           <Group gap="sm" mt="sm">
             <Title order={1}>Requirements</Title>
             <Badge variant="light">{workflows.length} total</Badge>
+            {archivedCount ? <Badge variant="outline" color="gray">{archivedCount} archived</Badge> : null}
           </Group>
           <Text c="dimmed" size="sm">
             Numbered requirements for {project.name}.
@@ -55,19 +57,33 @@ export default async function ProjectRequirementsPage({
 
 function RequirementListRow({ projectId, workflow }: { projectId: string; workflow: WorkflowRecord }) {
   return (
-    <a href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row">
+    <div className="requirement-row">
       <div className="requirement-row-body">
         <div className="requirement-row-main">
-          <Group gap="xs">
-            <Code>{workflow.trackingCode ?? workflow.workflowId}</Code>
-            <Badge size="xs" variant="light">{workflow.status}</Badge>
-            <Badge size="xs" variant="outline">{workflow.issues.length} issue{workflow.issues.length === 1 ? "" : "s"}</Badge>
-          </Group>
-          <Text size="sm" mt={6} lineClamp={2}>{workflow.userRequirement}</Text>
-          <Text size="xs" c="dimmed" mt={4}>Created {formatDate(workflow.createdAt)}</Text>
+          <a href={`/projects/${projectId}/workflows/${workflow.workflowId}`} className="requirement-row-link">
+            <Group gap="xs">
+              <Code>{workflow.trackingCode ?? workflow.workflowId}</Code>
+              <Badge size="xs" variant="light">{workflow.status}</Badge>
+              {workflow.archivedAt ? <Badge size="xs" variant="outline" color="gray">Archived</Badge> : null}
+              <Badge size="xs" variant="outline">{workflow.issues.length} issue{workflow.issues.length === 1 ? "" : "s"}</Badge>
+            </Group>
+            <Text size="sm" mt={6} lineClamp={2}>{workflow.userRequirement}</Text>
+            <Text size="xs" c="dimmed" mt={4}>{workflow.archivedAt ? `Archived ${formatDate(workflow.archivedAt)}` : `Created ${formatDate(workflow.createdAt)}`}</Text>
+          </a>
         </div>
+        {!workflow.archivedAt && workflow.trackingCode ? <ArchiveRequirementForm projectId={projectId} workflowId={workflow.workflowId} /> : null}
       </div>
-    </a>
+    </div>
+  );
+}
+
+function ArchiveRequirementForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
+  return (
+    <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/archive`}>
+      <Button type="submit" variant="subtle" color="gray" size="compact-xs" radius="xl" leftSection={<Archive size={14} />}>
+        Archive
+      </Button>
+    </form>
   );
 }
 

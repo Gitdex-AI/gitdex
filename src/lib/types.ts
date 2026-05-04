@@ -138,6 +138,7 @@ export type WorkflowRecord = {
   createdAt: string;
   paused?: boolean;
   pausedAt?: string | null;
+  archivedAt?: string | null;
   projectId?: string | null;
   projectName?: string | null;
   issues: IssueRecord[];

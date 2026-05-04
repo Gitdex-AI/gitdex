@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Alert, Badge, Button, Code, Group, Stack, Text } from "@mantine/core";
-import { FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
+import { Archive, FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
@@ -79,13 +79,14 @@ export default async function ProjectDetailPage({
   const archivedSessions = allDynamicSessions.filter((session) => session.archivedAt);
   const dynamicSessions = allDynamicSessions.filter((session) => !session.archivedAt);
   const sortedWorkflows = sortWorkflowsLatestFirst(workflows);
-  const activeWorkflows = sortedWorkflows.filter((workflow) => workflow.status !== "done");
-  const doneWorkflows = sortedWorkflows.filter((workflow) => workflow.status === "done");
+  const visibleWorkflows = sortedWorkflows.filter((workflow) => !workflow.archivedAt);
+  const activeWorkflows = visibleWorkflows.filter((workflow) => workflow.status !== "done");
+  const doneWorkflows = visibleWorkflows.filter((workflow) => workflow.status === "done");
   const queuedWorkflowId = query.workflow ?? null;
   const queuedJobId = query.job ?? null;
   const queuedWorkflow = queuedWorkflowId ? sortedWorkflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
-  const latestWorkflow = queuedWorkflow ?? visibleActiveWorkflows[0] ?? sortedWorkflows[0] ?? null;
+  const latestWorkflow = queuedWorkflow ?? visibleActiveWorkflows[0] ?? visibleWorkflows[0] ?? null;
   const pmSession = findWorkflowPmSession(sessions, project.projectId, latestWorkflow);
   const roleSession = activeSession ?? pmSession ?? await getAgentSession(`${project.projectId}:${activeRole}`);
   const readyForPlannerPayload = findReadyForPlannerPayload(pmSession ?? (activeRole === "product_manager" ? roleSession : null));
@@ -93,7 +94,7 @@ export default async function ProjectDetailPage({
     ? readyForPlannerPayload
     : null;
   const hasMatchingPmHandoffWorkflow = readyForPlannerPayload
-    ? sortedWorkflows.some((workflow) => workflow.workflowId !== latestWorkflow?.workflowId && workflow.userRequirement === formatPmHandoffPayload(readyForPlannerPayload))
+    ? visibleWorkflows.some((workflow) => workflow.workflowId !== latestWorkflow?.workflowId && workflow.userRequirement === formatPmHandoffPayload(readyForPlannerPayload))
     : false;
   const hasUnqueuedPmHandoff = Boolean(readyForPlannerPayload && !latestWorkflow && !hasMatchingPmHandoffWorkflow && !queuedWorkflow && !isInspectingIssueSession);
   const workflowPanelWorkflows = hasUnqueuedPmHandoff ? [] : latestWorkflow ? [latestWorkflow] : [];
@@ -118,7 +119,7 @@ export default async function ProjectDetailPage({
           pmSession={pmSession}
           workflows={workflowPanelWorkflows}
           visibleActiveWorkflows={visibleActiveWorkflows}
-          requirementWorkflows={sortedWorkflows}
+          requirementWorkflows={visibleWorkflows}
           doneWorkflows={doneWorkflows}
           sessions={sessions}
           jobs={jobs}
@@ -386,13 +387,16 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
           <div className="requirement-tree-issues">
             <Group justify="space-between" align="center" gap="xs" mb="xs" wrap="nowrap">
               <Text size="xs" fw={820} tt="uppercase" c="dimmed">Issues</Text>
-              <ProjectAutoRunIssuesButton
-                projectId={projectId}
-                workflowIds={[workflow.workflowId]}
-                issueIds={workflow.issues.map((issue) => issue.issueId)}
-                initialState={autoRunState}
-                runningLabel={activeAutoRunLabel(jobs, [workflow])}
-              />
+              <Group gap={6} wrap="nowrap">
+                <ArchiveRequirementForm projectId={projectId} workflowId={workflow.workflowId} />
+                <ProjectAutoRunIssuesButton
+                  projectId={projectId}
+                  workflowIds={[workflow.workflowId]}
+                  issueIds={workflow.issues.map((issue) => issue.issueId)}
+                  initialState={autoRunState}
+                  runningLabel={activeAutoRunLabel(jobs, [workflow])}
+                />
+              </Group>
             </Group>
             {renderGithubIssueRows(projectId, [workflow], sessions, jobs, queuedJobId, autoRunState)}
           </div>
@@ -414,6 +418,16 @@ function DiscardDraftRequirementForm({ projectId, workflowId }: { projectId: str
           Discard
         </Button>
       </Group>
+    </form>
+  );
+}
+
+function ArchiveRequirementForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
+  return (
+    <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/archive`}>
+      <Button type="submit" variant="subtle" color="gray" size="compact-xs" radius="xl" leftSection={<Archive size={14} />}>
+        Archive
+      </Button>
     </form>
   );
 }

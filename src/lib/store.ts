@@ -139,6 +139,15 @@ export async function setWorkflowPaused(workflowId: string, paused: boolean): Pr
   return workflow;
 }
 
+export async function archiveWorkflow(workflowId: string): Promise<WorkflowRecord | null> {
+  const workflow = await getWorkflow(workflowId);
+  if (!workflow) return null;
+  workflow.archivedAt = new Date().toISOString();
+  workflow.timeline.push(`Requirement archived at ${workflow.archivedAt}.`);
+  await saveWorkflow(workflow);
+  return workflow;
+}
+
 export async function saveWorkflow(workflow: WorkflowRecord): Promise<void> {
   getDb()
     .prepare(
