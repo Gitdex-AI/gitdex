@@ -414,22 +414,17 @@ pre,
 }
 
 .project-sidebar-draft {
-  margin-top: 10px;
-  padding: 10px 0 0;
+  margin-top: 8px;
+  padding: 8px 0 0;
   border-top: 1px solid #edf2f7;
 }
 
 .project-sidebar-draft .handoff-box,
 .project-sidebar-draft .draft-discard-form {
-  padding: 8px 0;
+  padding: 0;
   background: transparent;
   border: 0;
-  border-top: 1px solid #edf2f7;
   border-radius: 0;
-}
-
-.project-sidebar-draft .handoff-box {
-  border-top: 0;
 }
 
 .requirement-tree-item {

@@ -340,11 +340,7 @@ function ProjectWorkspaceSidebar(input: {
           </form>
           {input.activeWorkflow && isDiscardableDraftWorkflow(project.projectId, input.activeWorkflow) ? (
             <div className="project-sidebar-draft">
-              <Text size="xs" fw={820} tt="uppercase" c="dimmed">Draft</Text>
-              <Text size="xs" c="dimmed" lineClamp={1} mt={2}>Continue in chat.</Text>
-              <Stack gap={6} mt="xs">
-                <DiscardDraftRequirementForm projectId={project.projectId} workflowId={input.activeWorkflow.workflowId} />
-              </Stack>
+              <DiscardDraftRequirementForm projectId={project.projectId} workflowId={input.activeWorkflow.workflowId} />
             </div>
           ) : null}
         </div>
