@@ -590,7 +590,7 @@ body.workspace-mode-body .topbar {
 
 .requirement-tree-item.active {
   border-color: #bfdbfe;
-  background: #eff6ff;
+  background: #ffffff;
 }
 
 .requirement-tree-link {
@@ -602,6 +602,10 @@ body.workspace-mode-body .topbar {
 
 .requirement-tree-link:hover {
   background: #f8fafc;
+}
+
+.requirement-tree-item.active .requirement-tree-link {
+  background: #eff6ff;
 }
 
 .requirement-tree-topline {
@@ -640,7 +644,11 @@ body.workspace-mode-body .topbar {
 }
 
 .requirement-tree-issues {
-  padding: 0 8px 8px 18px;
+  margin-top: 2px;
+  padding: 8px 8px 8px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #dbeafe;
+  border-radius: 0 0 8px 8px;
 }
 
 .requirement-tree-issues .github-issue-row {
