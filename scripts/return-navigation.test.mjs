@@ -107,6 +107,20 @@ test("active project workspace panel nav re-click returns to the same project wo
   });
 });
 
+test("active project workspace panel nav preserves encoded project id", () => {
+  const action = resolveProjectWorkspacePanelNavAction({
+    projectId: "project/a",
+    panel: "settings",
+    activePanel: "settings"
+  });
+
+  assert.deepEqual(action, {
+    href: "/projects/project%2Fa",
+    active: true,
+    action: "return"
+  });
+});
+
 test("inactive project workspace panel nav opens the requested panel for the same project", () => {
   const action = resolveProjectWorkspacePanelNavAction({
     projectId: "project-a",
