@@ -16,7 +16,7 @@ type ApiFailure = {
 
 export function SelfUpdateDialog({
   version,
-  triggerClassName = "topbar-version",
+  triggerClassName = "self-update-trigger",
   triggerLabel
 }: {
   version: string;

@@ -10,7 +10,7 @@ import {
   type ProjectSwitcherProject
 } from "@/components/project-switcher/routes";
 
-export function ProjectSwitcher({ projects, variant = "topbar" }: { projects: ProjectSwitcherProject[]; variant?: "topbar" | "sidebar" }) {
+export function ProjectSwitcher({ projects, variant = "sidebar" }: { projects: ProjectSwitcherProject[]; variant?: "sidebar" }) {
   const pathname = usePathname();
   const router = useRouter();
   const currentProject = currentProjectFromPathname(projects, pathname);

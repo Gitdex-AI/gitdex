@@ -4,24 +4,12 @@ import packageJson from "../package.json" with { type: "json" };
 
 const layoutSource = await readFile(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
 
-assert.match(
+assert.doesNotMatch(
   layoutSource,
-  /import packageJson from "\.\.\/\.\.\/package\.json";/,
-  "Root layout should source the header version from package.json"
-);
-
-assert.match(
-  layoutSource,
-  /<HeaderSecondaryActions[^>]*projects=\{headerProjects\}[^>]*version=\{packageJson\.version\}[^>]*\/>/,
-  "Root layout should wire the package version into the compact header actions entry point"
-);
-
-assert.match(
-  layoutSource,
-  /version=\{packageJson\.version\}/,
-  "Root layout should pass the package version without duplicating the version literal"
+  /packageJson|version=\{packageJson\.version\}|HeaderSecondaryActions/,
+  "Root layout should not fetch package version only for the removed topbar"
 );
 
 assert.ok(packageJson.version, "package.json should define a version value");
 
-console.log(`header version verification passed for ${packageJson.version}`);
+console.log(`header removal version verification passed for ${packageJson.version}`);
