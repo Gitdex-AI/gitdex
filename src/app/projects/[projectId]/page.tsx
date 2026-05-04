@@ -193,8 +193,8 @@ function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | nu
 }
 
 function WorkspacePanelContent({ panel, project, projects, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; projects: ProjectRecord[]; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
-  const returnTo = `/projects/${project.projectId}?panel=${panel}`;
-  const workspaceHref = `/projects/${project.projectId}`;
+  const workspaceHref = `/projects/${encodeURIComponent(project.projectId)}`;
+  const returnTo = `${workspaceHref}?panel=${panel}`;
   const recentProjectChats = projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }));
   return (
     <div className="workspace-panel-content">
@@ -205,7 +205,7 @@ function WorkspacePanelContent({ panel, project, projects, workflows, jobs, mess
       </Group>
       {panel === "projects" ? <ProjectsPanel message={message} error={error} /> : null}
       {panel === "tools" ? <ToolsPanel /> : null}
-      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${project.projectId}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
+      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`${workspaceHref}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
       {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
     </div>
   );

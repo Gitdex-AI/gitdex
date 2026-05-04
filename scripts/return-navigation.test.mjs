@@ -161,3 +161,17 @@ test("inactive project workspace panel nav opens the requested panel for the sam
     action: "open"
   });
 });
+
+test("inactive project workspace panel nav preserves encoded project id", () => {
+  const action = resolveProjectWorkspacePanelNavAction({
+    projectId: "project/a",
+    panel: "tools",
+    activePanel: "settings"
+  });
+
+  assert.deepEqual(action, {
+    href: "/projects/project%2Fa?panel=tools",
+    active: false,
+    action: "open"
+  });
+});
