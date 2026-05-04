@@ -266,7 +266,7 @@ function ProjectWorkspaceSidebar(input: {
           {input.activeWorkflow && isDiscardableDraftWorkflow(project.projectId, input.activeWorkflow) ? (
             <div className="project-sidebar-draft">
               <Text size="xs" fw={820} tt="uppercase" c="dimmed">Draft</Text>
-              <Text size="xs" c="dimmed" lineClamp={2} mt={2}>Confirm the draft to create a numbered requirement and GitHub issues.</Text>
+              <Text size="xs" c="dimmed" lineClamp={1} mt={2}>Confirm to create issues.</Text>
               <Stack gap={6} mt="xs">
                 {input.readyForArchitectPayload ? <ProjectHandoffForm projectId={project.projectId} payload={input.readyForArchitectPayload} workflowId={input.activeWorkflow.workflowId} /> : null}
                 <DiscardDraftRequirementForm projectId={project.projectId} workflowId={input.activeWorkflow.workflowId} />
@@ -408,7 +408,7 @@ function DiscardDraftRequirementForm({ projectId, workflowId }: { projectId: str
       <Group justify="space-between" gap="sm" wrap="nowrap">
         <div>
           <Text size="sm" fw={760}>Draft requirement</Text>
-          <Text size="xs" c="dimmed">Discard this unconfirmed draft and remove its PM chat.</Text>
+          <Text size="xs" c="dimmed">Remove draft chat.</Text>
         </div>
         <Button type="submit" variant="light" color="red" size="compact-xs" radius="xl" leftSection={<Trash2 size={14} />}>
           Discard
