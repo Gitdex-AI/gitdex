@@ -1,23 +1,19 @@
 import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, Paper, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
 import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
 import { PageTitle } from "@/components/PageTitle";
-import { SettingsReturnNavigation } from "@/components/settings/SettingsReturnNavigation";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
 import { getSettings } from "@/lib/settings";
-import type { RecentProjectChat } from "@/lib/return-navigation";
 
 export async function SettingsPanel({
   message,
   error,
   returnTo,
-  toolsHref = "/tools",
-  recentProjectChats = []
+  toolsHref = "/tools"
 }: {
   message?: string;
   error?: string;
   returnTo?: string;
   toolsHref?: string;
-  recentProjectChats?: RecentProjectChat[];
 }) {
   const settings = await getSettings();
   const hasGitHubKey = Boolean(settings.githubUsername && settings.githubSshPrivateKeyPath && settings.githubSshPublicKey);
@@ -25,9 +21,6 @@ export async function SettingsPanel({
   return (
     <>
       <PageTitle title="Settings" />
-      <Group justify="flex-start" mb="md">
-        <SettingsReturnNavigation recentProjectChats={recentProjectChats} />
-      </Group>
       {(message || error) && (
         <Alert color={error ? "red" : "blue"} icon={<Info size={16} />} mb="md">
           {message ?? error}

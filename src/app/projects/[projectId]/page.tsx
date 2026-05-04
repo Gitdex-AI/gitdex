@@ -183,7 +183,6 @@ function WorkspacePanelContent({ panel, project, projects, workflows, jobs, ghUs
   const workspaceHref = `/projects/${encodeURIComponent(project.projectId)}`;
   const returnTo = `${workspaceHref}?panel=${panel}`;
   const guardSettingsReturn = shouldGuardWorkspaceSettingsReturn({ panel });
-  const recentProjectChats = projects.map(({ projectId, createdAt }) => ({ projectId, createdAt }));
   return (
     <div className="workspace-panel-content">
       <Group justify="flex-start" mb="md">
@@ -198,7 +197,7 @@ function WorkspacePanelContent({ panel, project, projects, workflows, jobs, ghUs
         </Button>
       </Group>
       {panel === "tools" ? <ToolsPanel /> : null}
-      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`${workspaceHref}?panel=tools`} recentProjectChats={recentProjectChats} /> : null}
+      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`${workspaceHref}?panel=tools`} /> : null}
       {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
       {panel === "triage" ? <ProjectGitHubTriagePanel project={project} ghUserLogin={ghUserLogin} /> : null}
     </div>
