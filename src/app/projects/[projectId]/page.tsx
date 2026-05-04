@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Alert, Badge, Button, Code, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { Archive, FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
+import { Archive, ArrowLeft, FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
@@ -34,6 +34,7 @@ import { findReadyForPlannerPayload, formatPmHandoffPayload } from "@/lib/pm-han
 import { findDependencyIssue, isDependencySatisfied } from "@/lib/issue-dependencies";
 import { getIssueStage, type IssueStage } from "@/lib/issue-stage";
 import { getIssueQaStatus } from "@/lib/qa-status";
+import { resolveProjectWorkspacePanelNavAction, type ProjectWorkspacePanel } from "@/lib/return-navigation";
 import { getAgentSession, getProject, listAgentSessions, listJobs, listProjectWorkflows, listProjects } from "@/lib/store";
 import type { AgentSessionRecord, IssueRecord, JobRecord, ProjectRecord, WorkflowRecord } from "@/lib/types";
 import type { AutoRunState } from "@/lib/auto-run-control";
@@ -184,7 +185,7 @@ function findWorkflowPmSession(sessions: AgentSessionRecord[], projectId: string
 }
 
 type WorkflowPhase = "requirements" | "github" | "operations";
-type WorkspacePanel = "projects" | "tools" | "settings" | "requirements";
+type WorkspacePanel = ProjectWorkspacePanel;
 
 function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | null {
   if (value === "projects" || value === "tools" || value === "settings" || value === "requirements") return value;
@@ -193,8 +194,14 @@ function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | nu
 
 function WorkspacePanelContent({ panel, project, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
   const returnTo = `/projects/${project.projectId}?panel=${panel}`;
+  const workspaceHref = `/projects/${project.projectId}`;
   return (
     <div className="workspace-panel-content">
+      <Group justify="flex-start" mb="md">
+        <Button component={Link} href={workspaceHref} variant="subtle" leftSection={<ArrowLeft size={16} />}>
+          Back to workspace
+        </Button>
+      </Group>
       {panel === "projects" ? <ProjectsPanel message={message} error={error} /> : null}
       {panel === "tools" ? <ToolsPanel /> : null}
       {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${project.projectId}?panel=tools`} /> : null}
@@ -304,6 +311,9 @@ function ProjectWorkspaceSidebar(input: {
 }) {
   const project = input.project;
   const draftWorkflow = input.requirementWorkflows.find((workflow) => isDiscardableDraftWorkflow(project.projectId, workflow)) ?? null;
+  const projectsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "projects", activePanel: input.activePanel });
+  const toolsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "tools", activePanel: input.activePanel });
+  const settingsPanelAction = resolveProjectWorkspacePanelNavAction({ projectId: project.projectId, panel: "settings", activePanel: input.activePanel });
 
   return (
     <aside className="project-workspace-sidebar" aria-label="Project workspace">
@@ -379,18 +389,20 @@ function ProjectWorkspaceSidebar(input: {
           <Group gap={4} wrap="nowrap">
             <ProjectSyncForm projectId={project.projectId} compact />
             <Link
-              href={`/projects/${project.projectId}?panel=projects`}
-              className={`sidebar-icon-link${input.activePanel === "projects" ? " active" : ""}`}
+              href={projectsPanelAction.href}
+              className={`sidebar-icon-link${projectsPanelAction.active ? " active" : ""}`}
               title="Projects"
               aria-label="Projects"
+              data-nav-action={projectsPanelAction.action}
             >
               <FolderKanban size={16} />
             </Link>
             <Link
-              href={`/projects/${project.projectId}?panel=tools`}
-              className={`sidebar-icon-link${input.activePanel === "tools" ? " active" : ""}`}
+              href={toolsPanelAction.href}
+              className={`sidebar-icon-link${toolsPanelAction.active ? " active" : ""}`}
               title="Tools"
               aria-label="Tools"
+              data-nav-action={toolsPanelAction.action}
             >
               <Wrench size={16} />
             </Link>
@@ -403,10 +415,11 @@ function ProjectWorkspaceSidebar(input: {
               <ListTodo size={16} />
             </Link>
             <Link
-              href={`/projects/${project.projectId}?panel=settings`}
-              className={`sidebar-icon-link${input.activePanel === "settings" ? " active" : ""}`}
+              href={settingsPanelAction.href}
+              className={`sidebar-icon-link${settingsPanelAction.active ? " active" : ""}`}
               title="Settings"
               aria-label="Settings"
+              data-nav-action={settingsPanelAction.action}
             >
               <Settings size={16} />
             </Link>

@@ -21,6 +21,8 @@ export type ConsoleNavAction = {
   action: "open" | "return";
 };
 
+export type ProjectWorkspacePanel = "projects" | "tools" | "settings" | "requirements";
+
 export const defaultConsoleReturnHref = "/projects";
 
 const nonChatConsolePaths = new Set(["/projects", "/projects/new", "/settings", "/tools"]);
@@ -57,6 +59,22 @@ export function resolveConsoleNavAction(input: {
 
   return {
     href: active ? input.returnDestination.href : itemHref,
+    active,
+    action: active ? "return" : "open"
+  };
+}
+
+export function resolveProjectWorkspacePanelNavAction(input: {
+  projectId: string;
+  panel: ProjectWorkspacePanel;
+  activePanel?: ProjectWorkspacePanel | null;
+}): ConsoleNavAction {
+  const workspaceHref = `/projects/${encodeURIComponent(input.projectId)}`;
+  const panelHref = `${workspaceHref}?panel=${input.panel}`;
+  const active = input.activePanel === input.panel;
+
+  return {
+    href: active ? workspaceHref : panelHref,
     active,
     action: active ? "return" : "open"
   };

@@ -5,6 +5,7 @@ import {
   isProjectChatHref,
   resolveConsoleNavAction,
   resolveConsoleReturnDestination,
+  resolveProjectWorkspacePanelNavAction,
   shouldRecordPriorConsoleDestination
 } from "../src/lib/return-navigation.ts";
 
@@ -87,6 +88,34 @@ test("inactive left-bottom navigation opens the selected destination", () => {
 
   assert.deepEqual(action, {
     href: "/projects/project-a?panel=tools",
+    active: false,
+    action: "open"
+  });
+});
+
+test("active project workspace panel nav re-click returns to the same project workspace", () => {
+  const action = resolveProjectWorkspacePanelNavAction({
+    projectId: "project-a",
+    panel: "tools",
+    activePanel: "tools"
+  });
+
+  assert.deepEqual(action, {
+    href: "/projects/project-a",
+    active: true,
+    action: "return"
+  });
+});
+
+test("inactive project workspace panel nav opens the requested panel for the same project", () => {
+  const action = resolveProjectWorkspacePanelNavAction({
+    projectId: "project-a",
+    panel: "settings",
+    activePanel: "tools"
+  });
+
+  assert.deepEqual(action, {
+    href: "/projects/project-a?panel=settings",
     active: false,
     action: "open"
   });
