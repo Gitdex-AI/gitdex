@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowDown, LoaderCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { FormEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { chatRoleLabel, parseChatTarget } from "@/lib/chat-routing";
+import { chatRoleLabel, parseChatTarget, type ChatTargetRole } from "@/lib/chat-routing";
 import type { AgentMessage, AgentSessionRecord, IssueRecord, JobRecord, WorkflowRecord } from "@/lib/types";
 
 type TimelineMessage = AgentMessage & {
@@ -46,6 +46,7 @@ export function ProjectChatArea({
   const formRef = useRef<HTMLFormElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
+  const [pendingTargetRole, setPendingTargetRole] = useState<ChatTargetRole>("product_manager");
   const [optimisticMessage, setOptimisticMessage] = useState<TimelineMessage | null>(null);
   const [liveJobs, setLiveJobs] = useState(jobs);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -68,6 +69,7 @@ export function ProjectChatArea({
 
   useEffect(() => {
     setPending(false);
+    setPendingTargetRole("product_manager");
     setOptimisticMessage(null);
   }, [sessions, inspectedSession?.updatedAt, readOnly]);
 
@@ -135,6 +137,7 @@ export function ProjectChatArea({
     const targetLabel = chatRoleLabel(target.role);
 
     setPending(true);
+    setPendingTargetRole(target.role);
     setOptimisticMessage({
       role: "user",
       kind: "message",
@@ -199,7 +202,7 @@ export function ProjectChatArea({
         </div>
       ) : null}
       <div ref={scrollRef} className="chat-scroll" onScroll={updateScrollPosition}>
-        <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} workflows={workflows} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} />
+        <MessageList projectId={projectId} sessions={visibleSessions} jobs={liveJobs} workflows={workflows} inspectedSession={readOnly ? inspectedSession : null} optimisticMessage={optimisticMessage} pending={pending} pendingTargetRole={pendingTargetRole} />
         <div aria-hidden="true" />
       </div>
       {!readOnly && (
@@ -238,7 +241,7 @@ export function ProjectChatArea({
                 {pending ? (
                   <>
                     <LoaderCircle size={14} className="chat-composer-spinner" />
-                    <Text size="xs" c="dimmed">Message sent. Codex agent is working...</Text>
+                    <Text size="xs" c="dimmed">Message sent. {chatRoleLabel(pendingTargetRole)} is working...</Text>
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">
@@ -475,7 +478,8 @@ function MessageList({
   workflows,
   inspectedSession,
   optimisticMessage,
-  pending
+  pending,
+  pendingTargetRole
 }: {
   projectId: string;
   sessions: AgentSessionRecord[];
@@ -484,6 +488,7 @@ function MessageList({
   inspectedSession: AgentSessionRecord | null;
   optimisticMessage: TimelineMessage | null;
   pending: boolean;
+  pendingTargetRole: ChatTargetRole;
 }) {
   const router = useRouter();
   const messages = [
@@ -546,15 +551,18 @@ function MessageList({
       ))}
       {pending && (
         <div className="chat-message assistant pending">
-          <div className="chat-avatar">A</div>
+          <div className="chat-avatar">{chatAvatarForRole(pendingTargetRole)}</div>
           <div className="chat-bubble">
             <Group gap="xs" mb={6} justify="space-between" align="center">
-              <Badge variant="light">assistant</Badge>
+              <Badge variant="light">{chatRoleLabel(pendingTargetRole)}</Badge>
               <Text component="time" dateTime={new Date().toISOString()} size="xs" c="dimmed">
                 now
               </Text>
             </Group>
-            <Text size="sm" c="dimmed">Codex agent is working...</Text>
+            <Text size="sm" c="dimmed" className="running-agent-line">
+              <LoaderCircle size={13} className="chat-composer-spinner" />
+              <span>{chatRoleLabel(pendingTargetRole)} is working...</span>
+            </Text>
           </div>
         </div>
       )}
@@ -698,14 +706,20 @@ function messageExecutionDuration(message: TimelineMessage): string | null {
 
 function chatAvatarText(message: TimelineMessage | TimelineExecutionLog): string {
   if (message.kind === "message" && message.role === "user") return "U";
-  if (message.sourceRole === "product_manager") return "PM";
-  if (message.sourceRole === "architect") return "AR";
-  if (message.sourceRole === "planner") return "PL";
-  if (message.sourceRole === "reviewer") return "RV";
-  if (message.sourceRole === "devops") return "DO";
-  if (message.sourceRole === "developer") return "DV";
-  if (message.sourceRole === "qa") return "QA";
+  const avatar = chatAvatarForRole(message.sourceRole);
+  if (avatar) return avatar;
   return message.kind === "message" && message.role === "assistant" ? "A" : "S";
+}
+
+function chatAvatarForRole(role: AgentSessionRecord["role"]): string {
+  if (role === "product_manager") return "PM";
+  if (role === "architect") return "AR";
+  if (role === "planner") return "PL";
+  if (role === "reviewer") return "RV";
+  if (role === "devops") return "DO";
+  if (role === "developer") return "DV";
+  if (role === "qa") return "QA";
+  return "";
 }
 
 function SessionRuntime({ projectId, session }: { projectId: string; session: AgentSessionRecord }) {
