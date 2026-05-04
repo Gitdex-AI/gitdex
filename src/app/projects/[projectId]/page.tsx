@@ -557,8 +557,8 @@ function filterSessionsForWorkflows(sessions: AgentSessionRecord[], workflows: W
 }
 
 const highlightedCardStyle = {
-  borderColor: "#93c5fd",
-  background: "#eff6ff"
+  borderColor: "var(--app-control-border-hover)",
+  background: "var(--app-control-bg-active)"
 } satisfies CSSProperties;
 
 type ProjectHandoffPayload = ComponentProps<typeof ProjectHandoffForm>["payload"];
