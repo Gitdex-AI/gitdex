@@ -948,7 +948,7 @@ Summarize code review outcome, merge readiness, and deployment status according 
       schemaPath,
       "-o",
       outputPath,
-      withAgentFinalInstruction(prompt)
+      prompt
     ], { cwd: options.cwd });
     const executionLog = formatCodexExecutionLog(result.stdout, result.stderr);
     if (!result.ok) return { value: null, error: result.stderr.trim() || "Codex exited with a non-zero status.", executionLog };
