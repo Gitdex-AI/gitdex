@@ -338,9 +338,9 @@ function ProjectWorkspaceSidebar(input: {
               {draftWorkflow ? "Continue Draft" : "New Requirement"}
             </Button>
           </form>
-          {input.activeWorkflow && isDiscardableDraftWorkflow(project.projectId, input.activeWorkflow) ? (
+          {draftWorkflow ? (
             <div className="project-sidebar-draft">
-              <DiscardDraftRequirementForm projectId={project.projectId} workflowId={input.activeWorkflow.workflowId} />
+              <DraftRequirementEntry projectId={project.projectId} workflowId={draftWorkflow.workflowId} />
             </div>
           ) : null}
         </div>
@@ -487,18 +487,24 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
   });
 }
 
+function DraftRequirementEntry({ projectId, workflowId }: { projectId: string; workflowId: string }) {
+  return (
+    <div className="draft-requirement-entry">
+      <Link href={`/projects/${projectId}?workflow=${encodeURIComponent(workflowId)}&phase=requirements`} className="draft-requirement-link">
+        <Text size="sm" fw={760}>Draft requirement</Text>
+        <Text size="xs" c="dimmed">Unconfirmed PM chat</Text>
+      </Link>
+      <DiscardDraftRequirementForm projectId={projectId} workflowId={workflowId} />
+    </div>
+  );
+}
+
 function DiscardDraftRequirementForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
   return (
     <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/discard`} className="draft-discard-form">
-      <Group justify="space-between" gap="sm" wrap="nowrap">
-        <div>
-          <Text size="sm" fw={760}>Draft requirement</Text>
-          <Text size="xs" c="dimmed">Remove draft chat.</Text>
-        </div>
-        <Button type="submit" variant="light" color="red" size="compact-xs" radius="xl" leftSection={<Trash2 size={14} />}>
-          Discard
-        </Button>
-      </Group>
+      <Button type="submit" variant="subtle" color="red" size="compact-xs" radius="xl" leftSection={<Trash2 size={14} />}>
+        Discard
+      </Button>
     </form>
   );
 }

@@ -427,6 +427,23 @@ pre,
   border-radius: 0;
 }
 
+.draft-requirement-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+  align-items: center;
+}
+
+.draft-requirement-link {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.draft-requirement-link:hover {
+  color: #1d4ed8;
+}
+
 .requirement-tree-item {
   border-radius: 0;
 }
