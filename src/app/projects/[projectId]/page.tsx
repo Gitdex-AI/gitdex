@@ -198,7 +198,7 @@ function WorkspacePanelContent({ panel, project, workflows, jobs, message, error
   return (
     <div className="workspace-panel-content">
       <Group justify="flex-start" mb="md">
-        <Button component={Link} href={workspaceHref} variant="subtle" leftSection={<ArrowLeft size={16} />}>
+        <Button component="a" href={workspaceHref} variant="subtle" leftSection={<ArrowLeft size={16} />}>
           Back to workspace
         </Button>
       </Group>
