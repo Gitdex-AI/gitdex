@@ -749,15 +749,21 @@ body.workspace-mode-body .topbar {
   top: -34px;
   left: 50%;
   z-index: 2;
-  color: #ffffff;
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.86);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.14);
   transform: translateX(-50%);
 }
 
 .chat-scroll-bottom-button:hover {
-  background: #1f2937;
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.chat-scroll-bottom-button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
 }
 
 .chat-composer-form {

@@ -210,8 +210,8 @@ export function ProjectChatArea({
               className="chat-scroll-bottom-button"
               radius="xl"
               size={38}
-              variant="filled"
-              color="dark"
+              variant="light"
+              color="blue"
               aria-label="Jump to latest message"
               title="Jump to latest message"
               onClick={() => scrollToBottom("smooth")}
