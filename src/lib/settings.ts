@@ -19,9 +19,6 @@ const defaults: Settings = {
   githubToken: "",
   githubRepo: "",
   githubApiUrl: "https://api.github.com",
-  githubUsername: "",
-  githubSshPrivateKeyPath: "",
-  githubSshPublicKey: "",
   worktreeRetentionDays: 7,
   autoCleanupCompletedWorktrees: true,
   rebuildWorktreeOnEnvironmentBlocked: true
@@ -57,9 +54,6 @@ function fromEnv(): Partial<Settings> {
     githubToken: process.env.GITHUB_TOKEN,
     githubRepo: process.env.GITHUB_REPO,
     githubApiUrl: process.env.GITHUB_API_URL,
-    githubUsername: process.env.GITHUB_USERNAME,
-    githubSshPrivateKeyPath: process.env.GITHUB_SSH_PRIVATE_KEY_PATH,
-    githubSshPublicKey: process.env.GITHUB_SSH_PUBLIC_KEY,
     worktreeRetentionDays: process.env.WORKTREE_RETENTION_DAYS,
     autoCleanupCompletedWorktrees: process.env.AUTO_CLEANUP_COMPLETED_WORKTREES,
     rebuildWorktreeOnEnvironmentBlocked: process.env.REBUILD_WORKTREE_ON_ENVIRONMENT_BLOCKED

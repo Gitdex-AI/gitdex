@@ -34,9 +34,6 @@ export type Settings = {
   githubToken: string;
   githubRepo: string;
   githubApiUrl: string;
-  githubUsername: string;
-  githubSshPrivateKeyPath: string;
-  githubSshPublicKey: string;
   worktreeRetentionDays: number;
   autoCleanupCompletedWorktrees: boolean;
   rebuildWorktreeOnEnvironmentBlocked: boolean;

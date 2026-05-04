@@ -1,15 +1,14 @@
 import { Alert, Badge, Button, Checkbox, Group, NativeSelect, SimpleGrid, Text, TextInput } from "@mantine/core";
-import { ArrowLeft, FolderPlus, Info, KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowLeft, FolderPlus, Info, Search, ShieldCheck } from "lucide-react";
 import { requireConsolePageAuth } from "@/lib/console-auth";
 import { listLocalGitHubRepos } from "@/lib/github-local";
-import { getSettings } from "@/lib/settings";
 
-export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
-  await requireConsolePageAuth(error ? `/projects/new?error=${encodeURIComponent(error)}` : "/projects/new");
-  const settings = await getSettings();
-  const repos = settings.githubUsername ? await safeListRepos(settings.githubUsername) : [];
-  const hasGitHubAccount = Boolean(settings.githubUsername && settings.githubSshPublicKey);
+export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string; owner?: string }> }) {
+  const { error, owner: ownerParam } = await searchParams;
+  const owner = String(ownerParam ?? "").trim();
+  const currentPath = `/projects/new${owner ? `?owner=${encodeURIComponent(owner)}` : ""}${error ? `${owner ? "&" : "?"}error=${encodeURIComponent(error)}` : ""}`;
+  await requireConsolePageAuth(currentPath);
+  const repos = owner ? await safeListRepos(owner) : [];
 
   return (
     <div className="project-new-panel">
@@ -36,33 +35,30 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
                 Required
               </Badge>
             </Group>
-            <Text className="settings-row-description">Select a repository from the configured GitHub user or organization.</Text>
+            <Text className="settings-row-description">Enter the GitHub user or organization for this project, then select one of its repositories.</Text>
           </div>
         </div>
-        {!hasGitHubAccount && (
-          <Alert color="yellow" icon={<Info size={16} />} mb="md">
-            <Text size="sm" mb="sm">
-              No usable GitHub owner is configured yet. Enter a GitHub user or organization and generate an SSH key before adding a project.
-            </Text>
-            <form method="post" action="/api/github/account">
-              <input type="hidden" name="next" value="/projects/new" />
-              <Group align="flex-end" gap="sm">
-                <TextInput name="githubUsername" label="GitHub Owner" placeholder="owner-or-org" required />
-                <Button type="submit" variant="light" leftSection={<KeyRound size={16} />}>
-                  Ensure SSH Key
-                </Button>
-              </Group>
-            </form>
+        <form method="get" className="settings-form">
+          <Group align="flex-end" gap="sm">
+            <TextInput name="owner" label="GitHub Owner" placeholder="owner-or-org" defaultValue={owner} required />
+            <Button type="submit" variant="light" leftSection={<Search size={16} />}>
+              Load Repos
+            </Button>
+          </Group>
+        </form>
+        {owner && !repos.length ? (
+          <Alert color="yellow" icon={<Info size={16} />} mt="md" mb="md">
+            No repositories were found for this owner with the current gh login.
           </Alert>
-        )}
+        ) : null}
         <form className="settings-form" method="post" action="/api/projects">
+          <input type="hidden" name="githubAccount" value={owner} />
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <TextInput name="projectName" label="Project Name" placeholder="Mobile App" required />
-            <TextInput name="githubAccount" label="GitHub Owner" defaultValue={settings.githubUsername || "not configured"} readOnly />
             <NativeSelect
               name="githubRepo"
               label="GitHub Repo"
-              data={repos.length ? repos.map((repo) => ({ value: repo.nameWithOwner, label: `${repo.nameWithOwner}${repo.isPrivate ? " private" : ""}` })) : [{ value: "", label: "No repositories available" }]}
+              data={repos.length ? repos.map((repo) => ({ value: repo.nameWithOwner, label: `${repo.nameWithOwner}${repo.isPrivate ? " private" : ""}` })) : [{ value: "", label: owner ? "No repositories available" : "Load an owner first" }]}
               required
             />
             <TextInput
@@ -88,7 +84,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
             Project creation always verifies the repository with your local gh login. Updating AGENTS.md is optional and may modify the remote repository.
           </Alert>
           <Group className="form-actions">
-            <Button type="submit" disabled={!hasGitHubAccount || !repos.length} leftSection={<FolderPlus size={16} />}>
+            <Button type="submit" disabled={!owner || !repos.length} leftSection={<FolderPlus size={16} />}>
               Add Project
             </Button>
           </Group>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { upsertAgentsFileWithGh, verifyLocalGitHubRepo } from "@/lib/github-local";
-import { getSettings } from "@/lib/settings";
 import { createProject, listProjects } from "@/lib/store";
 import { requireConsoleApiAuth } from "@/lib/console-auth";
 
@@ -19,14 +18,13 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const projectName = String(form.get("projectName") ?? "").trim();
   const githubRepo = String(form.get("githubRepo") ?? "").trim();
-  const settings = await getSettings();
-  const githubAccount = settings.githubUsername;
+  const githubAccount = String(form.get("githubAccount") ?? "").trim();
   const agentsFilePath = String(form.get("agentsFilePath") ?? "AGENTS.md").trim();
   const autoDeploy = form.get("autoDeploy") === "true";
   const updateAgentsFile = form.get("updateAgentsFile") === "true";
 
   const error = validateProject(projectName, githubRepo, githubAccount, agentsFilePath);
-  if (error) return redirect(request, `/projects/new?error=${encodeURIComponent(error)}`);
+  if (error) return redirect(request, newProjectPath(githubAccount, error));
 
   try {
     await verifyLocalGitHubRepo(githubRepo);
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
     }
   } catch (verificationError) {
     const message = verificationError instanceof Error ? verificationError.message : "GitHub connection failed.";
-    return redirect(request, `/projects/new?error=${encodeURIComponent(message)}`);
+    return redirect(request, newProjectPath(githubAccount, message));
   }
 
   const project = await createProject({
@@ -57,11 +55,19 @@ export async function POST(request: Request) {
 
 function validateProject(name: string, repo: string, account: string, agentsFilePath: string): string | null {
   if (!name) return "Project name is required.";
-  if (!account) return "Configure a GitHub owner in Settings first.";
+  if (!account) return "GitHub owner is required.";
   if (!repo.includes("/") || repo.split("/").length !== 2) return "GitHub repo must use owner/repo format.";
+  if (repo.split("/")[0].toLowerCase() !== account.toLowerCase()) return "GitHub repo owner must match the selected project owner.";
   if (!agentsFilePath) return "Agent instructions file path is required.";
   if (agentsFilePath.includes("..")) return "Agent instructions file path cannot contain '..'.";
   return null;
+}
+
+function newProjectPath(owner: string, error: string): string {
+  const params = new URLSearchParams();
+  if (owner) params.set("owner", owner);
+  params.set("error", error);
+  return `/projects/new?${params.toString()}`;
 }
 
 function redirect(request: Request, location: string): NextResponse {

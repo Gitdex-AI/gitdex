@@ -1,5 +1,5 @@
-import { Alert, Badge, Button, Checkbox, Code, Group, NumberInput, PasswordInput, SimpleGrid, Text, TextInput, Textarea } from "@mantine/core";
-import { GitBranch, Info, KeyRound, Save, Trash2, Webhook, Wrench } from "lucide-react";
+import { Alert, Button, Checkbox, Group, NumberInput, PasswordInput, SimpleGrid, Text, TextInput } from "@mantine/core";
+import { Info, Save, Trash2, Webhook, Wrench } from "lucide-react";
 import packageJson from "../../package.json";
 import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
@@ -17,7 +17,6 @@ export async function SettingsPanel({
   toolsHref?: string;
 }) {
   const settings = await getSettings();
-  const hasGitHubKey = Boolean(settings.githubUsername && settings.githubSshPrivateKeyPath && settings.githubSshPublicKey);
 
   return (
     <div className="settings-panel">
@@ -62,50 +61,6 @@ export async function SettingsPanel({
           </div>
           <SelfUpdateDialog version={packageJson.version} triggerLabel="Update Gitdex" triggerVariant="button" />
         </div>
-      </section>
-
-      <section className="settings-section">
-        <div className="settings-section-heading">
-          <div>
-            <Group gap="xs" align="center">
-              <Text className="settings-section-title">GitHub Owner</Text>
-              <Badge color={hasGitHubKey ? "green" : "yellow"} variant="light" size="sm">
-                {hasGitHubKey ? "key ready" : "setup required"}
-              </Badge>
-            </Group>
-            <Text className="settings-row-description">Configure a GitHub user or organization owner before adding projects.</Text>
-          </div>
-        </div>
-        <form method="post" action="/api/github/account" data-settings-form className="settings-form">
-          <ReturnToInput returnTo={returnTo} />
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-            <TextInput name="githubUsername" label="GitHub Owner" defaultValue={settings.githubUsername} placeholder="owner-or-org" required />
-            <TextInput label="SSH Private Key" value={settings.githubSshPrivateKeyPath || "not generated"} readOnly />
-          </SimpleGrid>
-          <Textarea
-            label="SSH Public Key"
-            value={settings.githubSshPublicKey || "Generate a key first."}
-            autosize
-            minRows={3}
-            readOnly
-          />
-          <Alert color="blue" icon={<Info size={16} />}>
-            The private key is stored locally. SQLite stores only the GitHub owner, private key path, and public key text.
-          </Alert>
-          <Group className="form-actions">
-            <Button type="submit" leftSection={<KeyRound size={16} />}>
-              Ensure SSH Key
-            </Button>
-            <Button component="a" href="https://github.com/settings/keys" target="_blank" variant="light" leftSection={<GitBranch size={16} />}>
-              SSH Keys
-            </Button>
-          </Group>
-          {settings.githubUsername && (
-            <Text size="sm" c="dimmed" mt="sm">
-              Add Project will list repositories owned by <Code>{settings.githubUsername}</Code> using your local <Code>gh</Code> login.
-            </Text>
-          )}
-        </form>
       </section>
 
       <form method="post" action="/api/settings" data-settings-form className="settings-form">

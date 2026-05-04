@@ -21,9 +21,6 @@ export async function POST(request: Request) {
     githubToken: String(form.get("githubToken") ?? "").trim(),
     githubRepo: String(form.get("githubRepo") ?? "").trim(),
     githubApiUrl: String(form.get("githubApiUrl") ?? "https://api.github.com").trim(),
-    githubUsername: current.githubUsername,
-    githubSshPrivateKeyPath: current.githubSshPrivateKeyPath,
-    githubSshPublicKey: current.githubSshPublicKey,
     worktreeRetentionDays: normalizeRetentionDays(form.get("worktreeRetentionDays")),
     autoCleanupCompletedWorktrees: form.get("autoCleanupCompletedWorktrees") === "on",
     rebuildWorktreeOnEnvironmentBlocked: form.get("rebuildWorktreeOnEnvironmentBlocked") === "on"

@@ -1,5 +1,5 @@
 import { Badge, Group, Paper, SimpleGrid, Text, ThemeIcon } from "@mantine/core";
-import { CheckCircle2, FolderGit2, GitBranch, PlayCircle, Terminal } from "lucide-react";
+import { CheckCircle2, GitBranch, PlayCircle, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageTitle } from "@/components/PageTitle";
 import { CodexStatusPanel } from "@/components/CodexStatusPanel";
@@ -22,10 +22,9 @@ export function ToolsPanel({ headerActions }: { headerActions?: ReactNode }) {
             <Badge variant="light">local setup</Badge>
           </Group>
         </Group>
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm" p="md">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm" p="md">
           <ChecklistItem icon={<Terminal size={16} />} title="Codex CLI" detail="`codex exec` works with the configured model." />
           <ChecklistItem icon={<GitBranch size={16} />} title="GitHub CLI" detail="`gh auth status` is authenticated over SSH." />
-          <ChecklistItem icon={<FolderGit2 size={16} />} title="GitHub Owner" detail="Settings has an owner and generated SSH key." />
           <ChecklistItem icon={<PlayCircle size={16} />} title="Workflow Run" detail="Project is bound to a repo before jobs run." />
         </SimpleGrid>
       </Paper>
