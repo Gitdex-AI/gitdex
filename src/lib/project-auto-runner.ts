@@ -149,7 +149,10 @@ async function findOrCreateNextBatch(
     .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })))
     .filter(({ issue }) => !issueScope.size || issueScope.has(issue.issueId));
   const failedReturnRows = issueRows.filter(({ workflow, issue }) => shouldReturnFailedJobToDeveloper(issue, workflow, jobs));
-  const returnRows = failedReturnRows.length ? failedReturnRows : issueRows.filter(({ issue }) => shouldReturnQaFailureToDeveloper(issue) || shouldReturnRebaseToDeveloper(issue));
+  const returnRows = failedReturnRows.length ? failedReturnRows : issueRows.filter(({ workflow, issue }) => (
+    (shouldReturnQaFailureToDeveloper(issue) || shouldReturnRebaseToDeveloper(issue))
+    && !hasSuccessfulDeveloperRetryAfterReturnBlocker(issue, workflow, jobs)
+  ));
   const jobsToRun: JobRecord[] = [];
   jobsToRun.push(...await Promise.all(returnRows.map(({ workflow, issue }) => ensureReturnDeveloperJob(project, workflow, issue))));
 
@@ -157,7 +160,9 @@ async function findOrCreateNextBatch(
   for (const { workflow, issue } of issueRows) {
     if (returnedIssueIds.has(issue.issueId)) continue;
     const stage = getIssueStage(issue);
-    if (stage === "gd:architect") {
+    if ((stage === "gd:fix" || stage === "gd:rebase") && hasSuccessfulDeveloperRetryAfterReturnBlocker(issue, workflow, jobs) && canRunQaAfterDeveloperRetry(issue)) {
+      jobsToRun.push(await ensureQaJob(project, workflow, issue));
+    } else if (stage === "gd:architect") {
       const job = await ensureArchitectBlockerJob(project, workflow, issue, sessions);
       if (job) jobsToRun.push(job);
     } else if (stage === "gd:dev" && canRunDeveloperIssue(issue, workflow.issues)) {
@@ -213,6 +218,10 @@ function canRunQa(issue: IssueRecord): boolean {
   return canAutoRunQa(issue);
 }
 
+function canRunQaAfterDeveloperRetry(issue: IssueRecord): boolean {
+  return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED";
+}
+
 function canRunArchitectReview(issue: IssueRecord): boolean {
   return Boolean(issue.prUrl)
     && !isClosedIssue(issue)
@@ -238,11 +247,36 @@ function shouldReturnRebaseToDeveloper(issue: IssueRecord): boolean {
     && getIssueStage(issue) === "gd:rebase";
 }
 
-function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[]): boolean {
-  const latest = jobs
-    .filter((job) => job.payload.workflowId === workflow.workflowId && job.payload.issueId === issue.issueId && (job.type === "architect_review_run" || job.type === "merge_run"))
-    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
+export function shouldReturnFailedJobToDeveloper(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[]): boolean {
+  const latest = latestReturnBlockerJob(issue, workflow, jobs, ["architect_review_run", "merge_run"]);
+  if (latest && hasSuccessfulDeveloperJobAfter(issue, workflow, jobs, Date.parse(latest.updatedAt))) return false;
   return Boolean(issue.prUrl) && !isClosedIssue(issue) && issue.prState !== "MERGED" && latest?.status === "failed";
+}
+
+export function hasSuccessfulDeveloperRetryAfterReturnBlocker(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[]): boolean {
+  const latest = latestReturnBlockerJob(issue, workflow, jobs, ["qa_run", "architect_review_run", "merge_run"]);
+  return Boolean(latest && hasSuccessfulDeveloperJobAfter(issue, workflow, jobs, Date.parse(latest.updatedAt)));
+}
+
+function latestReturnBlockerJob(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[], types: JobRecord["type"][]): JobRecord | null {
+  return jobs
+    .filter((job) => (
+      job.payload.workflowId === workflow.workflowId
+      && job.payload.issueId === issue.issueId
+      && types.includes(job.type)
+      && job.status === "failed"
+    ))
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0] ?? null;
+}
+
+function hasSuccessfulDeveloperJobAfter(issue: IssueRecord, workflow: WorkflowRecord, jobs: JobRecord[], timestamp: number): boolean {
+  return jobs.some((job) => (
+    job.payload.workflowId === workflow.workflowId
+    && job.payload.issueId === issue.issueId
+    && job.type === "issue_run"
+    && job.status === "done"
+    && Date.parse(job.updatedAt) > timestamp
+  ));
 }
 
 async function ensureDeveloperJob(project: ProjectRecord, workflow: WorkflowRecord, issue: IssueRecord): Promise<JobRecord> {

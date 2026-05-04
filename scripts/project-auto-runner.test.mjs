@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 import { canAutoRunDeveloper, canAutoRunQa } from "../src/lib/auto-run-policy.ts";
+
+const projectAutoRunnerSource = await readFile(new URL("../src/lib/project-auto-runner.ts", import.meta.url), "utf8");
 
 const issue = (overrides = {}) => ({
   title: "Issue",
@@ -57,5 +60,15 @@ describe("canAutoRunDeveloper", () => {
 
   it("does not treat rebase-required PRs as fresh developer work", () => {
     assert.equal(canAutoRunDeveloper(issue({ prUrl: null, prState: null, labels: ["gd:rebase"] })), false);
+  });
+});
+
+describe("stale failed return jobs", () => {
+  it("ignores failed review or merge jobs once a newer developer retry succeeded", () => {
+    assert.match(
+      projectAutoRunnerSource,
+      /if \(latest && hasSuccessfulDeveloperJobAfter\(issue, workflow, jobs, Date\.parse\(latest\.updatedAt\)\)\) return false;/
+    );
+    assert.match(projectAutoRunnerSource, /job\.type === "issue_run"[\s\S]*job\.status === "done"[\s\S]*Date\.parse\(job\.updatedAt\) > timestamp/);
   });
 });
