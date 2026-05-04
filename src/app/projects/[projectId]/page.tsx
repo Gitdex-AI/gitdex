@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { Alert, Badge, Button, Code, Group, Stack, Text } from "@mantine/core";
-import { FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
+import { Alert, Badge, Button, Code, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { Archive, FolderKanban, GitBranch, Info, ListTodo, Plus, RefreshCw, RotateCcw, Settings, Trash2, UserCircle, Wrench } from "lucide-react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
@@ -134,7 +134,7 @@ export default async function ProjectDetailPage({
 
         <main className="chat-panel">
           {activePanel ? (
-            <WorkspacePanelContent panel={activePanel} projectId={project.projectId} message={query.message} error={query.error} />
+            <WorkspacePanelContent panel={activePanel} project={project} workflows={sortedWorkflows} jobs={jobs} message={query.message} error={query.error} />
           ) : (
             <ProjectChatArea projectId={project.projectId} sessions={chatSessions} jobs={workflowPanelJobs.length ? workflowPanelJobs : jobs} workflows={workflowPanelWorkflows.length ? workflowPanelWorkflows : workflows} activeWorkflowId={latestWorkflow?.workflowId ?? null} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
           )}
@@ -186,20 +186,21 @@ function findWorkflowPmSession(sessions: AgentSessionRecord[], projectId: string
 }
 
 type WorkflowPhase = "requirements" | "github" | "operations";
-type WorkspacePanel = "projects" | "tools" | "settings";
+type WorkspacePanel = "projects" | "tools" | "settings" | "requirements";
 
 function normalizeWorkspacePanel(value: string | undefined): WorkspacePanel | null {
-  if (value === "projects" || value === "tools" || value === "settings") return value;
+  if (value === "projects" || value === "tools" || value === "settings" || value === "requirements") return value;
   return null;
 }
 
-function WorkspacePanelContent({ panel, projectId, message, error }: { panel: WorkspacePanel; projectId: string; message?: string; error?: string }) {
-  const returnTo = `/projects/${projectId}?panel=${panel}`;
+function WorkspacePanelContent({ panel, project, workflows, jobs, message, error }: { panel: WorkspacePanel; project: ProjectRecord; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
+  const returnTo = `/projects/${project.projectId}?panel=${panel}`;
   return (
     <div className="workspace-panel-content">
       {panel === "projects" ? <ProjectsPanel message={message} error={error} /> : null}
       {panel === "tools" ? <ToolsPanel /> : null}
-      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${projectId}?panel=tools`} /> : null}
+      {panel === "settings" ? <SettingsPanel message={message} error={error} returnTo={returnTo} toolsHref={`/projects/${project.projectId}?panel=tools`} /> : null}
+      {panel === "requirements" ? <RequirementsPanelContent project={project} workflows={workflows} jobs={jobs} message={message} error={error} /> : null}
     </div>
   );
 }
@@ -207,6 +208,82 @@ function WorkspacePanelContent({ panel, projectId, message, error }: { panel: Wo
 function normalizeSelectedPhase(value: string | undefined, hasUnqueuedPmHandoff: boolean): WorkflowPhase {
   if (value === "requirements" || value === "github" || value === "operations") return value;
   return hasUnqueuedPmHandoff ? "requirements" : "github";
+}
+
+function RequirementsPanelContent({ project, workflows, jobs, message, error }: { project: ProjectRecord; workflows: WorkflowRecord[]; jobs: JobRecord[]; message?: string; error?: string }) {
+  const archivedCount = workflows.filter((workflow) => workflow.archivedAt).length;
+  return (
+    <Stack gap="lg">
+      {error ? <Alert color="red" icon={<Info size={16} />}>{error}</Alert> : null}
+      {message ? <Alert color="green" icon={<Info size={16} />}>{message}</Alert> : null}
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Group gap="sm">
+            <Title order={1}>Requirements</Title>
+            <Badge variant="light">{workflows.length} total</Badge>
+            {archivedCount ? <Badge variant="outline" color="gray">{archivedCount} archived</Badge> : null}
+          </Group>
+          <Text c="dimmed" size="sm">
+            Numbered requirements for {project.name}.
+          </Text>
+        </div>
+      </Group>
+
+      <Paper>
+        <Group justify="space-between" p="md" className="section-header">
+          <div>
+            <Text fw={760}>All Requirements</Text>
+            <Text size="sm" c="dimmed">Requirement number, status, and linked workflow detail.</Text>
+          </div>
+        </Group>
+        <Stack p="md" gap="xs">
+          {workflows.length ? workflows.map((workflow) => (
+            <RequirementPanelRow key={workflow.workflowId} projectId={project.projectId} workflow={workflow} jobs={jobs} />
+          )) : (
+            <Text size="sm" c="dimmed">No numbered requirements yet.</Text>
+          )}
+        </Stack>
+      </Paper>
+    </Stack>
+  );
+}
+
+function RequirementPanelRow({ projectId, workflow, jobs }: { projectId: string; workflow: WorkflowRecord; jobs: JobRecord[] }) {
+  const planningJob = latestWorkflowJob(workflow.workflowId, jobs, "workflow_run");
+  const status = requirementStatus(workflow, planningJob);
+  return (
+    <div className="requirement-row">
+      <div className="requirement-row-body">
+        <div className="requirement-row-main">
+          <a href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&phase=github`} className="requirement-row-link">
+            <Group gap="xs">
+              <Code>{workflow.trackingCode ?? workflow.workflowId}</Code>
+              <Badge size="xs" variant="light" color={status.color}>{status.label}</Badge>
+              {workflow.archivedAt ? <Badge size="xs" variant="outline" color="gray">Archived</Badge> : null}
+              <Badge size="xs" variant="outline">{workflow.issues.length} issue{workflow.issues.length === 1 ? "" : "s"}</Badge>
+            </Group>
+            <Text size="sm" mt={6} lineClamp={2}>{workflow.userRequirement}</Text>
+            <Text size="xs" c="dimmed" mt={4}>{workflow.archivedAt ? `Archived ${formatDate(workflow.archivedAt)}` : `Created ${formatDate(workflow.createdAt)}`}</Text>
+          </a>
+        </div>
+        <Group gap={6} justify="flex-end" wrap="nowrap">
+          {!workflow.archivedAt ? renderRequirementRunAction(projectId, planningJob) : null}
+          {!workflow.archivedAt && workflow.trackingCode ? <ArchiveRequirementPanelForm projectId={projectId} workflowId={workflow.workflowId} /> : null}
+        </Group>
+      </div>
+    </div>
+  );
+}
+
+function ArchiveRequirementPanelForm({ projectId, workflowId }: { projectId: string; workflowId: string }) {
+  return (
+    <form method="post" action={`/api/projects/${projectId}/requirements/${workflowId}/archive`}>
+      <input type="hidden" name="returnTo" value={`/projects/${projectId}?panel=requirements`} />
+      <Button type="submit" variant="light" color="red" size="compact-xs" radius="xl" leftSection={<Archive size={14} />}>
+        Archive
+      </Button>
+    </form>
+  );
 }
 
 function ProjectWorkspaceSidebar(input: {
@@ -279,7 +356,7 @@ function ProjectWorkspaceSidebar(input: {
         <div className="project-sidebar-section">
           <Group justify="space-between" gap="xs" mb="xs" wrap="nowrap">
             <Text size="xs" fw={820} tt="uppercase" c="dimmed">Requirements</Text>
-            <Button component="a" href={`/projects/${project.projectId}/requirements`} variant="subtle" size="compact-xs" radius="xl">
+            <Button component="a" href={`/projects/${project.projectId}?panel=requirements`} variant={input.activePanel === "requirements" ? "light" : "subtle"} size="compact-xs" radius="xl">
               View all
             </Button>
           </Group>
