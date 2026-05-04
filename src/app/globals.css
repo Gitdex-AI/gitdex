@@ -498,10 +498,11 @@ body.workspace-mode-body .topbar {
   display: grid;
   grid-template-columns: clamp(360px, 30vw, 460px) minmax(0, 1fr);
   gap: 0;
-  align-items: start;
-  min-height: 100vh;
+  align-items: stretch;
+  height: 100dvh;
+  min-height: 0;
   margin: 0;
-  overflow: visible;
+  overflow: hidden;
   background: #f8fbff;
   border: 1px solid #e0e7f0;
   border-radius: 0;
@@ -513,8 +514,8 @@ body.workspace-mode-body .topbar {
   position: sticky;
   top: 0;
   min-width: 0;
-  height: 100vh;
-  min-height: 540px;
+  height: 100%;
+  min-height: 0;
   background: #ffffff;
   border-right: 1px solid #e0e7f0;
   border-radius: 0;
@@ -681,8 +682,9 @@ body.workspace-mode-body .topbar {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: #f8fbff;
   border-radius: 0;
 }
@@ -693,11 +695,11 @@ body.workspace-mode-body .topbar {
 }
 
 .chat-scroll {
-  flex: 0 0 auto;
-  min-height: calc(100vh - 118px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: visible;
-  overscroll-behavior: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px clamp(18px, 5vw, 72px) 36px;
   background:
     radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 28%),
