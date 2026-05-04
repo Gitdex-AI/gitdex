@@ -664,7 +664,7 @@ function ExecutionLogItem({ log }: { log: TimelineExecutionLog }) {
             </Group>
             <Text size="sm" fw={760} mt={6}>{log.title}</Text>
           </summary>
-          <pre className="execution-log-content">{stripAgentFinalBlocks(log.content) || "No Codex execution output captured."}</pre>
+          <pre className="execution-log-content">{log.content || "No Codex execution output captured."}</pre>
         </details>
       </div>
     </div>
@@ -687,7 +687,7 @@ function InlineExecutionLogs({ logs }: { logs: TimelineExecutionLog[] }) {
               </Text>
             </Group>
           </summary>
-          <pre className="execution-log-content">{stripAgentFinalBlocks(log.content) || "No Codex execution output captured."}</pre>
+          <pre className="execution-log-content">{log.content || "No Codex execution output captured."}</pre>
         </details>
       ))}
     </div>

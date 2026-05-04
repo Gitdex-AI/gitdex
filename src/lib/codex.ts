@@ -1177,11 +1177,9 @@ function extractSessionId(stderr: string): string | null {
 }
 
 function formatCodexExecutionLog(stdout: string, stderr: string): string {
-  const displayStdout = stripAgentFinalBlock(stdout).trim();
-  const displayStderr = stripAgentFinalBlock(stderr).trim();
   const sections = [
-    displayStdout ? `stdout\n${displayStdout}` : "",
-    displayStderr ? `stderr\n${displayStderr}` : ""
+    stdout.trim() ? `stdout\n${stdout.trim()}` : "",
+    stderr.trim() ? `stderr\n${stderr.trim()}` : ""
   ].filter(Boolean);
   return sections.join("\n\n");
 }
