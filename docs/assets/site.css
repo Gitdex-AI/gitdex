@@ -284,6 +284,12 @@ h1 {
   line-height: 1.25;
 }
 
+.hero-lede.zh {
+  margin-top: -4px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(17px, 1.8vw, 23px);
+}
+
 .hero-actions,
 .install-actions {
   display: flex;
@@ -337,10 +343,21 @@ h2 {
   letter-spacing: 0;
 }
 
+.zh-heading {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: clamp(25px, 3.4vw, 40px);
+}
+
 .section-heading p:not(.eyebrow),
 .install p {
   color: var(--muted);
   font-size: 18px;
+}
+
+.zh {
+  color: var(--muted);
+  font-size: 16px;
 }
 
 .workflow {
@@ -385,6 +402,13 @@ h3 {
 .feature-grid p {
   margin-bottom: 0;
   color: var(--muted);
+}
+
+.flow-grid p.zh,
+.feature-grid p.zh {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
 
 .features {

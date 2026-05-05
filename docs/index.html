@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gitdex - Multi-agent GitHub workflow console</title>
+    <title>Gitdex - Multi-agent GitHub workflow console / 多 Agent GitHub 工作流控制台</title>
     <meta
       name="description"
-      content="Gitdex turns product conversations into GitHub issues, coordinates Codex agents for development, QA, review, and merge, and keeps the workflow visible."
+      content="Gitdex turns product conversations into GitHub issues, coordinates Codex agents for development, QA, review, and merge, and keeps the workflow visible. Gitdex 将产品对话转成 GitHub issue，并协调 Codex agent 完成开发、QA、审核和合并。"
     />
     <link rel="canonical" href="https://gitdex.ai/" />
     <link rel="stylesheet" href="./assets/site.css" />
@@ -18,9 +18,9 @@
         <span>Gitdex</span>
       </a>
       <nav>
-        <a href="#workflow">Workflow</a>
-        <a href="#features">Features</a>
-        <a href="#install">Install</a>
+        <a href="#workflow">Workflow / 流程</a>
+        <a href="#features">Features / 功能</a>
+        <a href="#install">Install / 安装</a>
         <a href="https://github.com/Gitdex-AI/gitdex">GitHub</a>
       </nav>
     </header>
@@ -31,14 +31,14 @@
           <div class="app-frame">
             <div class="app-sidebar">
               <div class="repo-line">Gitdex-AI / gitdex</div>
-              <div class="new-req">New Requirement</div>
+              <div class="new-req">New Requirement / 新需求</div>
               <div class="req active">
                 <span>R12</span>
-                <small>Ready for QA</small>
+                <small>Ready for QA / 等待 QA</small>
               </div>
               <div class="req">
                 <span>R11</span>
-                <small>Done</small>
+                <small>Done / 已完成</small>
               </div>
               <div class="issue-list">
                 <div>#184 <b>gd:qa</b></div>
@@ -47,23 +47,27 @@
               </div>
             </div>
             <div class="app-chat">
-              <div class="message user">Run QA for issue #184</div>
+              <div class="message user">Run QA for issue #184 / 对 #184 执行 QA</div>
               <div class="message agent">
-                <strong>QA working on issue #184</strong>
+                <strong>QA working on issue #184 / QA 正在处理 #184</strong>
                 <span>Running tests, checking PR scope, and validating browser behavior.</span>
+                <span>运行测试、检查 PR 范围，并验证浏览器行为。</span>
               </div>
-              <div class="status-line">Codex live output connected</div>
+              <div class="status-line">Codex live output connected / Codex 实时输出已连接</div>
             </div>
           </div>
         </div>
         <div class="hero-copy">
-          <p class="eyebrow">Multi-agent GitHub workflow console</p>
+          <p class="eyebrow">Multi-agent GitHub workflow console / 多 Agent GitHub 工作流控制台</p>
           <h1 id="hero-title">Gitdex</h1>
           <p class="hero-lede">
             Turn product conversations into GitHub issues, run Codex agents for development and QA, review changes before merge, and keep every step visible.
           </p>
+          <p class="hero-lede zh">
+            将产品需求对话转成 GitHub issue，调用 Codex agent 完成开发与 QA，在合并前完成审核，并让每一步都清晰可见。
+          </p>
           <div class="hero-actions">
-            <a class="button primary" href="#install">Install Gitdex</a>
+            <a class="button primary" href="#install">Install Gitdex / 安装 Gitdex</a>
             <a class="button secondary" href="https://github.com/Gitdex-AI/gitdex">View GitHub</a>
           </div>
         </div>
@@ -71,81 +75,98 @@
 
       <section class="section workflow" id="workflow" aria-labelledby="workflow-title">
         <div class="section-heading">
-          <p class="eyebrow">From requirement to merge</p>
+          <p class="eyebrow">From requirement to merge / 从需求到合并</p>
           <h2 id="workflow-title">A visible path for agent work</h2>
+          <h2 class="zh-heading">让 Agent 工作路径清晰可见</h2>
           <p>Gitdex separates product discovery, GitHub issue execution, and operations follow-up while letting multiple issues move in parallel.</p>
+          <p class="zh">Gitdex 将产品澄清、GitHub issue 执行和运营跟进分开，同时允许多个 issue 在依赖允许时并行推进。</p>
         </div>
         <div class="flow-grid">
           <article>
             <span class="step">01</span>
-            <h3>Plan</h3>
+            <h3>Plan / 规划</h3>
             <p>Chat with the PM agent, confirm the requirement, then let the planner create scoped GitHub issues.</p>
+            <p class="zh">先与 PM agent 澄清需求，确认后由 Planner 创建范围明确的 GitHub issue。</p>
           </article>
           <article>
             <span class="step">02</span>
-            <h3>Build</h3>
+            <h3>Build / 开发</h3>
             <p>Developer agents work in isolated worktrees, create PRs, and include tests for the accepted behavior.</p>
+            <p class="zh">Developer agent 在隔离 worktree 中实现需求、创建 PR，并补充覆盖验收行为的测试。</p>
           </article>
           <article>
             <span class="step">03</span>
-            <h3>Validate</h3>
+            <h3>Validate / 验证</h3>
             <p>QA agents verify tests, run browser checks on assigned preview ports, and send failures back to the right stage.</p>
+            <p class="zh">QA agent 检查测试覆盖，在指定预览端口验证浏览器行为，并把失败退回正确阶段。</p>
           </article>
           <article>
             <span class="step">04</span>
-            <h3>Review and merge</h3>
+            <h3>Review and merge / 审核与合并</h3>
             <p>Reviewer and merge agents inspect PR readiness, handle rebase requirements, and close issues after merge.</p>
+            <p class="zh">Reviewer 和 Merge agent 检查 PR 是否就绪、处理 rebase 要求，并在合并后关闭 issue。</p>
           </article>
         </div>
       </section>
 
       <section class="section features" id="features" aria-labelledby="features-title">
         <div class="section-heading">
-          <p class="eyebrow">Why teams use it</p>
+          <p class="eyebrow">Why teams use it / 为什么使用 Gitdex</p>
           <h2 id="features-title">Designed for real GitHub workflows</h2>
+          <h2 class="zh-heading">面向真实 GitHub 工作流设计</h2>
         </div>
         <div class="feature-grid">
           <article>
-            <h3>Issue-first tracking</h3>
+            <h3>Issue-first tracking / 以 issue 为主体</h3>
             <p>GitHub issues are the source of truth for stage labels, PR links, dependencies, and workflow history.</p>
+            <p class="zh">GitHub issue 是阶段标签、PR 链接、依赖关系和工作流历史的事实来源。</p>
           </article>
           <article>
-            <h3>Role-specific agents</h3>
+            <h3>Role-specific agents / 按角色分工</h3>
             <p>PM, planner, developer, QA, reviewer, merge, and operations roles receive focused prompts and context.</p>
+            <p class="zh">PM、Planner、Developer、QA、Reviewer、Merge 和 Operations 使用各自聚焦的 prompt 与上下文。</p>
           </article>
           <article>
-            <h3>Live execution output</h3>
+            <h3>Live execution output / 实时执行输出</h3>
             <p>Watch Codex work in the chat timeline with elapsed time, live logs, and final execution summaries.</p>
+            <p class="zh">在聊天时间线中查看 Codex 工作状态、运行时长、实时日志和最终总结。</p>
           </article>
           <article>
-            <h3>Auto-run orchestration</h3>
+            <h3>Auto-run orchestration / 自动推进</h3>
             <p>Automatically advance every runnable issue, including parallel work across different stages.</p>
+            <p class="zh">自动推进所有可运行 issue，也支持不同 issue 在不同阶段并行运行。</p>
           </article>
           <article>
-            <h3>Local-first runtime</h3>
+            <h3>Local-first runtime / 本地优先</h3>
             <p>Gitdex runs on your machine with local data, local worktrees, your GitHub CLI, and your Codex login.</p>
+            <p class="zh">Gitdex 运行在你的机器上，使用本地数据、本地 worktree、本地 GitHub CLI 和 Codex 登录状态。</p>
           </article>
           <article>
-            <h3>Service-ready install</h3>
+            <h3>Service-ready install / 可安装为服务</h3>
             <p>Install as a CLI, run in development mode, or register a user-level launchd or systemd service.</p>
+            <p class="zh">可以作为 CLI 使用，也可以运行开发模式，或注册为用户级 launchd/systemd 服务。</p>
           </article>
         </div>
       </section>
 
       <section class="install" id="install" aria-labelledby="install-title">
         <div>
-          <p class="eyebrow">Stable release</p>
+          <p class="eyebrow">Stable release / 稳定版本</p>
           <h2 id="install-title">Install Gitdex v0.2.0</h2>
+          <h2 class="zh-heading">安装 Gitdex v0.2.0</h2>
           <p>
             The installer uses the stable <code>v0.2.0</code> tag, installs dependencies, builds the app, and links the <code>gitdex</code> command into <code>~/.local/bin</code>.
+          </p>
+          <p class="zh">
+            安装脚本使用稳定的 <code>v0.2.0</code> tag，安装依赖、构建应用，并把 <code>gitdex</code> 命令链接到 <code>~/.local/bin</code>。
           </p>
         </div>
         <div class="install-card">
           <div class="terminal-title">Terminal</div>
           <pre><code>curl -fsSL https://gitdex.ai/install.sh | bash</code></pre>
           <div class="install-actions">
-            <a class="button primary" href="https://github.com/Gitdex-AI/gitdex/tree/v0.2.0">Release source</a>
-            <a class="button secondary" href="https://github.com/Gitdex-AI/gitdex/blob/v0.2.0/README.md">Read docs</a>
+            <a class="button primary" href="https://github.com/Gitdex-AI/gitdex/tree/v0.2.0">Release source / 版本源码</a>
+            <a class="button secondary" href="https://github.com/Gitdex-AI/gitdex/blob/v0.2.0/README.md">Read docs / 查看文档</a>
           </div>
         </div>
       </section>
@@ -153,7 +174,7 @@
 
     <footer>
       <span>Gitdex</span>
-      <span>Local-first multi-agent GitHub workflow console.</span>
+      <span>Local-first multi-agent GitHub workflow console. / 本地优先的多 Agent GitHub 工作流控制台。</span>
     </footer>
   </body>
 </html>
