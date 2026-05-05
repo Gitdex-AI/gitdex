@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gitdex - Multi-agent GitHub workflow console</title>
+    <meta
+      name="description"
+      content="Gitdex turns product conversations into GitHub issues, coordinates Codex agents for development, QA, review, and merge, and keeps the workflow visible."
+    />
+    <link rel="canonical" href="https://gitdex.ai/" />
+    <link rel="stylesheet" href="./assets/site.css" />
+  </head>
+  <body>
+    <header class="site-nav" aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="Gitdex home">
+        <span class="brand-mark">GD</span>
+        <span>Gitdex</span>
+      </a>
+      <nav>
+        <a href="#workflow">Workflow</a>
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/Gitdex-AI/gitdex">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-visual" aria-hidden="true">
+          <div class="app-frame">
+            <div class="app-sidebar">
+              <div class="repo-line">Gitdex-AI / gitdex</div>
+              <div class="new-req">New Requirement</div>
+              <div class="req active">
+                <span>R12</span>
+                <small>Ready for QA</small>
+              </div>
+              <div class="req">
+                <span>R11</span>
+                <small>Done</small>
+              </div>
+              <div class="issue-list">
+                <div>#184 <b>gd:qa</b></div>
+                <div>#185 <b>gd:review</b></div>
+                <div>#186 <b>gd:merge</b></div>
+              </div>
+            </div>
+            <div class="app-chat">
+              <div class="message user">Run QA for issue #184</div>
+              <div class="message agent">
+                <strong>QA working on issue #184</strong>
+                <span>Running tests, checking PR scope, and validating browser behavior.</span>
+              </div>
+              <div class="status-line">Codex live output connected</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Multi-agent GitHub workflow console</p>
+          <h1 id="hero-title">Gitdex</h1>
+          <p class="hero-lede">
+            Turn product conversations into GitHub issues, run Codex agents for development and QA, review changes before merge, and keep every step visible.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#install">Install Gitdex</a>
+            <a class="button secondary" href="https://github.com/Gitdex-AI/gitdex">View GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section workflow" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <p class="eyebrow">From requirement to merge</p>
+          <h2 id="workflow-title">A visible path for agent work</h2>
+          <p>Gitdex separates product discovery, GitHub issue execution, and operations follow-up while letting multiple issues move in parallel.</p>
+        </div>
+        <div class="flow-grid">
+          <article>
+            <span class="step">01</span>
+            <h3>Plan</h3>
+            <p>Chat with the PM agent, confirm the requirement, then let the planner create scoped GitHub issues.</p>
+          </article>
+          <article>
+            <span class="step">02</span>
+            <h3>Build</h3>
+            <p>Developer agents work in isolated worktrees, create PRs, and include tests for the accepted behavior.</p>
+          </article>
+          <article>
+            <span class="step">03</span>
+            <h3>Validate</h3>
+            <p>QA agents verify tests, run browser checks on assigned preview ports, and send failures back to the right stage.</p>
+          </article>
+          <article>
+            <span class="step">04</span>
+            <h3>Review and merge</h3>
+            <p>Reviewer and merge agents inspect PR readiness, handle rebase requirements, and close issues after merge.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section features" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow">Why teams use it</p>
+          <h2 id="features-title">Designed for real GitHub workflows</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Issue-first tracking</h3>
+            <p>GitHub issues are the source of truth for stage labels, PR links, dependencies, and workflow history.</p>
+          </article>
+          <article>
+            <h3>Role-specific agents</h3>
+            <p>PM, planner, developer, QA, reviewer, merge, and operations roles receive focused prompts and context.</p>
+          </article>
+          <article>
+            <h3>Live execution output</h3>
+            <p>Watch Codex work in the chat timeline with elapsed time, live logs, and final execution summaries.</p>
+          </article>
+          <article>
+            <h3>Auto-run orchestration</h3>
+            <p>Automatically advance every runnable issue, including parallel work across different stages.</p>
+          </article>
+          <article>
+            <h3>Local-first runtime</h3>
+            <p>Gitdex runs on your machine with local data, local worktrees, your GitHub CLI, and your Codex login.</p>
+          </article>
+          <article>
+            <h3>Service-ready install</h3>
+            <p>Install as a CLI, run in development mode, or register a user-level launchd or systemd service.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="install" id="install" aria-labelledby="install-title">
+        <div>
+          <p class="eyebrow">Stable release</p>
+          <h2 id="install-title">Install Gitdex v0.2.0</h2>
+          <p>
+            The installer uses the stable <code>v0.2.0</code> tag, installs dependencies, builds the app, and links the <code>gitdex</code> command into <code>~/.local/bin</code>.
+          </p>
+        </div>
+        <div class="install-card">
+          <div class="terminal-title">Terminal</div>
+          <pre><code>curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/install.sh | bash</code></pre>
+          <div class="install-actions">
+            <a class="button primary" href="https://github.com/Gitdex-AI/gitdex/tree/v0.2.0">Release source</a>
+            <a class="button secondary" href="https://github.com/Gitdex-AI/gitdex/blob/v0.2.0/README.md">Read docs</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Gitdex</span>
+      <span>Local-first multi-agent GitHub workflow console.</span>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-label="Gitdex console preview">
+  <rect width="1400" height="900" fill="#111827"/>
+  <rect x="92" y="84" width="1216" height="732" rx="38" fill="#f8fafc" opacity=".94"/>
+  <rect x="92" y="84" width="330" height="732" rx="38" fill="#0b1220"/>
+  <rect x="132" y="136" width="150" height="28" rx="8" fill="#334155"/>
+  <rect x="132" y="196" width="230" height="44" rx="12" fill="#2563eb"/>
+  <rect x="132" y="270" width="238" height="72" rx="14" fill="#1d4ed8" opacity=".55"/>
+  <rect x="132" y="362" width="238" height="72" rx="14" fill="#ffffff" opacity=".08"/>
+  <rect x="132" y="486" width="238" height="42" rx="10" fill="#ffffff" opacity=".08"/>
+  <rect x="132" y="544" width="238" height="42" rx="10" fill="#ffffff" opacity=".08"/>
+  <rect x="132" y="602" width="238" height="42" rx="10" fill="#ffffff" opacity=".08"/>
+  <rect x="492" y="156" width="376" height="68" rx="20" fill="#2563eb"/>
+  <rect x="632" y="264" width="520" height="106" rx="22" fill="#ffffff"/>
+  <rect x="670" y="304" width="270" height="18" rx="9" fill="#172033"/>
+  <rect x="670" y="334" width="402" height="16" rx="8" fill="#94a3b8"/>
+  <rect x="536" y="420" width="560" height="104" rx="20" fill="#ffffff"/>
+  <rect x="574" y="456" width="250" height="18" rx="9" fill="#172033"/>
+  <rect x="574" y="486" width="432" height="16" rx="8" fill="#94a3b8"/>
+  <rect x="536" y="586" width="560" height="72" rx="16" fill="#0b1220"/>
+  <rect x="574" y="614" width="228" height="16" rx="8" fill="#86efac"/>
+  <circle cx="1238" cy="164" r="22" fill="#0f8f67"/>
+  <circle cx="1186" cy="164" r="22" fill="#b7791f"/>
+</svg>
