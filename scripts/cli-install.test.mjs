@@ -5,6 +5,8 @@ import test from "node:test";
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 const cliSource = readFileSync("bin/gitdex.mjs", "utf8");
 const installSource = readFileSync("scripts/install.sh", "utf8");
+const pagesInstallSource = readFileSync("docs/install.sh", "utf8");
+const landingSource = readFileSync("docs/index.html", "utf8");
 
 test("package exposes the gitdex CLI bin", () => {
   assert.equal(packageJson.bin?.gitdex, "./bin/gitdex.mjs");
@@ -39,4 +41,9 @@ test("install script installs from GitHub and links the local CLI", () => {
   assert.match(installSource, /ln -sf "\$install_dir\/bin\/gitdex\.mjs" "\$bin_dir\/gitdex"/);
   assert.match(installSource, /GITDEX_INSTALL_SERVICE:-0/);
   assert.match(installSource, /install-service --no-build/);
+});
+
+test("GitHub Pages publishes the stable installer under gitdex.ai", () => {
+  assert.equal(pagesInstallSource, installSource);
+  assert.match(landingSource, /https:\/\/gitdex\.ai\/install\.sh/);
 });

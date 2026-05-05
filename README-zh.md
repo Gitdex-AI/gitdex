@@ -214,7 +214,7 @@ Gitdex 要求宿主机上的 `codex exec` 和 `gh` 操作可以正常工作。
 快速安装：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/install.sh | bash
+curl -fsSL https://gitdex.ai/install.sh | bash
 ```
 
 安装脚本会把 Gitdex 安装到 `~/.gitdex/app`，把 `gitdex` 命令链接到 `~/.local/bin`，安装依赖并构建应用。可以用 `GITDEX_INSTALL_DIR` 修改安装目录，用 `GITDEX_BIN_DIR` 修改命令目录。
@@ -222,7 +222,7 @@ curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/ins
 如果希望安装时直接作为后台服务启动：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/install.sh | GITDEX_INSTALL_SERVICE=1 bash
+curl -fsSL https://gitdex.ai/install.sh | GITDEX_INSTALL_SERVICE=1 bash
 ```
 
 克隆仓库：

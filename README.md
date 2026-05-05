@@ -214,7 +214,7 @@ Product site: <https://gitdex.ai>
 Quick install:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/install.sh | bash
+curl -fsSL https://gitdex.ai/install.sh | bash
 ```
 
 The script installs Gitdex into `~/.gitdex/app`, links `gitdex` into `~/.local/bin`, installs dependencies, and builds the app. The install location can be changed with `GITDEX_INSTALL_DIR`, and the command directory can be changed with `GITDEX_BIN_DIR`.
@@ -222,7 +222,7 @@ The script installs Gitdex into `~/.gitdex/app`, links `gitdex` into `~/.local/b
 To install and start Gitdex as a background service during installation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gitdex-AI/gitdex/v0.2.0/scripts/install.sh | GITDEX_INSTALL_SERVICE=1 bash
+curl -fsSL https://gitdex.ai/install.sh | GITDEX_INSTALL_SERVICE=1 bash
 ```
 
 Clone the repository:
