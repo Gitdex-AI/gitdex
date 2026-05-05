@@ -24,13 +24,24 @@ export function ProjectChatLayout({ children }: { children: ReactNode }) {
     <div className={`project-chat-layout${collapsed ? " sidebar-collapsed" : ""}`}>
       <button
         type="button"
-        className="project-sidebar-collapse-button"
+        className="project-sidebar-expand-button"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         onClick={toggleCollapsed}
       >
         {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
+      <div className="project-sidebar-collapse-control">
+        <button
+          type="button"
+          className="project-sidebar-collapse-button"
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+          onClick={toggleCollapsed}
+        >
+          <PanelLeftClose size={18} />
+        </button>
+      </div>
       {children}
     </div>
   );
