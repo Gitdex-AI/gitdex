@@ -88,6 +88,62 @@ a {
   color: #ffffff;
 }
 
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.language-switch {
+  display: flex;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.language-switch button {
+  min-width: 42px;
+  height: 28px;
+  padding: 0 10px;
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.language-switch button[aria-pressed="true"] {
+  color: var(--ink);
+  background: #ffffff;
+}
+
+[data-lang="zh"] {
+  display: none !important;
+}
+
+:root[data-language="zh"] [data-lang="en"] {
+  display: none !important;
+}
+
+:root[data-language="zh"] [data-lang="zh"] {
+  display: revert !important;
+}
+
+:root[data-language="zh"] .hero-actions [data-lang="zh"],
+:root[data-language="zh"] .install-actions [data-lang="zh"] {
+  display: inline-flex !important;
+}
+
+:root[data-language="zh"] .new-req[data-lang="zh"],
+:root[data-language="zh"] .message[data-lang="zh"],
+:root[data-language="zh"] .status-line[data-lang="zh"] {
+  display: block !important;
+}
+
 .hero {
   position: relative;
   display: grid;
@@ -284,12 +340,6 @@ h1 {
   line-height: 1.25;
 }
 
-.hero-lede.zh {
-  margin-top: -4px;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: clamp(17px, 1.8vw, 23px);
-}
-
 .hero-actions,
 .install-actions {
   display: flex;
@@ -343,21 +393,10 @@ h2 {
   letter-spacing: 0;
 }
 
-.zh-heading {
-  margin-top: -4px;
-  color: var(--muted);
-  font-size: clamp(25px, 3.4vw, 40px);
-}
-
 .section-heading p:not(.eyebrow),
 .install p {
   color: var(--muted);
   font-size: 18px;
-}
-
-.zh {
-  color: var(--muted);
-  font-size: 16px;
 }
 
 .workflow {
@@ -402,13 +441,6 @@ h3 {
 .feature-grid p {
   margin-bottom: 0;
   color: var(--muted);
-}
-
-.flow-grid p.zh,
-.feature-grid p.zh {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
 }
 
 .features {
@@ -480,6 +512,10 @@ footer span:first-child {
 @media (max-width: 980px) {
   .site-nav nav {
     display: none;
+  }
+
+  .nav-controls {
+    margin-left: auto;
   }
 
   .hero {
