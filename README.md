@@ -5,9 +5,11 @@ Gitdex is a local-first control plane for running Codex-powered software teams a
 It turns a product request into a tracked delivery flow with fixed AI roles:
 
 - Product Manager: clarifies requirements with the user and produces a handoff.
-- Architect: turns requirements into GitHub issues, reviews implementation, resolves specification blockers, and controls merge readiness.
+- Planner: turns confirmed requirements into GitHub issues with ownership, dependencies, and acceptance criteria.
 - Developer: implements one GitHub issue at a time inside explicit owned paths.
 - QA: validates pull requests against issue requirements and acceptance criteria.
+- Reviewer: reviews implementation and merge readiness after QA passes.
+- Merge agent: merges approved PRs and closes the GitHub issue.
 - DevOps: handles deployment planning, release operations, and production follow-up.
 
 Gitdex uses the local `codex` CLI, the local `gh` CLI, GitHub issues/PRs/labels, and local SQLite state. It is designed to keep the backend deterministic: the server queues work, passes context between agents, stores state, and syncs GitHub; agents make the judgment calls.
@@ -18,19 +20,19 @@ Gitdex uses the local `codex` CLI, the local `gh` CLI, GitHub issues/PRs/labels,
 - First-run admin setup and login-protected console.
 - Project setup bound to a GitHub repository.
 - Local SQLite storage in `data/gitdex.sqlite`.
-- GitHub account setup, SSH key generation, repo discovery, issue creation, PR lookup, labels, comments, review, and merge operations through `gh`.
+- Per-project GitHub owner/repo setup, repo discovery, issue creation, PR lookup, labels, comments, review, and merge operations through `gh`.
 - Codex CLI status checks and long-running agent sessions.
-- PM, Architect, Developer, QA, and DevOps sessions with persistent chat and execution logs.
+- PM, Planner, Developer, QA, Reviewer, Merge, Architect blocker-resolution, and DevOps sessions with persistent chat and execution logs.
 - Structured PM handoff to create a requirement record.
-- Requirement IDs such as `WF-YYYYMMDD-NNN`.
-- Architect issue planning with explicit developer roles, owned paths, acceptance criteria, and issue-number dependencies.
+- Requirement IDs such as `R1`, `R2`, and `R3`.
+- Planner issue breakdown with explicit developer roles, owned paths, acceptance criteria, and issue-number dependencies.
 - GitHub issue tracking as the main execution object after planning.
 - Developer worktree isolation under `data/gitdex-workspaces/`.
 - Developer PR creation/recovery and retry after failed QA.
-- QA validation with comments and `gitdex:qa-*` labels.
-- Architect code review before merge.
-- Architect merge jobs after QA and review pass.
-- Specification blocker escalation back to Architect from Developer or QA.
+- QA validation with comments and `gd:*` stage labels on the GitHub issue.
+- Reviewer code review before merge.
+- Merge jobs after QA and review pass.
+- Specification blocker escalation to Architect from Developer or QA.
 - Auto Run for issue lists: Gitdex keeps running any currently runnable issue stage, including parallel work where dependencies allow it.
 - Auto Run pause, stop, resume, and persisted state across refreshes.
 - Per-issue controls: `Run Dev`, `Run QA`, `Run Review`, and `Run Merge`.
@@ -45,7 +47,7 @@ Gitdex separates work into three phases.
 
 ### 1. Requirements Before GitHub
 
-The user talks with the PM until the requirement is clear enough to hand over.
+The user talks with the PM until the requirement is clear enough to plan. PM should ask one focused question at a time and provide concise options when clarifying the request.
 
 The PM produces structured handoff JSON with:
 
@@ -58,9 +60,9 @@ Gitdex records this as a requirement. Requirements may be created while other re
 
 ### 2. GitHub Issue Tracking
 
-After the Architect receives a requirement, GitHub becomes the source of execution tracking.
+After the Planner receives a confirmed requirement, GitHub becomes the source of execution tracking.
 
-The Architect creates one or more GitHub issues. Each issue should include:
+The Planner creates one or more GitHub issues. Each issue should include:
 
 - a clear title and requirement,
 - acceptance criteria,
@@ -81,8 +83,8 @@ Rules:
 - QA validates the PR. If QA fails, the issue returns to Developer.
 - QA or Developer may mark an issue as specification-blocked when the issue cannot be safely implemented or validated without Architect clarification.
 - Architect resolves specification blockers by updating issue scope, acceptance criteria, or owned paths, then queues Developer retry.
-- Architect reviews code after QA passes.
-- Architect merges only after QA passes and review marks the PR ready.
+- Reviewer reviews code after QA passes.
+- Merge runs only after QA passes and review marks the PR ready.
 - The backend does not hand-roll conflict resolution or code judgment; those decisions are delegated to Codex agents.
 
 ### 3. Post-GitHub Operations
@@ -95,17 +97,18 @@ After issues are merged, DevOps owns deployment and operational follow-up:
 - incident analysis,
 - production follow-up.
 
-If operations uncover product or implementation work, DevOps should hand it back to Architect so a new GitHub issue can enter the normal issue-tracking phase.
+If operations uncover product or implementation work, DevOps should hand it back to Architect or Planner so a new GitHub issue can enter the normal issue-tracking phase.
 
 ## Web Console
 
-The project page is split into the chat surface and a right-side workflow panel.
+The project page uses a ChatGPT-style layout: a left workspace sidebar and a main chat/content area.
 
-The right-side panel is organized by phase:
+The left sidebar is organized around requirements and their GitHub issues:
 
-- Requirements: recent requirements and the entry to all requirements.
-- GitHub Issues: active issue list, issue labels, PR links, action buttons, and Auto Run.
-- Operations: DevOps and post-merge work.
+- New Requirement: starts or resumes the PM requirement chat.
+- Requirements: recent requirement chats, status, archive, and the entry to all requirements.
+- GitHub Issues: active issue list under the selected requirement, issue labels, PR links, action buttons, and Auto Run.
+- Project tools: GitHub triage, settings, project details, and Add Project.
 
 The GitHub issue list shows GitHub-backed labels as labels. Local execution state, such as a currently running Codex job, affects buttons and live status instead of being treated as a GitHub label.
 
@@ -127,19 +130,32 @@ Gitdex creates and reads labels for durable GitHub workflow state.
 Common state labels:
 
 ```text
-gitdex:dev-running
-gitdex:architect-review
-gitdex:need-qa
-gitdex:qa-running
-gitdex:qa-passed
-gitdex:qa-failed
-gitdex:spec-blocked
-gitdex:ready-to-merge
-gitdex:merged
-gitdex:deployed
-gitdex:blocked
-gitdex:superseded
+gd:dev
+gd:fix
+gd:rebase
+gd:qa
+gd:review
+gd:merge
+gd:architect
+gd:blocked
+gd:done
 ```
+
+There should be exactly one `gd:*` stage label on an active GitHub issue. The UI derives the visible action from that stage:
+
+```text
+gd:dev       -> Run Dev
+gd:fix       -> Run Dev
+gd:rebase    -> Run Dev
+gd:qa        -> Run QA
+gd:review    -> Run Review
+gd:merge     -> Run Merge
+gd:architect -> Run Architect
+gd:blocked   -> Resolve
+gd:done      -> no run action
+```
+
+Older workflow labels such as `gitdex:need-qa`, `gitdex:qa-passed`, `gitdex:qa-failed`, and `gitdex:ready-to-merge` are treated as legacy labels. Gitdex migrates or removes them during sync/repair so the issue label state converges back to a single `gd:*` stage label.
 
 Common role labels:
 
@@ -170,7 +186,6 @@ Important runtime files:
 ```text
 data/gitdex.sqlite              SQLite runtime database
 data/gitdex-workspaces/         per-agent Git worktrees
-data/ssh/                       generated GitHub SSH keys
 ```
 
 ## Requirements
@@ -191,6 +206,8 @@ codex login
 ```
 
 Gitdex expects `codex exec` and `gh` operations to work on the host machine.
+
+Product site: <https://gitdex.ai>
 
 ## Installation
 

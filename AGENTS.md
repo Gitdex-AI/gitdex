@@ -52,7 +52,7 @@ QA should test from user-visible behavior and leave a GitHub issue comment with:
 - Findings with severity, reproduction steps, expected result, and actual result.
 - Any untested areas or environment limits.
 
-When QA passes, add the `qa-passed` label. When QA fails, add `qa-failed` and comment with the failure details. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue. When requesting QA recheck after a developer fix, remove `qa-failed` / `gitdex:qa-failed` and add `gitdex:need-qa` on both the source issue and PR so the workflow is back in QA-required state. Merge the PR into `main` only after QA has passed.
+When QA passes, transition the GitHub issue to `gd:review`. When QA fails because implementation changes are needed, transition the issue to `gd:fix` and comment with the failure details. When QA or Developer determines the issue cannot be safely implemented or validated without clarification, transition the issue to `gd:architect`. When local tooling or the validation environment blocks progress, transition the issue to `gd:blocked`. Developers should address failed QA findings in a follow-up commit and request another QA pass on the same issue by transitioning the issue back to `gd:qa`. PR labels are not the source of workflow state; the source issue should have exactly one active `gd:*` stage label. Merge the PR into `main` only after QA has passed and review marks the PR ready.
 
 ## Commit & Pull Request Guidelines
 
