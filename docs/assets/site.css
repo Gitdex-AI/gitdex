@@ -492,9 +492,9 @@ h3 {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  color: #e0f2fe;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
@@ -510,8 +510,8 @@ h3 {
   min-width: 88px;
   height: 46px;
   padding: 0 16px;
-  color: #07101f;
-  background: #d1fae5;
+  color: #ffffff;
+  background: var(--blue);
   border: 0;
   border-radius: 8px;
   font: inherit;
@@ -521,7 +521,7 @@ h3 {
 }
 
 .install-command button:hover {
-  background: #a7f3d0;
+  background: var(--blue-dark);
 }
 
 .install-command button[data-copied="true"] span {
@@ -570,8 +570,11 @@ footer span:first-child {
     min-height: auto;
     padding-top: 104px;
     padding-bottom: 42px;
+    background:
+      linear-gradient(rgba(7, 12, 24, 0.18), rgba(7, 12, 24, 0.58)),
+      linear-gradient(135deg, #0c1220 0%, #1f2937 48%, #143b55 100%);
     background-position: center;
-    background-size: cover, 0 0, cover;
+    background-size: cover;
   }
 
   .hero::after {
@@ -598,6 +601,10 @@ footer span:first-child {
   .hero {
     padding-right: 18px;
     padding-left: 18px;
+  }
+
+  .hero-visual {
+    display: none;
   }
 
   h1 {
