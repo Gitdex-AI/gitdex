@@ -1,15 +1,16 @@
 :root {
   color-scheme: light;
-  --ink: #172033;
-  --muted: #5f6b7a;
-  --surface: #ffffff;
-  --surface-soft: #f5f7fb;
-  --line: #dfe5ee;
-  --blue: #2563eb;
-  --blue-dark: #173da6;
-  --green: #0f8f67;
-  --amber: #b7791f;
-  --shadow: 0 24px 80px rgba(23, 32, 51, 0.18);
+  --ink: #11140f;
+  --muted: #586052;
+  --surface: #f8f7ef;
+  --surface-soft: #eeeadb;
+  --line: #c9c3ad;
+  --terminal: #0d100b;
+  --terminal-soft: #151a12;
+  --green: #2ad36b;
+  --green-dark: #149447;
+  --amber: #c98324;
+  --shadow: 10px 10px 0 rgba(17, 20, 15, 0.16);
 }
 
 * {
@@ -23,7 +24,11 @@ html {
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--surface);
+  background:
+    linear-gradient(rgba(17, 20, 15, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 20, 15, 0.035) 1px, transparent 1px),
+    var(--surface);
+  background-size: 28px 28px;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
@@ -45,10 +50,10 @@ a {
   gap: 24px;
   height: 64px;
   padding: 0 clamp(20px, 5vw, 64px);
-  color: #ffffff;
-  background: rgba(12, 18, 32, 0.78);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(14px);
+  color: #f8f7ef;
+  background: rgba(13, 16, 11, 0.92);
+  border-bottom: 1px solid rgba(42, 211, 107, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .brand {
@@ -64,12 +69,13 @@ a {
   place-items: center;
   width: 34px;
   height: 34px;
-  color: #ffffff;
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
+  color: var(--green);
+  background: #050704;
+  border: 1px solid rgba(42, 211, 107, 0.54);
+  border-radius: 3px;
   font-size: 13px;
   letter-spacing: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .site-nav nav {
@@ -97,9 +103,9 @@ a {
 .language-switch {
   display: flex;
   padding: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 999px;
+  background: rgba(42, 211, 107, 0.08);
+  border: 1px solid rgba(42, 211, 107, 0.28);
+  border-radius: 3px;
 }
 
 .language-switch button {
@@ -109,7 +115,7 @@ a {
   color: rgba(255, 255, 255, 0.72);
   background: transparent;
   border: 0;
-  border-radius: 999px;
+  border-radius: 2px;
   font: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -117,8 +123,8 @@ a {
 }
 
 .language-switch button[aria-pressed="true"] {
-  color: var(--ink);
-  background: #ffffff;
+  color: #081008;
+  background: var(--green);
 }
 
 [data-lang="zh"] {
@@ -153,9 +159,9 @@ a {
   overflow: hidden;
   color: #ffffff;
   background:
-    linear-gradient(rgba(7, 12, 24, 0.18), rgba(7, 12, 24, 0.58)),
+    linear-gradient(rgba(13, 16, 11, 0.2), rgba(13, 16, 11, 0.68)),
     url("./hero-console.svg"),
-    linear-gradient(135deg, #0c1220 0%, #1f2937 48%, #143b55 100%);
+    linear-gradient(135deg, #070906 0%, #12180f 52%, #22200f 100%);
   background-position: center, center right, center;
   background-size: cover, min(980px, 86vw), cover;
   background-repeat: no-repeat;
@@ -165,7 +171,10 @@ a {
   position: absolute;
   inset: 0;
   content: "";
-  background: linear-gradient(90deg, rgba(7, 12, 24, 0.92), rgba(7, 12, 24, 0.56) 52%, rgba(7, 12, 24, 0.18));
+  background:
+    linear-gradient(90deg, rgba(7, 9, 6, 0.95), rgba(7, 9, 6, 0.68) 54%, rgba(7, 9, 6, 0.28)),
+    linear-gradient(rgba(42, 211, 107, 0.08) 1px, transparent 1px);
+  background-size: auto, 100% 18px;
 }
 
 .hero-visual {
@@ -182,23 +191,23 @@ a {
   grid-template-columns: 230px 1fr;
   min-height: 420px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 18px;
+  background: rgba(248, 247, 239, 0.94);
+  border: 1px solid rgba(42, 211, 107, 0.5);
+  border-radius: 4px;
   box-shadow: var(--shadow);
 }
 
 .app-sidebar {
   padding: 18px;
   color: var(--ink);
-  background: #111827;
+  background: #0d100b;
 }
 
 .repo-line,
 .new-req,
 .req,
 .issue-list {
-  border-radius: 10px;
+  border-radius: 3px;
 }
 
 .repo-line {
@@ -209,10 +218,11 @@ a {
 .new-req {
   margin: 18px 0;
   padding: 10px 12px;
-  color: #ffffff;
-  background: var(--blue);
+  color: #081008;
+  background: var(--green);
   font-size: 13px;
   font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .req {
@@ -226,7 +236,8 @@ a {
 
 .req.active {
   color: #ffffff;
-  background: rgba(37, 99, 235, 0.32);
+  background: rgba(42, 211, 107, 0.22);
+  border: 1px solid rgba(42, 211, 107, 0.38);
 }
 
 .req span {
@@ -250,11 +261,11 @@ a {
   justify-content: space-between;
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
+  border-radius: 3px;
 }
 
 .issue-list b {
-  color: #8bd5ff;
+  color: var(--green);
 }
 
 .app-chat {
@@ -263,26 +274,28 @@ a {
   gap: 14px;
   padding: 26px;
   color: var(--ink);
-  background: #eef3f8;
+  background: #ebe7d7;
 }
 
 .message {
   width: min(84%, 520px);
   padding: 14px 16px;
-  border-radius: 14px;
-  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: none;
 }
 
 .message.user {
   align-self: flex-end;
-  color: #ffffff;
-  background: var(--blue);
+  color: #081008;
+  background: #d9f99d;
+  border-color: rgba(20, 148, 71, 0.36);
 }
 
 .message.agent {
   display: grid;
   gap: 5px;
-  background: #ffffff;
+  background: #f8f7ef;
 }
 
 .message.agent span {
@@ -293,9 +306,10 @@ a {
 .status-line {
   margin-top: auto;
   padding: 12px 14px;
-  color: #d1fae5;
-  background: #0b1220;
-  border-radius: 12px;
+  color: var(--green);
+  background: var(--terminal);
+  border: 1px solid rgba(42, 211, 107, 0.32);
+  border-radius: 3px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
 }
@@ -313,10 +327,11 @@ a {
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .hero .eyebrow {
-  color: #82f3c8;
+  color: var(--green);
 }
 
 h1,
@@ -331,6 +346,8 @@ h1 {
   font-size: clamp(72px, 14vw, 156px);
   line-height: 0.86;
   letter-spacing: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 900;
 }
 
 .hero-lede {
@@ -354,25 +371,27 @@ h1 {
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 3px;
   font-size: 14px;
   font-weight: 800;
   text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .button.primary {
-  color: #ffffff;
-  background: var(--blue);
+  color: #081008;
+  background: var(--green);
+  border-color: var(--green);
 }
 
 .button.primary:hover {
-  background: var(--blue-dark);
+  background: #8cffb6;
 }
 
 .button.secondary {
   color: inherit;
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.24);
+  background: transparent;
+  border-color: rgba(42, 211, 107, 0.5);
 }
 
 .section,
@@ -416,7 +435,7 @@ h2 {
   padding: 22px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 4px;
 }
 
 .flow-grid article {
@@ -445,6 +464,8 @@ h3 {
 
 .features {
   background: var(--surface-soft);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .feature-grid {
@@ -456,7 +477,10 @@ h3 {
   grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
   gap: 36px;
   align-items: start;
-  background: #0b1220;
+  background:
+    linear-gradient(rgba(42, 211, 107, 0.06) 1px, transparent 1px),
+    var(--terminal);
+  background-size: 100% 22px;
 }
 
 .install h2,
@@ -470,8 +494,8 @@ h3 {
 
 .install-card {
   color: #d1fae5;
-  background: #07101f;
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--terminal-soft);
+  border-color: rgba(42, 211, 107, 0.34);
 }
 
 .terminal-title {
@@ -492,28 +516,28 @@ h3 {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  color: var(--ink);
-  background: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 8px;
+  color: #d7ffe4;
+  background: #050704;
+  border: 1px solid rgba(42, 211, 107, 0.38);
+  border-radius: 3px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
   outline: none;
 }
 
 .install-command input:focus {
-  border-color: rgba(139, 213, 255, 0.6);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+  border-color: rgba(42, 211, 107, 0.82);
+  box-shadow: 0 0 0 3px rgba(42, 211, 107, 0.16);
 }
 
 .install-command button {
   min-width: 88px;
   height: 46px;
   padding: 0 16px;
-  color: #ffffff;
-  background: var(--blue);
-  border: 0;
-  border-radius: 8px;
+  color: #081008;
+  background: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 3px;
   font: inherit;
   font-size: 14px;
   font-weight: 850;
@@ -521,7 +545,7 @@ h3 {
 }
 
 .install-command button:hover {
-  background: var(--blue-dark);
+  background: #8cffb6;
 }
 
 .install-command button[data-copied="true"] span {
