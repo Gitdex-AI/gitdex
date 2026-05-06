@@ -20,7 +20,7 @@ export type WorkflowStatus =
 export type AgentSessionStatus = "active" | "blocked" | "done";
 export type AgentMessageRole = "user" | "assistant" | "system";
 export type JobStatus = "pending" | "running" | "done" | "failed" | "cancelled";
-export type JobType = "memory_init" | "workflow_run" | "issue_run" | "qa_run" | "architect_blocker_run" | "architect_review_run" | "merge_run";
+export type JobType = "memory_init" | "workflow_run" | "issue_run" | "qa_run" | "blocker_analysis_run" | "architect_blocker_run" | "architect_review_run" | "merge_run";
 
 export type Settings = {
   appBaseUrl: string;
@@ -98,6 +98,15 @@ export type ReviewerMergeResult = {
   decision: ReviewerMergeDecision;
   summary: string;
   blocker: string;
+  executionLog?: string;
+};
+
+export type BlockerAnalysisResult = {
+  blockerType: "environment" | "spec" | "implementation" | "merge_conflict" | "permission" | "unknown";
+  summary: string;
+  recommendedAction: "reset_to_dev" | "run_architect" | "fix_environment" | "manual_review" | "close_issue";
+  userExplanation: string;
+  risks: string[];
   executionLog?: string;
 };
 

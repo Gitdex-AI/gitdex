@@ -73,6 +73,11 @@ function findJobSession(job: JobRecord, sessions: AgentSessionRecord[]): AgentSe
       ?? sessions.find((session) => session.sessionKey === job.payload.sessionKey)
       ?? null;
   }
+  if (job.type === "blocker_analysis_run") {
+    return sessions.find((session) => session.sessionKey === `${job.payload.issueId}:blocker-analysis`)
+      ?? sessions.find((session) => session.role === "architect" && session.title === "Blocker analysis" && session.issueId === job.payload.issueId)
+      ?? null;
+  }
   if (job.type === "architect_review_run" || job.type === "merge_run") {
     return sessions.find((session) => session.role === "reviewer" && session.issueId === job.payload.issueId) ?? null;
   }

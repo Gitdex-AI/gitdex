@@ -1,6 +1,7 @@
 import { architectMergeInstruction, architectReviewInstruction, runWorkflowArchitectReview, runWorkflowMerge } from "@/lib/architect-runner";
 import { architectBlockerInstruction, runArchitectBlockerResolution } from "@/lib/architect-blocker-runner";
 import { appendAgentRunPlaceholder } from "@/lib/agent-run-messages";
+import { blockerAnalysisSessionKey, runIssueBlockerAnalysis } from "@/lib/blocker-analysis-runner";
 import { CodexClient } from "@/lib/codex";
 import { developerIssueInstruction, plannerWorkflowInstruction, qaValidationInstruction, runWorkflow, runWorkflowIssue, runWorkflowQa, syncWorkflowFromGitHub } from "@/lib/orchestrator";
 import { runWithJobRuntime } from "@/lib/job-runtime";
@@ -40,7 +41,7 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
 
   try {
     await runWithJobRuntime(job.jobId, async () => {
-      if (!["memory_init", "workflow_run", "issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) return;
+      if (!["memory_init", "workflow_run", "issue_run", "qa_run", "blocker_analysis_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) return;
       const project = job.projectId ? await getProject(job.projectId) : null;
       const workflow = await getWorkflow(job.payload.workflowId);
       if (workflow?.paused) {
@@ -57,6 +58,8 @@ async function runClaimedJob(job: JobRecord): Promise<{ job: JobRecord | null; r
       }
       if (job.type === "memory_init" && project) {
         await runProjectMemoryInit(project);
+      } else if (job.type === "blocker_analysis_run" && project && job.payload.issueId) {
+        await runIssueBlockerAnalysis(project, job.payload.workflowId, job.payload.issueId);
       } else if (job.type === "architect_blocker_run" && project && job.payload.sessionKey) {
         await runArchitectBlockerResolution(project, job.payload.sessionKey);
       } else if (job.type === "issue_run" && job.payload.issueId) {
@@ -244,6 +247,39 @@ async function ensureRunningPlaceholder(project: ProjectRecord, workflow: Workfl
       sessionId: existing?.sessionId ?? null,
       currentStep: job.type === "merge_run" ? "merge requested" : "review requested",
       prUrl: job.payload.prUrl ?? issue.prUrl ?? null,
+      labels: issue.labels ?? []
+    });
+    return;
+  }
+  if (job.type === "blocker_analysis_run" && issue) {
+    const sessionKey = blockerAnalysisSessionKey(issue);
+    const existing = await getAgentSession(sessionKey);
+    const instruction = `Analyze why this Gitdex issue is blocked and recommend the next operator action. This is read-only analysis; do not change GitHub or local files.`;
+    await appendRunUserInstruction({
+      project,
+      workflow,
+      issue,
+      sessionKey,
+      role: "architect",
+      title: "Blocker analysis",
+      content: instruction,
+      sessionId: existing?.sessionId ?? null,
+      currentStep: "analyzing blocker",
+      prUrl: issue.prUrl ?? null,
+      labels: issue.labels ?? []
+    });
+    await appendAgentRunPlaceholder({
+      project,
+      workflow,
+      issue,
+      job,
+      sessionKey,
+      role: "architect",
+      title: "Blocker analysis",
+      label: "Analysis",
+      sessionId: existing?.sessionId ?? null,
+      currentStep: "analyzing blocker",
+      prUrl: issue.prUrl ?? null,
       labels: issue.labels ?? []
     });
     return;

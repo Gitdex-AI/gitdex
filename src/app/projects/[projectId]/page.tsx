@@ -7,6 +7,7 @@ import { ProjectAutoRunJob } from "@/components/ProjectAutoRunJob";
 import { ProjectAutoRunIssueAction } from "@/components/ProjectAutoRunIssueAction";
 import { ProjectAutoRunIssuesButton } from "@/components/ProjectAutoRunIssuesButton";
 import { ProjectAutoSync } from "@/components/ProjectAutoSync";
+import { ProjectAnalyzeBlockerButton } from "@/components/ProjectAnalyzeBlockerButton";
 import { ProjectChatArea } from "@/components/ProjectChatArea";
 import { ProjectChatLayout } from "@/components/ProjectChatLayout";
 import { ProjectDetailPanel } from "@/components/ProjectDetailPanel";
@@ -922,7 +923,14 @@ function renderIssueStageAction(input: {
   if (input.activeJob?.status === "pending") return wrapAutoRunAction(runningLabelForJob(input.activeJob, input.issue), <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />);
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob, input.issue)} />;
   if (input.stage === "gd:architect" && input.specBlockedSessionKey) return wrapAutoRunAction(runningLabelForStage("Architect", input.issue), <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />);
-  if (input.stage === "gd:blocked") return <ProjectResetBlockedIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
+  if (input.stage === "gd:blocked") {
+    return (
+      <>
+        <ProjectAnalyzeBlockerButton projectId={input.projectId} issueId={input.issue.issueId} />
+        <ProjectResetBlockedIssueButton projectId={input.projectId} issueId={input.issue.issueId} />
+      </>
+    );
+  }
   if (input.stage === "gd:fix" || input.stage === "gd:rebase") return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.canMerge) return wrapAutoRunAction(runningLabelForStage("Merge", input.issue), <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />);
   if (input.canArchitectReview) return wrapAutoRunAction(runningLabelForStage("Review", input.issue), <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />);
@@ -984,6 +992,7 @@ function canRunDeveloperIssue(issue: IssueRecord, issues: IssueRecord[]): boolea
 
 function runLabelForJob(job: JobRecord): string {
   if (job.type === "qa_run") return "Run QA";
+  if (job.type === "blocker_analysis_run") return "Analyze";
   if (job.type === "architect_blocker_run") return "Run Architect";
   if (job.type === "architect_review_run") return "Run Review";
   if (job.type === "merge_run") return "Run Merge";
@@ -992,6 +1001,7 @@ function runLabelForJob(job: JobRecord): string {
 
 function runningLabelForJob(job: JobRecord, issue: IssueRecord): string {
   if (job.type === "qa_run") return runningLabelForStage("QA", issue);
+  if (job.type === "blocker_analysis_run") return runningLabelForStage("Analysis", issue);
   if (job.type === "architect_blocker_run") return runningLabelForStage("Architect", issue);
   if (job.type === "architect_review_run") return runningLabelForStage("Review", issue);
   if (job.type === "merge_run") return runningLabelForStage("Merge", issue);
@@ -1015,7 +1025,7 @@ function activeAutoRunLabel(jobs: JobRecord[], workflows: WorkflowRecord[]): str
 }
 
 function isIssueStageJob(job: JobRecord): boolean {
-  return ["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type);
+  return ["blocker_analysis_run", "architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"].includes(job.type);
 }
 
 function RunningActionButton({ label }: { label: string }): ReactNode {
@@ -1029,7 +1039,7 @@ function RunningActionButton({ label }: { label: string }): ReactNode {
 function latestIssueJob(issueId: string, jobs: JobRecord[], type?: JobRecord["type"], status?: JobRecord["status"]): JobRecord | null {
   const activeStatuses = new Set<JobRecord["status"]>(["pending", "running", "failed"]);
   const matchingJobs = jobs
-    .filter((job) => (type ? job.type === type : ["issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) && job.payload.issueId === issueId);
+    .filter((job) => (type ? job.type === type : ["issue_run", "qa_run", "blocker_analysis_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)) && job.payload.issueId === issueId);
   if (status) return matchingJobs.filter((job) => job.status === status).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
   const latestSuccessfulAt = Math.max(0, ...matchingJobs.filter((job) => job.status === "done").map((job) => Date.parse(job.updatedAt)));
   return matchingJobs

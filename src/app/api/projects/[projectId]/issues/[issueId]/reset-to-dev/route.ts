@@ -21,7 +21,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ pr
   const jobs = await listJobs(project.projectId);
   const activeJob = jobs.find((job) => (
     (job.status === "pending" || job.status === "running")
-    && ["issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)
+    && ["issue_run", "qa_run", "blocker_analysis_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type)
     && job.payload.workflowId === workflow.workflowId
     && job.payload.issueId === issue.issueId
   ));

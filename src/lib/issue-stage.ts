@@ -202,5 +202,5 @@ function chooseStage(stages: IssueStage[]): IssueStage | null {
 }
 
 function isIssueJobForIssue(job: JobRecord, issueId: string): boolean {
-  return ["issue_run", "qa_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type) && job.payload.issueId === issueId;
+  return ["issue_run", "qa_run", "blocker_analysis_run", "architect_blocker_run", "architect_review_run", "merge_run"].includes(job.type) && job.payload.issueId === issueId;
 }

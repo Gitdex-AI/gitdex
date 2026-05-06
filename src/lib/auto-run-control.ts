@@ -16,7 +16,7 @@ export type AutoRunState = {
   updatedAt: string;
 };
 
-const runnableJobTypes = new Set<JobRecord["type"]>(["architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"]);
+const runnableJobTypes = new Set<JobRecord["type"]>(["blocker_analysis_run", "architect_blocker_run", "issue_run", "qa_run", "architect_review_run", "merge_run"]);
 const activeStatuses = new Set<AutoRunStatus>(["running", "pause_requested", "cancel_requested"]);
 
 export function autoRunStateKey(projectId: string): string {

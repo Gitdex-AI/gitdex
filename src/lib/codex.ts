@@ -8,7 +8,7 @@ import { developerRoleIds, developerRoleProfile, formatDeveloperRoleCatalog } fr
 import { expectedDeveloperBaseBranch } from "@/lib/issue-run-policy";
 import { getActiveJobId } from "@/lib/job-runtime";
 import { recordJobAgentFinal, touchJobRuntime } from "@/lib/store";
-import type { ArchitectPrReviewResult, ArchitectReviewResult, DeveloperIssueResult, DeveloperResult, IssueSpec, QaPrReviewResult, QaResult, ReviewerMergeResult } from "@/lib/types";
+import type { ArchitectPrReviewResult, ArchitectReviewResult, BlockerAnalysisResult, DeveloperIssueResult, DeveloperResult, IssueSpec, QaPrReviewResult, QaResult, ReviewerMergeResult } from "@/lib/types";
 import { dataDir, rootDir } from "@/lib/paths";
 import type { Settings } from "@/lib/types";
 
@@ -458,6 +458,66 @@ ${input.blockedContext}`;
         executionLog: result.executionLog
       },
       sessionId: input.sessionId
+    };
+  }
+
+  async analyzeIssueBlocker(input: {
+    projectName: string;
+    githubRepo: string;
+    issueId: string;
+    issueNumber?: number | null;
+    prUrl?: string | null;
+    context: string;
+  }): Promise<BlockerAnalysisResult> {
+    const workspaceDir = await this.prepareArchitectWorkspace(input.githubRepo, `blocker-analysis-${input.issueNumber ?? input.issueId}`);
+    const schema = objectSchema({
+      blockerType: { type: "string", enum: ["environment", "spec", "implementation", "merge_conflict", "permission", "unknown"] },
+      summary: { type: "string" },
+      recommendedAction: { type: "string", enum: ["reset_to_dev", "run_architect", "fix_environment", "manual_review", "close_issue"] },
+      userExplanation: { type: "string" },
+      risks: { type: "array", items: { type: "string" } }
+    });
+    const prompt = `${rolePrompts.architect}
+
+Project: ${input.projectName}
+GitHub repo: ${input.githubRepo}
+Workspace: ${workspaceDir}
+Issue: ${input.issueNumber ? `#${input.issueNumber}` : input.issueId}
+PR: ${input.prUrl ?? "none"}
+
+You are diagnosing a blocked Gitdex issue for the human operator. This is analysis only.
+
+Task:
+- Read the full GitHub issue and PR history with gh, including labels, comments, timeline, checks, and current PR mergeability when a PR exists.
+- Do not rely only on the latest comment. Understand the whole issue process and repeated failures.
+- Use the local Gitdex context below as a hint, but treat GitHub as the source of truth.
+- Recommend the next operator action, not a code change.
+
+Hard rules:
+- Do not modify GitHub issues, PRs, labels, branches, or files.
+- Do not modify the current Gitdex app checkout or its .git directory.
+- The current working directory is the isolated analysis clone: ${workspaceDir}.
+- Run git and gh commands only in the current working directory unless explicitly inspecting GitHub metadata with gh.
+- Return JSON only.
+
+Action guidance:
+- reset_to_dev: use when the blocker is likely recoverable by rerunning developer work.
+- run_architect: use when the issue is unclear, contradictory, has bad ownedPaths, missing architecture decisions, or cannot be implemented safely as specified.
+- fix_environment: use when the operator must fix local tools, ports, credentials, sandbox, or project setup before agents can continue.
+- manual_review: use when GitHub state is inconsistent or requires human inspection before changing labels.
+- close_issue: use only when the issue is already obsolete or intentionally abandoned.
+
+Gitdex context:
+${input.context}`;
+
+    const result = await this.runJsonResult<BlockerAnalysisResult>(prompt, schema, { cwd: workspaceDir });
+    return result.value ? { ...result.value, executionLog: result.executionLog } : {
+      blockerType: "unknown",
+      summary: `Could not produce a structured blocker analysis for ${input.issueNumber ? `#${input.issueNumber}` : input.issueId}.`,
+      recommendedAction: "manual_review",
+      userExplanation: result.error ?? "Codex did not return valid blocker analysis JSON.",
+      risks: ["The issue state should be inspected manually before resetting labels or rerunning agents."],
+      executionLog: result.executionLog
     };
   }
 
