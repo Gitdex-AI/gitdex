@@ -17,6 +17,7 @@ import { ProjectHandoffForm } from "@/components/ProjectHandoffForm";
 import { ProjectHandoffToQaButton } from "@/components/ProjectHandoffToQaButton";
 import { ProjectMergePrButton } from "@/components/ProjectMergePrButton";
 import { ProjectRetryJobButton } from "@/components/ProjectRetryJobButton";
+import { ProjectResetBlockedIssueButton } from "@/components/ProjectResetBlockedIssueButton";
 import { ProjectReturnToDeveloperButton } from "@/components/ProjectReturnToDeveloperButton";
 import { ProjectRunDeveloperIssueButton } from "@/components/ProjectRunDeveloperIssueButton";
 import { ProjectRunJobButton } from "@/components/ProjectRunJobButton";
@@ -921,8 +922,7 @@ function renderIssueStageAction(input: {
   if (input.activeJob?.status === "pending") return wrapAutoRunAction(runningLabelForJob(input.activeJob, input.issue), <ProjectRunJobButton projectId={input.projectId} jobId={input.activeJob.jobId} label={runLabelForJob(input.activeJob)} />);
   if (input.activeJob?.status === "running") return <RunningActionButton label={runningLabelForJob(input.activeJob, input.issue)} />;
   if (input.stage === "gd:architect" && input.specBlockedSessionKey) return wrapAutoRunAction(runningLabelForStage("Architect", input.issue), <ProjectEscalateSessionButton projectId={input.projectId} sessionKey={input.specBlockedSessionKey} />);
-  if (input.stage === "gd:blocked" && input.issue.prUrl) return wrapAutoRunAction(runningLabelForStage("QA", input.issue), <ProjectHandoffToQaButton projectId={input.projectId} issueId={input.issue.issueId} label="Reset" />);
-  if (input.stage === "gd:blocked") return null;
+  if (input.stage === "gd:blocked") return <ProjectResetBlockedIssueButton projectId={input.projectId} issueId={input.issue.issueId} />;
   if (input.stage === "gd:fix" || input.stage === "gd:rebase") return wrapAutoRunAction(runningLabelForStage("Dev", input.issue), <ProjectRunDeveloperIssueButton projectId={input.projectId} issueId={input.issue.issueId} />);
   if (input.canMerge) return wrapAutoRunAction(runningLabelForStage("Merge", input.issue), <ProjectMergePrButton projectId={input.projectId} issueId={input.issue.issueId} prUrl={input.issue.prUrl} />);
   if (input.canArchitectReview) return wrapAutoRunAction(runningLabelForStage("Review", input.issue), <ProjectArchitectReviewButton projectId={input.projectId} issueId={input.issue.issueId} />);
