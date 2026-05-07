@@ -853,6 +853,17 @@ pre,
   background: var(--app-surface-subtle);
 }
 
+.github-issue-number-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.github-issue-number-link:hover {
+  color: var(--app-interactive);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .project-sidebar-footer {
   flex: 0 0 auto;
   padding: 10px 12px;

@@ -108,4 +108,34 @@ assert.match(
   "Requirement Auto Run should only render when the active requirement still has runnable issues"
 );
 
+assert.match(
+  projectPageSource,
+  /const activeIssueId = query\.issue \?\? null;/,
+  "Project workspace should support issue-scoped chat timeline selection"
+);
+
+assert.match(
+  projectPageSource,
+  /filterSessionsForIssue\(sessions, workflowPanelWorkflows, activeIssueId\)/,
+  "Issue-scoped chat timeline should filter sessions to the selected issue"
+);
+
+assert.match(
+  projectPageSource,
+  /filterJobsForIssue\(jobs, workflowPanelWorkflows, activeIssueId\)/,
+  "Issue-scoped chat timeline should filter jobs to the selected issue"
+);
+
+assert.match(
+  projectPageSource,
+  /href=\{`\/projects\/\$\{projectId\}\?workflow=\$\{encodeURIComponent\(workflow\.workflowId\)\}&issue=\$\{encodeURIComponent\(issue\.issueId\)\}&phase=github`\}/,
+  "Issue numbers in the sidebar should link to the issue-scoped timeline"
+);
+
+assert.match(
+  globalStyles,
+  /\.github-issue-number-link\b/,
+  "Issue number timeline links should have explicit link styling"
+);
+
 console.log("chat UI source verification passed");

@@ -58,7 +58,7 @@ export default async function ProjectDetailPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ role?: string; session?: string; error?: string; message?: string; autorun?: string; workflow?: string; job?: string; queued?: string; phase?: string; panel?: string }>;
+  searchParams: Promise<{ role?: string; session?: string; error?: string; message?: string; autorun?: string; workflow?: string; issue?: string; job?: string; queued?: string; phase?: string; panel?: string }>;
 }) {
   const [{ projectId }, query] = await Promise.all([params, searchParams]);
   await requireConsolePageAuth(buildProjectNextPath(projectId, query));
@@ -92,6 +92,7 @@ export default async function ProjectDetailPage({
   const activeWorkflows = visibleWorkflows.filter((workflow) => workflow.status !== "done");
   const doneWorkflows = visibleWorkflows.filter((workflow) => workflow.status === "done");
   const queuedWorkflowId = query.workflow ?? null;
+  const activeIssueId = query.issue ?? null;
   const queuedJobId = query.job ?? null;
   const queuedWorkflow = queuedWorkflowId ? sortedWorkflows.find((workflow) => workflow.workflowId === queuedWorkflowId) ?? null : null;
   const visibleActiveWorkflows = prioritizeById(activeWorkflows, queuedWorkflowId);
@@ -104,8 +105,8 @@ export default async function ProjectDetailPage({
     : false;
   const hasUnqueuedPmHandoff = Boolean(readyForPlannerPayload && !latestWorkflow && !hasMatchingPmHandoffWorkflow && !queuedWorkflow && !isInspectingIssueSession);
   const workflowPanelWorkflows = hasUnqueuedPmHandoff ? [] : latestWorkflow ? [latestWorkflow] : [];
-  const workflowPanelJobs = filterJobsForWorkflows(jobs, workflowPanelWorkflows);
-  const workflowPanelSessions = filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
+  const workflowPanelJobs = activeIssueId ? filterJobsForIssue(jobs, workflowPanelWorkflows, activeIssueId) : filterJobsForWorkflows(jobs, workflowPanelWorkflows);
+  const workflowPanelSessions = activeIssueId ? filterSessionsForIssue(sessions, workflowPanelWorkflows, activeIssueId) : filterSessionsForWorkflows(sessions, workflowPanelWorkflows);
   const chatSessions = isInspectingIssueSession ? sessions : workflowPanelSessions;
   const autoRunState = getAutoRunState(project.projectId);
 
@@ -129,6 +130,7 @@ export default async function ProjectDetailPage({
           sessions={sessions}
           jobs={jobs}
           queuedJobId={queuedJobId}
+          activeIssueId={activeIssueId}
           activeWorkflow={latestWorkflow}
           autoRunState={autoRunState}
           activePanel={activePanel}
@@ -144,7 +146,7 @@ export default async function ProjectDetailPage({
           {activePanel ? (
             <WorkspacePanelContent panel={activePanel} project={project} projects={projects} workflows={sortedWorkflows} jobs={jobs} ghUserLogin={ghUserLogin} message={query.message} error={query.error} />
           ) : (
-            <ProjectChatArea projectId={project.projectId} sessions={chatSessions} jobs={workflowPanelJobs.length ? workflowPanelJobs : jobs} workflows={workflowPanelWorkflows.length ? workflowPanelWorkflows : workflows} activeWorkflowId={latestWorkflow?.workflowId ?? null} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
+            <ProjectChatArea projectId={project.projectId} sessions={chatSessions} jobs={workflowPanelJobs} workflows={workflowPanelWorkflows.length ? workflowPanelWorkflows : workflows} activeWorkflowId={latestWorkflow?.workflowId ?? null} inspectedSession={activeSession} readOnly={isInspectingIssueSession} />
           )}
         </main>
       </ProjectChatLayout>
@@ -152,7 +154,7 @@ export default async function ProjectDetailPage({
   );
 }
 
-function buildProjectNextPath(projectId: string, query: { role?: string; session?: string; error?: string; message?: string; autorun?: string; workflow?: string; job?: string; queued?: string; phase?: string; panel?: string }): string {
+function buildProjectNextPath(projectId: string, query: { role?: string; session?: string; error?: string; message?: string; autorun?: string; workflow?: string; issue?: string; job?: string; queued?: string; phase?: string; panel?: string }): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value) params.set(key, value);
@@ -302,6 +304,7 @@ function ProjectWorkspaceSidebar(input: {
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
   queuedJobId: string | null;
+  activeIssueId: string | null;
   activeWorkflow: WorkflowRecord | null;
   autoRunState: AutoRunState | null;
   activePanel: WorkspacePanel | null;
@@ -382,6 +385,7 @@ function ProjectWorkspaceSidebar(input: {
             sessions={input.sessions}
             jobs={input.jobs}
             queuedJobId={input.queuedJobId}
+            activeIssueId={input.activeIssueId}
             autoRunState={input.autoRunState}
           />
         </div>
@@ -429,17 +433,18 @@ function RequirementIssueTree(input: {
   sessions: AgentSessionRecord[];
   jobs: JobRecord[];
   queuedJobId: string | null;
+  activeIssueId: string | null;
   autoRunState: AutoRunState | null;
 }): ReactNode {
   if (!input.workflows.length) return <Text size="xs" c="dimmed">No confirmed requirements yet.</Text>;
   return (
     <Stack gap={6}>
-      {renderRequirementTreeRows(input.projectId, input.workflows, input.activeWorkflow, input.sessions, input.jobs, input.queuedJobId, input.autoRunState)}
+      {renderRequirementTreeRows(input.projectId, input.workflows, input.activeWorkflow, input.sessions, input.jobs, input.queuedJobId, input.activeIssueId, input.autoRunState)}
     </Stack>
   );
 }
 
-function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[], activeWorkflow: WorkflowRecord | null, sessions: AgentSessionRecord[], jobs: JobRecord[], queuedJobId: string | null, autoRunState: AutoRunState | null): ReactNode {
+function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[], activeWorkflow: WorkflowRecord | null, sessions: AgentSessionRecord[], jobs: JobRecord[], queuedJobId: string | null, activeIssueId: string | null, autoRunState: AutoRunState | null): ReactNode {
   return workflows.slice(0, 12).map((workflow) => {
     const planningJob = latestWorkflowJob(workflow.workflowId, jobs, "workflow_run");
     const status = requirementStatus(workflow, planningJob);
@@ -485,7 +490,7 @@ function renderRequirementTreeRows(projectId: string, workflows: WorkflowRecord[
             <Group justify="space-between" align="center" gap="xs" mb="xs" wrap="nowrap">
               <Text size="xs" fw={820} tt="uppercase" c="dimmed">Issues</Text>
             </Group>
-            {renderGithubIssueRows(projectId, [workflow], sessions, jobs, queuedJobId, autoRunState)}
+            {renderGithubIssueRows(projectId, [workflow], sessions, jobs, queuedJobId, activeIssueId, autoRunState)}
           </div>
         ) : null}
       </div>
@@ -534,6 +539,22 @@ function filterSessionsForWorkflows(sessions: AgentSessionRecord[], workflows: W
     if (session.issueId && issueSessionIds.has(session.issueId)) return true;
     return issueSessionIds.has(session.sessionKey);
   });
+}
+
+function filterSessionsForIssue(sessions: AgentSessionRecord[], workflows: WorkflowRecord[], issueId: string): AgentSessionRecord[] {
+  const workflowIds = new Set(workflows.map((workflow) => workflow.workflowId));
+  const issue = workflows.flatMap((workflow) => workflow.issues).find((item) => item.issueId === issueId);
+  const issueSessionKeys = new Set([issueId, issue?.developerSessionId, issue?.qaSessionId, `${issueId}:architect`, `${issueId}:reviewer`, `${issueId}:blocker-analysis`].filter(Boolean) as string[]);
+  return sessions.filter((session) => (
+    session.issueId === issueId
+    || issueSessionKeys.has(session.sessionKey)
+    || (session.workflowId && workflowIds.has(session.workflowId) && session.issueId === issueId)
+  ));
+}
+
+function filterJobsForIssue(jobs: JobRecord[], workflows: WorkflowRecord[], issueId: string): JobRecord[] {
+  const workflowIds = new Set(workflows.map((workflow) => workflow.workflowId));
+  return jobs.filter((job) => workflowIds.has(job.payload.workflowId) && job.payload.issueId === issueId);
 }
 
 const highlightedCardStyle = {
@@ -836,7 +857,7 @@ function renderDeveloperIssueRows(projectId: string, workflows: WorkflowRecord[]
   });
 }
 
-function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[], jobs: JobRecord[], queuedJobId: string | null, autoRunState: AutoRunState | null): ReactNode {
+function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], sessions: AgentSessionRecord[], jobs: JobRecord[], queuedJobId: string | null, activeIssueId: string | null, autoRunState: AutoRunState | null): ReactNode {
   const rows = workflows
     .flatMap((workflow) => workflow.issues.map((issue) => ({ workflow, issue })));
   if (!rows.length) return <Text size="xs" c="dimmed">No GitHub issues are being tracked for this requirement.</Text>;
@@ -854,7 +875,7 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
     const activeJob = latestIssueJob(issue.issueId, jobs);
     const completedDeveloperJob = latestIssueJob(issue.issueId, jobs, "issue_run", "done");
     const canRunDev = canRunDeveloperIssue(issue, workflow.issues);
-    const isHighlighted = activeJob?.jobId === queuedJobId;
+    const isHighlighted = activeJob?.jobId === queuedJobId || issue.issueId === activeIssueId;
     const primaryStatusBadge = githubIssueStatusBadge(issue, stage, qaStatus);
     const prNumber = extractPullRequestNumber(issue.prUrl);
     const issueMetaParts = [
@@ -869,7 +890,12 @@ function renderGithubIssueRows(projectId: string, workflows: WorkflowRecord[], s
         <Group justify="space-between" align="flex-start" gap="sm" wrap="nowrap">
           <div style={{ minWidth: 0 }}>
             <Group gap={6} wrap="wrap">
-              <Text size="sm" fw={780} lineClamp={1}>{issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}</Text>
+              <Link
+                href={`/projects/${projectId}?workflow=${encodeURIComponent(workflow.workflowId)}&issue=${encodeURIComponent(issue.issueId)}&phase=github`}
+                className="github-issue-number-link"
+              >
+                <Text size="sm" fw={780} lineClamp={1}>{issue.githubIssueNumber ? `#${issue.githubIssueNumber}` : issue.issueId}</Text>
+              </Link>
               {prNumber ? <Badge size="xs" color="gray" variant="light">PR #{prNumber}</Badge> : null}
               <Badge size="xs" variant="outline">{issue.developerRole ?? issue.assigneeRole}</Badge>
               <Badge size="xs" color={primaryStatusBadge.color} variant="light">{primaryStatusBadge.label}</Badge>
