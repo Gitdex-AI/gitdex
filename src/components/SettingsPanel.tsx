@@ -4,7 +4,11 @@ import packageJson from "../../package.json";
 import { SelfUpdateDialog } from "@/components/SelfUpdateDialog";
 import { buildSettingsGroupState, type SettingsFieldState } from "@/components/settings/settings-field-model";
 import { ThemeSelector } from "@/components/theme/ThemeSelector";
-import { getSettings } from "@/lib/settings";
+import {
+  getMissingRequiredSettingsGroups,
+  getSettings,
+  type MissingRequiredSettingsGroup
+} from "@/lib/settings";
 import { settingsMetadataGroups } from "@/lib/settings-metadata";
 
 export async function SettingsPanel({
@@ -20,6 +24,7 @@ export async function SettingsPanel({
 }) {
   const settings = await getSettings();
   const settingsGroups = buildSettingsGroupState(settingsMetadataGroups, settings);
+  const missingRequiredSettingsGroups = getMissingRequiredSettingsGroups(settings);
 
   return (
     <div className="settings-panel">
@@ -34,6 +39,7 @@ export async function SettingsPanel({
           {message ?? error}
         </Alert>
       )}
+      <MissingConfigurationSummary groups={missingRequiredSettingsGroups} />
       <section className="settings-section">
         <div className="settings-row">
           <div className="settings-row-copy">
@@ -96,6 +102,35 @@ export async function SettingsPanel({
         </Group>
       </form>
     </div>
+  );
+}
+
+function MissingConfigurationSummary({ groups }: { groups: MissingRequiredSettingsGroup[] }) {
+  if (groups.length === 0) return null;
+
+  return (
+    <section className="settings-missing-summary" aria-labelledby="settings-missing-summary-title">
+      <div>
+        <Text id="settings-missing-summary-title" className="settings-missing-summary-title">
+          Missing required configuration
+        </Text>
+        <Text className="settings-missing-summary-copy">
+          Gitdex cannot complete the GitHub PR workflow end to end until the missing required Codex and GitHub configuration is provided.
+        </Text>
+      </div>
+      <div className="settings-missing-summary-groups">
+        {groups.map((group) => (
+          <div key={group.groupId} className="settings-missing-summary-group">
+            <Text className="settings-missing-summary-group-title">{group.groupLabel}</Text>
+            <ul className="settings-missing-summary-list">
+              {group.settings.map((setting) => (
+                <li key={setting.key}>{setting.label}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

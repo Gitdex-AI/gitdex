@@ -24,6 +24,12 @@ export type MissingRequiredSetting = SettingMetadata & {
   value: Settings[keyof Settings] | undefined;
 };
 
+export type MissingRequiredSettingsGroup = {
+  groupId: SettingsMetadataGroupId;
+  groupLabel: string;
+  settings: MissingRequiredSetting[];
+};
+
 export const settingsMetadataGroups: readonly SettingsMetadataGroup[] = [
   {
     id: "runtime",
@@ -177,6 +183,17 @@ export function getMissingRequiredSettings(settings: Partial<Settings>): Missing
         value: settings[setting.key]
       }))
   );
+}
+
+export function getMissingRequiredSettingsGroups(settings: Partial<Settings>): MissingRequiredSettingsGroup[] {
+  const missingSettings = getMissingRequiredSettings(settings);
+  return settingsMetadataGroups
+    .map((group) => ({
+      groupId: group.id,
+      groupLabel: group.label,
+      settings: missingSettings.filter((setting) => setting.groupId === group.id)
+    }))
+    .filter((group) => group.settings.length > 0);
 }
 
 function isMissingSettingValue(value: unknown): boolean {

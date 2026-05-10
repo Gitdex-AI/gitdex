@@ -9,12 +9,14 @@ const defaultCodexHome = path.join(os.homedir(), ".codex");
 
 export {
   getMissingRequiredSettings,
+  getMissingRequiredSettingsGroups,
   settingsMetadata,
   settingsMetadataByKey,
   settingsMetadataGroups
 } from "@/lib/settings-metadata";
 export type {
   MissingRequiredSetting,
+  MissingRequiredSettingsGroup,
   SettingMetadata,
   SettingRequirement,
   SettingsMetadataGroup,
